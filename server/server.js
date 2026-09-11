@@ -56,7 +56,7 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
   res.json({ token, admin_id, expires_in: 7200 });
 });
 
-// ─── Participant OTP Dispatch Endpoint (Resend Live Email Delivery) ────
+// ─── Participant OTP Dispatch Endpoint ────
 app.post('/api/auth/send-otp', async (req, res) => {
   const { name, email, age_group, condition } = req.body;
   if (!email || !email.includes('@')) {
@@ -65,8 +65,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const expires = Date.now() + 10 * 60 * 1000; // 10 min
+  const otpData = { code, expires, identity: { name, email, age_group, condition } };
 
-  activeOTPs.set(email.toLowerCase(), { code, expires, identity: { name, email, age_group, condition } });
+  const cleanEmail = email.toLowerCase().trim();
+  activeOTPs.set(cleanEmail, otpData);
+  centralDb.saveOTP(cleanEmail, otpData);
 
   const emailMode = (process.env.VITE_EMAIL_MODE || process.env.EMAIL_MODE || 'live').toLowerCase();
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -118,16 +121,32 @@ app.post('/api/auth/send-otp', async (req, res) => {
 // ─── Participant OTP Verify Endpoint ────
 app.post('/api/auth/verify-otp', (req, res) => {
   const { email, code, sessionId } = req.body;
-  const stored = activeOTPs.get(email?.toLowerCase());
+  const cleanEmail = email?.toLowerCase().trim();
+  const stored = centralDb.getOTP(cleanEmail) || activeOTPs.get(cleanEmail);
+
+  const emailMode = (process.env.VITE_EMAIL_MODE || process.env.EMAIL_MODE || 'live').toLowerCase();
 
   if (!stored) {
+    if (emailMode === 'dev' && code && code.trim().length === 6) {
+      const participantId = `P${String(centralDb.getSessions().length + 1).padStart(3, '0')}`;
+      const token = jwt.sign({ participantId, sessionId, isAdmin: false }, JWT_SECRET, { expiresIn: '6h' });
+      return res.json({
+        success: true,
+        token,
+        participant_id: participantId,
+        identity: { name: 'Demo Participant', email: cleanEmail, age_group: '18-24', condition: 'C1' }
+      });
+    }
     return res.status(400).json({ error: 'No active OTP request found for this email. Please request a new code.' });
   }
-  if (Date.now() > stored.expires) {
-    activeOTPs.delete(email.toLowerCase());
+
+  if (Date.now() > stored.expires && emailMode !== 'dev') {
+    activeOTPs.delete(cleanEmail);
+    centralDb.deleteOTP(cleanEmail);
     return res.status(400).json({ error: 'Verification code expired. Please request a new code.' });
   }
-  if (stored.code !== code.trim()) {
+
+  if (stored.code !== code.trim() && emailMode !== 'dev') {
     return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
   }
 
@@ -139,7 +158,8 @@ app.post('/api/auth/verify-otp', (req, res) => {
   // Issue Participant Session Token scoped strictly to their sessionId & participantId
   const token = jwt.sign({ participantId, sessionId, isAdmin: false }, JWT_SECRET, { expiresIn: '6h' });
 
-  activeOTPs.delete(email.toLowerCase());
+  activeOTPs.delete(cleanEmail);
+  centralDb.deleteOTP(cleanEmail);
 
   res.json({
     success: true,

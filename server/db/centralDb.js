@@ -106,6 +106,28 @@ export const centralDb = {
 
   getAssessments() {
     return loadDb().assessments;
+  },
+
+  saveOTP(email, otpData) {
+    const db = loadDb();
+    if (!db.otps) db.otps = {};
+    db.otps[email.toLowerCase()] = otpData;
+    saveDb(db);
+    return otpData;
+  },
+
+  getOTP(email) {
+    const db = loadDb();
+    if (!db.otps) return null;
+    return db.otps[email.toLowerCase()] || null;
+  },
+
+  deleteOTP(email) {
+    const db = loadDb();
+    if (db.otps && db.otps[email.toLowerCase()]) {
+      delete db.otps[email.toLowerCase()];
+      saveDb(db);
+    }
   }
 };
 
