@@ -177,6 +177,10 @@ app.get('/api/db/assessments', verifyAdminToken, (req, res) => {
   res.json(assessments);
 });
 
-app.listen(PORT, () => {
-  console.log(`⚡ Central Study Backend Server running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' || require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`⚡ Central Study Backend Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
