@@ -1,0 +1,116 @@
+/* Global Reset & Base Styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Dark Mode Default Theme Tokens */
+:root,
+[data-theme="dark"] {
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-bg: #0a0a1a;
+  --card-bg: rgba(20, 24, 38, 0.85);
+  --input-bg: rgba(15, 23, 42, 0.7);
+  --status-bar-bg: rgba(15, 23, 42, 0.8);
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --text-color: #ffffff;
+  --text-muted: #94a3b8;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --color-primary: #4ECDC4;
+  --color-accent: #FF6B35;
+  --color-success: #4CAF50;
+  --color-warning: #FFD93D;
+  --color-error: #F44336;
+  --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  --header-bg: rgba(10, 10, 26, 0.8);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* Light Mode Theme Tokens — High-End Clean Aesthetics */
+[data-theme="light"] {
+  --color-bg: #f8fafc;
+  --card-bg: #ffffff;
+  --input-bg: #f1f5f9;
+  --status-bar-bg: #e2e8f0;
+  --color-surface: rgba(0, 0, 0, 0.04);
+  --border-color: #e2e8f0;
+  --text-color: #0f172a;
+  --text-muted: #64748b;
+  --text-secondary: #334155;
+  --color-primary: #0d9488;
+  --color-accent: #ea580c;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --header-bg: rgba(255, 255, 255, 0.85);
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--text-color);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-family);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Selection */
+::selection {
+  background: rgba(78, 205, 196, 0.3);
+  color: var(--text-color);
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

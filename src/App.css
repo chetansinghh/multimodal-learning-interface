@@ -1,0 +1,388 @@
+/* App.css — Landing page and global app styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ─── Global Navigation Header ───────── */
+.global-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 2rem;
+  background: var(--header-bg, rgba(10, 10, 26, 0.8));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-color);
+  text-decoration: none;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.header-logo:hover {
+  opacity: 0.9;
+}
+
+.logo-sparkle {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 0 8px rgba(78, 205, 196, 0.5));
+}
+
+.logo-text {
+  color: var(--text-color);
+}
+
+.logo-accent {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+}
+
+.header-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.nav-link {
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
+}
+
+.nav-link:hover {
+  color: var(--text-color);
+  background: var(--color-surface);
+}
+
+.nav-link.active {
+  color: var(--color-primary);
+  background: rgba(78, 205, 196, 0.12);
+  border-color: rgba(78, 205, 196, 0.3);
+  font-weight: 600;
+}
+
+/* Theme Toggle Pill Button */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.theme-toggle-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.2);
+}
+
+/* ─── Landing Page ───────── */
+.landing-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(78, 205, 196, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 107, 53, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(69, 183, 209, 0.05) 0%, transparent 50%);
+  z-index: 0;
+  animation: bgShift 20s ease-in-out infinite alternate;
+}
+
+[data-theme="light"] .landing-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(13, 148, 136, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(234, 88, 12, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(14, 165, 233, 0.06) 0%, transparent 50%);
+}
+
+@keyframes bgShift {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(15deg); }
+}
+
+.landing-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1000px;
+  padding: 3rem 2rem;
+}
+
+/* ─── Hero ───────── */
+.landing-hero {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.hero-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.25);
+  margin-bottom: 1.5rem;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--text-color);
+  line-height: 1.1;
+  margin: 0 0 1rem 0;
+  letter-spacing: -1px;
+}
+
+.hero-accent {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.6;
+}
+
+/* ─── Landing Cards ───────── */
+.landing-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  text-decoration: none;
+  box-shadow: var(--card-shadow);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.participant-card::before {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.08), rgba(78, 205, 196, 0.02));
+}
+
+.researcher-card::before {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.08), rgba(255, 107, 53, 0.02));
+}
+
+.landing-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+}
+
+.landing-card:hover::before { opacity: 1; }
+
+.card-icon {
+  font-size: 2rem;
+}
+
+.landing-card h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.landing-card p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.card-conditions, .card-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cond-chip {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(78, 205, 196, 0.12);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.feat-chip {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 107, 53, 0.12);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.card-arrow {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  align-self: flex-end;
+  margin-top: auto;
+  transition: all 0.2s;
+}
+
+.landing-card:hover .card-arrow {
+  color: var(--color-primary);
+  transform: translateX(4px);
+}
+
+/* ─── Story Previews ───────── */
+.landing-stories {
+  text-align: center;
+}
+
+.landing-stories h2 {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem 0;
+  font-weight: 600;
+}
+
+.story-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.story-preview-card {
+  padding: 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-align: left;
+  box-shadow: var(--card-shadow);
+}
+
+.story-emoji {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.story-preview-card h4 {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  margin: 0 0 0.3rem 0;
+}
+
+.story-preview-card p {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem 0;
+}
+
+.story-segments {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.story-segments span {
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--text-color);
+  background: var(--color-surface);
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+}
+
+/* ─── Footer ───────── */
+.landing-footer {
+  text-align: center;
+  margin-top: 4rem;
+  padding: 2rem 0;
+}
+
+.landing-footer p {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ─── Responsive ───────── */
+@media (max-width: 640px) {
+  .hero-title { font-size: 2rem; }
+  .landing-cards, .story-preview-grid { grid-template-columns: 1fr; }
+  .global-header { padding: 0.75rem 1rem; }
+  .header-actions { gap: 0.75rem; }
+}

@@ -1,0 +1,283 @@
+/* Player Common — shared styles for all 4 condition players */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+.player-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  background: #0a0a1a;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ─── Segment Indicator ───────── */
+.segment-indicator {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  z-index: 10;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.segment-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.segment-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Controls ───────── */
+.player-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 16px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  z-index: 15;
+}
+
+.player-controls.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.segment-timeline {
+  position: relative;
+  height: 20px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.segment-block {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.segment-block:hover {
+  opacity: 0.7;
+}
+
+.progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255,255,255,0.3);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.seek-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.control-btn:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.3);
+}
+
+.control-btn.play-btn {
+  padding: 8px 20px;
+  font-size: 1.1rem;
+  background: rgba(78, 205, 196, 0.3);
+  border-color: rgba(78, 205, 196, 0.5);
+}
+
+.control-btn.play-btn:hover {
+  background: rgba(78, 205, 196, 0.5);
+}
+
+.time-display {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  font-family: 'Inter', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Condition Badge ───────── */
+.condition-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 5px 12px;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ─── Spatial Audio Indicator ───────── */
+.spatial-audio-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(78, 205, 196, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4ECDC4;
+  z-index: 10;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.spatial-audio-indicator .audio-wave {
+  animation: audioWave 1.5s infinite;
+}
+
+@keyframes audioWave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1.2); }
+}
+
+/* ─── Interaction Overlay Container ───────── */
+.interaction-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
+/* ─── VR-specific ───────── */
+.vr-canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+.vr-hud {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+.vr-enter-btn {
+  padding: 10px 24px;
+  background: rgba(78, 205, 196, 0.3);
+  border: 2px solid rgba(78, 205, 196, 0.6);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.vr-enter-btn:hover {
+  background: rgba(78, 205, 196, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.3);
+}
+
+.vr-hotspot-label {
+  position: absolute;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  border: 1px solid rgba(78, 205, 196, 0.4);
+  max-width: 250px;
+  z-index: 25;
+}
+
+/* ─── Gaze Reticle ───────── */
+.gaze-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.gaze-reticle.locked {
+  border-color: #4ECDC4;
+  box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+}
+
+.gaze-progress {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+}

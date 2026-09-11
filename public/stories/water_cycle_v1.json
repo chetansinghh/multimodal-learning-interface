@@ -1,0 +1,435 @@
+{
+  "story_id": "water_cycle_v1",
+  "title": "The Journey of a Water Droplet",
+  "subtitle": "Understanding the Water Cycle",
+  "version": "1.0",
+  "duration_sec": 600,
+  "description": "Follow a single water droplet as it travels through all four stages of the water cycle — from ocean to sky and back again.",
+  "media": {
+    "video_flat": "/stories/media/water_cycle_flat.mp4",
+    "video_360": "/stories/media/water_cycle_360.mp4",
+    "audio_stereo": "/stories/media/water_cycle_stereo.mp3",
+    "audio_spatial": "/stories/media/water_cycle_spatial.mp3",
+    "thumbnail": "/stories/media/water_cycle_thumb.jpg"
+  },
+  "segments": [
+    {
+      "id": "seg1",
+      "label": "Evaporation",
+      "description": "The sun heats the ocean surface, causing water molecules to gain energy and rise as invisible vapor.",
+      "start": "00:00",
+      "end": "02:30",
+      "color": "#FF6B35"
+    },
+    {
+      "id": "seg2",
+      "label": "Condensation",
+      "description": "Water vapor cools as it rises into the atmosphere, condensing around tiny particles to form clouds.",
+      "start": "02:30",
+      "end": "05:00",
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "seg3",
+      "label": "Precipitation",
+      "description": "When cloud droplets combine and grow heavy enough, they fall as rain, snow, sleet, or hail.",
+      "start": "05:00",
+      "end": "07:30",
+      "color": "#45B7D1"
+    },
+    {
+      "id": "seg4",
+      "label": "Collection",
+      "description": "Water flows across the land into rivers, lakes, and back to the ocean, completing the cycle.",
+      "start": "07:30",
+      "end": "10:00",
+      "color": "#96CEB4"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "int_01",
+      "segment_id": "seg1",
+      "verb": "hold_charge",
+      "trigger_time": "00:20",
+      "duration": 5,
+      "object_id": "sun_energy_01",
+      "prompt": "Hold to heat the ocean surface — watch the temperature rise!",
+      "description": "Press and hold to simulate solar energy heating the water.",
+      "success_criteria": "meter_filled_100",
+      "config": {
+        "meter_label": "Solar Energy",
+        "fill_duration_ms": 3000,
+        "color": "#FF6B35"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_02",
+      "segment_id": "seg1",
+      "verb": "trace_path",
+      "trigger_time": "00:45",
+      "duration": 8,
+      "object_id": "droplet_01",
+      "prompt": "Trace the droplet's path as it rises from the ocean surface",
+      "description": "Draw the path a water molecule takes as it evaporates upward.",
+      "success_criteria": "path_match_70_percent",
+      "config": {
+        "path_points": [
+          {"x": 0.5, "y": 0.85},
+          {"x": 0.48, "y": 0.7},
+          {"x": 0.52, "y": 0.55},
+          {"x": 0.47, "y": 0.4},
+          {"x": 0.5, "y": 0.25}
+        ],
+        "tolerance": 0.08,
+        "color": "#FFD93D"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_03",
+      "segment_id": "seg1",
+      "verb": "select_hotspot",
+      "trigger_time": "01:30",
+      "duration": 6,
+      "object_id": "molecule_info_01",
+      "prompt": "Tap the water molecules to see how they change state",
+      "description": "Select highlighted molecules to reveal state-change information.",
+      "success_criteria": "all_hotspots_selected",
+      "config": {
+        "hotspots": [
+          {"id": "hs1", "x": 0.3, "y": 0.6, "label": "Liquid H₂O", "info": "Water molecules in liquid form vibrate but stay close together."},
+          {"id": "hs2", "x": 0.5, "y": 0.4, "label": "Water Vapor", "info": "With enough energy, molecules break free and become invisible gas."},
+          {"id": "hs3", "x": 0.7, "y": 0.5, "label": "Energy Input", "info": "Solar radiation provides the energy needed for evaporation."}
+        ]
+      },
+      "logged_events": ["HOTSPOT_OPEN", "HOTSPOT_CLOSE", "SELECT"]
+    },
+    {
+      "id": "int_04",
+      "segment_id": "seg2",
+      "verb": "drag_sort",
+      "trigger_time": "03:00",
+      "duration": 15,
+      "object_id": "cloud_sort_01",
+      "prompt": "Sort these cloud types by altitude — drag each to the correct level",
+      "description": "Categorize cloud types (cirrus, cumulus, stratus) by their typical altitude.",
+      "success_criteria": "all_correct",
+      "config": {
+        "items": [
+          {"id": "cirrus", "label": "Cirrus", "icon": "☁️", "description": "Thin, wispy, high-altitude"},
+          {"id": "cumulus", "label": "Cumulus", "icon": "⛅", "description": "Puffy, mid-level, fair weather"},
+          {"id": "stratus", "label": "Stratus", "icon": "🌫️", "description": "Flat, layered, low-altitude"},
+          {"id": "cumulonimbus", "label": "Cumulonimbus", "icon": "⛈️", "description": "Towering storm clouds"}
+        ],
+        "zones": [
+          {"id": "high", "label": "High Altitude (6-12 km)", "correct_items": ["cirrus"]},
+          {"id": "mid", "label": "Mid Altitude (2-6 km)", "correct_items": ["cumulus", "cumulonimbus"]},
+          {"id": "low", "label": "Low Altitude (0-2 km)", "correct_items": ["stratus"]}
+        ]
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"]
+    },
+    {
+      "id": "int_05",
+      "segment_id": "seg2",
+      "verb": "select_hotspot",
+      "trigger_time": "04:00",
+      "duration": 8,
+      "object_id": "condensation_nuclei_01",
+      "prompt": "Tap to discover what particles help clouds form",
+      "description": "Explore condensation nuclei — the tiny particles water vapor clings to.",
+      "success_criteria": "all_hotspots_selected",
+      "config": {
+        "hotspots": [
+          {"id": "dust", "x": 0.25, "y": 0.45, "label": "Dust", "info": "Tiny dust particles blown into the atmosphere provide surfaces for water to condense on."},
+          {"id": "pollen", "x": 0.55, "y": 0.35, "label": "Pollen", "info": "Pollen grains from plants can act as condensation nuclei."},
+          {"id": "salt", "x": 0.75, "y": 0.5, "label": "Sea Salt", "info": "Ocean spray sends salt crystals into the air, which are excellent condensation nuclei."}
+        ]
+      },
+      "logged_events": ["HOTSPOT_OPEN", "HOTSPOT_CLOSE", "SELECT"]
+    },
+    {
+      "id": "int_06",
+      "segment_id": "seg3",
+      "verb": "slice",
+      "trigger_time": "05:30",
+      "duration": 6,
+      "object_id": "raindrop_01",
+      "prompt": "Swipe to split the raindrop as it collides with the ground!",
+      "description": "Slice through a falling raindrop to simulate impact and splashing.",
+      "success_criteria": "swipe_crosses_object",
+      "config": {
+        "object_position": {"x": 0.5, "y": 0.4},
+        "object_radius": 0.12,
+        "min_swipe_speed": 200,
+        "split_animation": "splash",
+        "color": "#45B7D1"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_07",
+      "segment_id": "seg3",
+      "verb": "slice",
+      "trigger_time": "06:15",
+      "duration": 6,
+      "object_id": "raindrop_02",
+      "prompt": "Swipe through another raindrop — this one splits into smaller droplets!",
+      "description": "Second slice interaction showing how large drops fragment.",
+      "success_criteria": "swipe_crosses_object",
+      "config": {
+        "object_position": {"x": 0.4, "y": 0.35},
+        "object_radius": 0.15,
+        "min_swipe_speed": 180,
+        "split_animation": "fragment",
+        "color": "#45B7D1"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_08",
+      "segment_id": "seg3",
+      "verb": "hold_charge",
+      "trigger_time": "06:50",
+      "duration": 8,
+      "object_id": "cloud_pressure_01",
+      "prompt": "Hold to build pressure inside the cloud until rain is released",
+      "description": "Simulate the buildup of water in a cloud until precipitation occurs.",
+      "success_criteria": "meter_filled_100",
+      "config": {
+        "meter_label": "Cloud Saturation",
+        "fill_duration_ms": 4000,
+        "color": "#45B7D1"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_09",
+      "segment_id": "seg4",
+      "verb": "trace_path",
+      "trigger_time": "08:00",
+      "duration": 10,
+      "object_id": "river_flow_01",
+      "prompt": "Trace the river's path from the mountains to the ocean",
+      "description": "Follow the water's journey as it flows downhill through the landscape.",
+      "success_criteria": "path_match_70_percent",
+      "config": {
+        "path_points": [
+          {"x": 0.2, "y": 0.2},
+          {"x": 0.3, "y": 0.35},
+          {"x": 0.45, "y": 0.45},
+          {"x": 0.55, "y": 0.55},
+          {"x": 0.65, "y": 0.6},
+          {"x": 0.8, "y": 0.75}
+        ],
+        "tolerance": 0.08,
+        "color": "#96CEB4"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_10",
+      "segment_id": "seg4",
+      "verb": "assemble",
+      "trigger_time": "09:00",
+      "duration": 20,
+      "object_id": "cycle_diagram_01",
+      "prompt": "Build the complete water cycle! Drag each stage into the correct position.",
+      "description": "Assemble the four stages of the water cycle into a complete diagram.",
+      "success_criteria": "all_pieces_correct_order",
+      "config": {
+        "pieces": [
+          {"id": "p1", "label": "Evaporation", "icon": "☀️🌊", "correct_slot": 0, "description": "Water heated by the sun turns to vapor"},
+          {"id": "p2", "label": "Condensation", "icon": "☁️", "correct_slot": 1, "description": "Vapor cools and forms clouds"},
+          {"id": "p3", "label": "Precipitation", "icon": "🌧️", "correct_slot": 2, "description": "Water falls from clouds as rain or snow"},
+          {"id": "p4", "label": "Collection", "icon": "🏞️", "correct_slot": 3, "description": "Water gathers in rivers, lakes, and oceans"}
+        ],
+        "slots": [
+          {"id": "s0", "label": "Stage 1", "x": 0.5, "y": 0.15},
+          {"id": "s1", "label": "Stage 2", "x": 0.85, "y": 0.5},
+          {"id": "s2", "label": "Stage 3", "x": 0.5, "y": 0.85},
+          {"id": "s3", "label": "Stage 4", "x": 0.15, "y": 0.5}
+        ]
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"]
+    }
+  ],
+  "vr_scene": {
+    "environment": "water_cycle_world",
+    "ambient_color": "#87CEEB",
+    "segments": [
+      {
+        "segment_id": "seg1",
+        "environment": "ocean_surface",
+        "description": "Standing on the ocean surface as the sun heats the water around you",
+        "ambient_audio": "ocean_waves",
+        "skybox_color": "#FF8C42"
+      },
+      {
+        "segment_id": "seg2",
+        "environment": "inside_a_cloud",
+        "description": "Floating inside a forming cloud, surrounded by condensing water droplets",
+        "ambient_audio": "wind_whisper",
+        "skybox_color": "#B8D4E3"
+      },
+      {
+        "segment_id": "seg3",
+        "environment": "storm_sky",
+        "description": "Standing in the sky as rain falls all around you",
+        "ambient_audio": "rain_heavy",
+        "skybox_color": "#4A5568"
+      },
+      {
+        "segment_id": "seg4",
+        "environment": "river_valley",
+        "description": "Flying along a river as it flows from mountains to the sea",
+        "ambient_audio": "river_flowing",
+        "skybox_color": "#48BB78"
+      }
+    ],
+    "hotspots": [
+      {"id": "vr_h1", "segment_id": "seg1", "position": [0, 2, -5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Rising Vapor", "info": "Look up to follow the water vapor as it rises from the warm ocean."},
+      {"id": "vr_h2", "segment_id": "seg1", "position": [-3, 1, -4], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Solar Rays", "info": "The sun's energy provides heat that drives evaporation."},
+      {"id": "vr_h3", "segment_id": "seg2", "position": [2, 0, -3], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Merging Droplets", "info": "Watch as tiny droplets combine to form larger cloud particles."},
+      {"id": "vr_h4", "segment_id": "seg2", "position": [-1, 1, -5], "trigger": "gaze_dwell_1500ms", "action": "VR_INTERACTION", "label": "Cloud Formation", "info": "Gaze here to trigger cloud growth — see condensation in action."},
+      {"id": "vr_h5", "segment_id": "seg3", "position": [0, -2, -4], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Raindrop Impact", "info": "Look down at where rain hits the ground and splashes."},
+      {"id": "vr_h6", "segment_id": "seg3", "position": [3, 0, -3], "trigger": "gaze_dwell_1500ms", "action": "VR_INTERACTION", "label": "Storm Cell", "info": "Gaze at the storm cell to see the precipitation mechanism."},
+      {"id": "vr_h7", "segment_id": "seg4", "position": [0, 0, -6], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "River Mouth", "info": "Follow the river as it carries water back to the ocean."},
+      {"id": "vr_h8", "segment_id": "seg4", "position": [-2, -1, -4], "trigger": "gaze_dwell_1500ms", "action": "VR_INTERACTION", "label": "Cycle Restart", "info": "The water has returned — the cycle begins again."}
+    ]
+  },
+  "assessment": {
+    "instructions": "Answer the following questions about the water cycle based on what you just experienced.",
+    "time_limit_per_question_sec": 60,
+    "levels": [
+      {
+        "level": "recall_understand",
+        "label": "Recall & Understand",
+        "description": "Test your memory and understanding of the water cycle facts.",
+        "items": [
+          {
+            "id": "q1",
+            "type": "multiple_choice",
+            "question": "What causes water vapor to form clouds?",
+            "options": [
+              "Water vapor is heated further by the sun",
+              "Water vapor cools and condenses around tiny particles",
+              "Wind pushes water droplets together",
+              "Gravity pulls water vapor into cloud shapes"
+            ],
+            "correct_answer": 1,
+            "explanation": "When water vapor rises and cools, it condenses around condensation nuclei (tiny particles like dust, pollen, and sea salt) to form cloud droplets."
+          },
+          {
+            "id": "q2",
+            "type": "multiple_choice",
+            "question": "What provides the energy that drives evaporation?",
+            "options": [
+              "Wind energy",
+              "Gravitational potential energy",
+              "Solar radiation (heat from the sun)",
+              "Chemical reactions in the water"
+            ],
+            "correct_answer": 2,
+            "explanation": "The sun's heat provides the thermal energy needed for water molecules to break free from the liquid surface and become water vapor."
+          },
+          {
+            "id": "q3",
+            "type": "multiple_choice",
+            "question": "Which of these is NOT a type of precipitation?",
+            "options": [
+              "Rain",
+              "Evaporation",
+              "Snow",
+              "Hail"
+            ],
+            "correct_answer": 1,
+            "explanation": "Evaporation is the process of water turning from liquid to gas — the opposite of precipitation. Rain, snow, and hail are all forms of precipitation."
+          }
+        ]
+      },
+      {
+        "level": "apply",
+        "label": "Apply",
+        "description": "Apply what you learned to new situations you haven't seen before.",
+        "items": [
+          {
+            "id": "q4",
+            "type": "multiple_choice",
+            "question": "A puddle of water disappears on a hot, sunny day with no rain. What happened to the water?",
+            "options": [
+              "The ground absorbed all of it permanently",
+              "The water evaporated — solar energy turned it into water vapor",
+              "The wind blew it away as liquid",
+              "It was consumed by bacteria in the soil"
+            ],
+            "correct_answer": 1,
+            "explanation": "The sun's heat caused the water in the puddle to evaporate, turning it into invisible water vapor that rose into the atmosphere — the same process that happens to ocean water."
+          },
+          {
+            "id": "q5",
+            "type": "multiple_choice",
+            "question": "If you put a cold glass outside on a humid day and water droplets form on the outside, which part of the water cycle does this most closely resemble?",
+            "options": [
+              "Precipitation — water is falling onto the glass",
+              "Evaporation — water is leaving the glass surface",
+              "Condensation — water vapor in the air is cooling on the glass surface",
+              "Collection — water is being collected by the glass"
+            ],
+            "correct_answer": 2,
+            "explanation": "The cold glass surface cools the warm, moist air around it, causing the water vapor to condense into liquid droplets — exactly like water vapor condensing into clouds when it reaches cooler altitudes."
+          },
+          {
+            "id": "q6",
+            "type": "multiple_choice",
+            "question": "A city at the base of a mountain range gets much more rain than a city on the other side. Why?",
+            "options": [
+              "The mountain blocks the sun, making it colder",
+              "Moist air rises over the mountain, cools, and precipitates on the windward side",
+              "The mountain produces its own water through geological processes",
+              "Rivers from the mountain carry more water to that side"
+            ],
+            "correct_answer": 1,
+            "explanation": "This is the 'rain shadow' effect — moist air is forced upward by the mountain, cools (condensation), and releases precipitation on the windward side, leaving the other side dry."
+          }
+        ]
+      },
+      {
+        "level": "implement",
+        "label": "Implement",
+        "description": "Demonstrate your understanding by constructing and ordering concepts.",
+        "items": [
+          {
+            "id": "q7",
+            "type": "drag_order",
+            "question": "Arrange the 4 stages of the water cycle in the correct order, starting from the ocean.",
+            "items_to_order": [
+              {"id": "o1", "label": "Condensation — vapor forms clouds"},
+              {"id": "o2", "label": "Collection — water flows back to ocean"},
+              {"id": "o3", "label": "Evaporation — sun heats water to vapor"},
+              {"id": "o4", "label": "Precipitation — water falls from clouds"}
+            ],
+            "correct_order": ["o3", "o1", "o4", "o2"],
+            "explanation": "The water cycle follows this order: Evaporation (water becomes vapor) → Condensation (vapor forms clouds) → Precipitation (water falls) → Collection (water returns to bodies of water)."
+          },
+          {
+            "id": "q8",
+            "type": "drag_order",
+            "question": "Put these events in order from the perspective of a single water molecule's journey.",
+            "items_to_order": [
+              {"id": "j1", "label": "You cool down and stick to a dust particle in a cloud"},
+              {"id": "j2", "label": "You sit in the ocean, absorbing sunlight"},
+              {"id": "j3", "label": "You grow heavy with other droplets and fall as rain"},
+              {"id": "j4", "label": "You gain enough energy to break free and float upward"},
+              {"id": "j5", "label": "You land in a stream and flow back to the sea"}
+            ],
+            "correct_order": ["j2", "j4", "j1", "j3", "j5"],
+            "explanation": "A water molecule's journey: sits in ocean → gains energy and evaporates → cools and condenses in a cloud → grows heavy and precipitates → flows through streams back to the ocean."
+          }
+        ]
+      }
+    ]
+  }
+}

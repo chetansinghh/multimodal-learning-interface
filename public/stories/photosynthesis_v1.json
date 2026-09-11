@@ -1,0 +1,74 @@
+{
+  "story_id": "photosynthesis_v1",
+  "title": "The Leaf Factory",
+  "subtitle": "How Plants Make Food from Sunlight",
+  "version": "1.0",
+  "duration_sec": 600,
+  "description": "Step inside a leaf and witness photosynthesis — the process that feeds nearly all life on Earth.",
+  "media": {
+    "video_flat": "/stories/media/photosynthesis_flat.mp4",
+    "video_360": "/stories/media/photosynthesis_360.mp4",
+    "audio_stereo": "/stories/media/photosynthesis_stereo.mp3",
+    "audio_spatial": "/stories/media/photosynthesis_spatial.mp3",
+    "thumbnail": "/stories/media/photosynthesis_thumb.jpg"
+  },
+  "segments": [
+    { "id": "seg1", "label": "Light Absorption", "description": "Chlorophyll in the leaf captures sunlight energy.", "start": "00:00", "end": "02:30", "color": "#FFD700" },
+    { "id": "seg2", "label": "Water Splitting", "description": "Water molecules are split using light energy, releasing oxygen.", "start": "02:30", "end": "05:00", "color": "#00CED1" },
+    { "id": "seg3", "label": "Carbon Fixation", "description": "CO₂ from the air is converted into glucose molecules.", "start": "05:00", "end": "07:30", "color": "#32CD32" },
+    { "id": "seg4", "label": "Sugar Production", "description": "Glucose is assembled and stored as the plant's food.", "start": "07:30", "end": "10:00", "color": "#FF6347" }
+  ],
+  "interactions": [
+    { "id": "int_01", "segment_id": "seg1", "verb": "hold_charge", "trigger_time": "00:30", "duration": 6, "object_id": "sunlight_01", "prompt": "Hold to charge the chlorophyll with sunlight!", "description": "Simulate light absorption by holding.", "success_criteria": "meter_filled_100", "config": { "meter_label": "Light Energy", "fill_duration_ms": 3500, "color": "#FFD700" }, "logged_events": ["OBJECT_INTERACT"] },
+    { "id": "int_02", "segment_id": "seg2", "verb": "slice", "trigger_time": "03:00", "duration": 5, "object_id": "water_molecule_01", "prompt": "Swipe to split the water molecule!", "description": "Break H₂O into hydrogen and oxygen.", "success_criteria": "swipe_crosses_object", "config": { "object_position": {"x": 0.5, "y": 0.5}, "object_radius": 0.1, "min_swipe_speed": 200, "split_animation": "burst", "color": "#00CED1" }, "logged_events": ["OBJECT_INTERACT"] },
+    { "id": "int_03", "segment_id": "seg3", "verb": "drag_sort", "trigger_time": "05:30", "duration": 12, "object_id": "molecule_sort_01", "prompt": "Sort the inputs and outputs of photosynthesis", "description": "Categorize molecules as inputs or outputs.", "success_criteria": "all_correct", "config": { "items": [ {"id": "co2", "label": "CO₂", "icon": "💨", "description": "Carbon dioxide"}, {"id": "h2o", "label": "H₂O", "icon": "💧", "description": "Water"}, {"id": "o2", "label": "O₂", "icon": "🫧", "description": "Oxygen"}, {"id": "glucose", "label": "C₆H₁₂O₆", "icon": "🍬", "description": "Glucose"} ], "zones": [ {"id": "inputs", "label": "Inputs (Reactants)", "correct_items": ["co2", "h2o"]}, {"id": "outputs", "label": "Outputs (Products)", "correct_items": ["o2", "glucose"]} ] }, "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"] },
+    { "id": "int_04", "segment_id": "seg4", "verb": "assemble", "trigger_time": "08:30", "duration": 18, "object_id": "equation_01", "prompt": "Build the photosynthesis equation!", "description": "Assemble the chemical equation in order.", "success_criteria": "all_pieces_correct_order", "config": { "pieces": [ {"id": "p1", "label": "6CO₂", "icon": "💨", "correct_slot": 0, "description": "Six carbon dioxide"}, {"id": "p2", "label": "+", "icon": "➕", "correct_slot": 1, "description": "Plus"}, {"id": "p3", "label": "6H₂O", "icon": "💧", "correct_slot": 2, "description": "Six water"}, {"id": "p4", "label": "→", "icon": "➡️", "correct_slot": 3, "description": "Yields"}, {"id": "p5", "label": "C₆H₁₂O₆", "icon": "🍬", "correct_slot": 4, "description": "Glucose"}, {"id": "p6", "label": "+", "icon": "➕", "correct_slot": 5, "description": "Plus"}, {"id": "p7", "label": "6O₂", "icon": "🫧", "correct_slot": 6, "description": "Six oxygen"} ], "slots": [ {"id": "s0", "label": "1", "x": 0.1, "y": 0.5}, {"id": "s1", "label": "2", "x": 0.22, "y": 0.5}, {"id": "s2", "label": "3", "x": 0.34, "y": 0.5}, {"id": "s3", "label": "4", "x": 0.46, "y": 0.5}, {"id": "s4", "label": "5", "x": 0.58, "y": 0.5}, {"id": "s5", "label": "6", "x": 0.7, "y": 0.5}, {"id": "s6", "label": "7", "x": 0.82, "y": 0.5} ] }, "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"] }
+  ],
+  "vr_scene": {
+    "environment": "inside_a_leaf",
+    "ambient_color": "#228B22",
+    "segments": [
+      { "segment_id": "seg1", "environment": "chloroplast_interior", "description": "Inside a chloroplast, surrounded by thylakoid discs", "ambient_audio": "gentle_hum", "skybox_color": "#228B22" },
+      { "segment_id": "seg2", "environment": "water_channel", "description": "Inside the xylem, watching water flow up", "ambient_audio": "water_flow", "skybox_color": "#00CED1" },
+      { "segment_id": "seg3", "environment": "stomata_view", "description": "Looking through the stomata as CO₂ enters", "ambient_audio": "breeze", "skybox_color": "#90EE90" },
+      { "segment_id": "seg4", "environment": "phloem_highway", "description": "Following glucose as it travels through the plant", "ambient_audio": "pulse", "skybox_color": "#FF6347" }
+    ],
+    "hotspots": [
+      { "id": "vr_h1", "segment_id": "seg1", "position": [0, 1, -4], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Chlorophyll", "info": "The green pigment that captures light energy." },
+      { "id": "vr_h2", "segment_id": "seg2", "position": [2, 0, -3], "trigger": "gaze_dwell_1500ms", "action": "VR_INTERACTION", "label": "Water Split", "info": "Watch H₂O break into H⁺ and O₂." },
+      { "id": "vr_h3", "segment_id": "seg3", "position": [-1, 1, -5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "CO₂ Molecule", "info": "Carbon dioxide enters through the stomata." },
+      { "id": "vr_h4", "segment_id": "seg4", "position": [0, -1, -4], "trigger": "gaze_dwell_1500ms", "action": "VR_INTERACTION", "label": "Glucose Chain", "info": "The finished sugar molecule, ready to fuel the plant." }
+    ]
+  },
+  "assessment": {
+    "instructions": "Answer the following questions about photosynthesis based on what you just experienced.",
+    "time_limit_per_question_sec": 60,
+    "levels": [
+      {
+        "level": "recall_understand",
+        "label": "Recall & Understand",
+        "description": "Test your recall of key photosynthesis facts.",
+        "items": [
+          { "id": "q1", "type": "multiple_choice", "question": "What pigment in plants captures sunlight for photosynthesis?", "options": ["Melanin", "Chlorophyll", "Hemoglobin", "Carotene"], "correct_answer": 1, "explanation": "Chlorophyll is the green pigment in chloroplasts that absorbs light energy." },
+          { "id": "q2", "type": "multiple_choice", "question": "What gas is released as a byproduct of photosynthesis?", "options": ["Carbon dioxide", "Nitrogen", "Oxygen", "Hydrogen"], "correct_answer": 2, "explanation": "Oxygen is released when water molecules are split during the light reactions." }
+        ]
+      },
+      {
+        "level": "apply",
+        "label": "Apply",
+        "description": "Apply your photosynthesis knowledge to new situations.",
+        "items": [
+          { "id": "q3", "type": "multiple_choice", "question": "A plant is placed in a sealed jar with no light. After a week, the oxygen level in the jar has dropped. Why?", "options": ["The plant consumed oxygen through respiration without producing more via photosynthesis", "The oxygen leaked out of the jar", "The plant converted oxygen back into water", "Oxygen naturally disappears over time"], "correct_answer": 0, "explanation": "Without light, photosynthesis cannot occur, so no new O₂ is produced. The plant still respires, consuming the existing O₂." }
+        ]
+      },
+      {
+        "level": "implement",
+        "label": "Implement",
+        "description": "Construct and order concepts about photosynthesis.",
+        "items": [
+          { "id": "q4", "type": "drag_order", "question": "Arrange the steps of photosynthesis in the correct order.", "items_to_order": [ {"id": "s1", "label": "Chlorophyll absorbs sunlight"}, {"id": "s2", "label": "Water molecules are split"}, {"id": "s3", "label": "CO₂ is fixed into organic molecules"}, {"id": "s4", "label": "Glucose is produced and stored"} ], "correct_order": ["s1", "s2", "s3", "s4"], "explanation": "Photosynthesis proceeds: light absorption → water splitting (light reactions) → carbon fixation (Calvin cycle) → glucose production." }
+        ]
+      }
+    ]
+  }
+}

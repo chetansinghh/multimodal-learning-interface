@@ -1,0 +1,37 @@
+# Environment files & Secrets (DO NOT COMMIT)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies & Build outputs
+node_modules
+dist
+dist-ssr
+*.local
+
+# Database & Data Exports
+server/data/*.json
+server/data/*.db
+*.sqlite
+*.sqlite3
+
+# Logs & Temporary Files
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

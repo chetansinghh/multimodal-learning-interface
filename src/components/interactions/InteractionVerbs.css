@@ -1,0 +1,417 @@
+/* Interaction Verbs — CSS for all 6 verb overlays */
+
+.interaction-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+  animation: fadeIn 0.4s ease-out;
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+.interaction-overlay.completed {
+  background: rgba(0, 40, 0, 0.6);
+}
+
+.interaction-prompt {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  max-width: 500px;
+}
+
+.interaction-hint {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.6);
+  animation: pulse 2s infinite;
+}
+
+.interaction-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4CAF50;
+  animation: bounceIn 0.5s ease-out;
+}
+
+.success-icon {
+  font-size: 1.5rem;
+}
+
+.interaction-feedback {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.interaction-feedback.success {
+  background: rgba(76, 175, 80, 0.3);
+  color: #81C784;
+  border: 1px solid rgba(76, 175, 80, 0.5);
+}
+
+.interaction-feedback.error {
+  background: rgba(244, 67, 54, 0.3);
+  color: #E57373;
+  border: 1px solid rgba(244, 67, 54, 0.5);
+}
+
+/* ─── Canvas-based interactions ───────── */
+.interaction-overlay canvas {
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.3);
+  cursor: crosshair;
+  max-width: 100%;
+  touch-action: none;
+}
+
+/* ─── DRAG SORT ───────── */
+.sort-items-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.sort-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.sort-item:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.4);
+  transform: translateY(-2px);
+}
+
+.sort-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.sort-item-icon {
+  font-size: 1.5rem;
+}
+
+.sort-item-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.sort-item-desc {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+}
+
+.sort-zones {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sort-zone {
+  min-width: 160px;
+  min-height: 100px;
+  padding: 1rem;
+  border: 2px dashed rgba(255,255,255,0.25);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sort-zone.accepting {
+  border-color: rgba(78, 205, 196, 0.6);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.zone-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.zone-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.zone-placed-item {
+  font-size: 0.85rem;
+  color: #fff;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255,255,255,0.15);
+  border-radius: 6px;
+}
+
+/* ─── ASSEMBLE ───────── */
+.assemble-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.assemble-piece {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.assemble-piece:hover {
+  background: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+}
+
+.assemble-piece.dragging {
+  opacity: 0.5;
+}
+
+.piece-icon {
+  font-size: 1.2rem;
+}
+
+.piece-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.assemble-slots {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.assemble-slot {
+  min-width: 120px;
+  min-height: 50px;
+  padding: 0.5rem 0.75rem;
+  border: 2px dashed rgba(255,255,255,0.25);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: #fff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.assemble-slot.filled {
+  border-style: solid;
+  border-color: rgba(76, 175, 80, 0.5);
+  background: rgba(76, 175, 80, 0.15);
+}
+
+.assemble-slot.accepting {
+  border-color: rgba(78, 205, 196, 0.6);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.slot-placeholder {
+  color: rgba(255,255,255,0.3);
+  font-size: 0.75rem;
+}
+
+/* ─── HOLD CHARGE ───────── */
+.charge-button {
+  width: 120px;
+  height: 180px;
+  border-radius: 16px;
+  border: 3px solid rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.charge-button.holding {
+  border-color: rgba(255,255,255,0.6);
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255, 107, 53, 0.4);
+}
+
+.charge-button.charged {
+  border-color: rgba(76, 175, 80, 0.6);
+  box-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
+}
+
+.charge-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height 0.05s linear;
+  opacity: 0.6;
+}
+
+.charge-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.charge-percent {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  z-index: 1;
+}
+
+/* ─── SELECT HOTSPOT ───────── */
+.hotspot-container {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  height: 300px;
+}
+
+.hotspot-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 2;
+}
+
+.hotspot-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(78, 205, 196, 0.8);
+  border: 2px solid #fff;
+  box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+}
+
+.hotspot-marker.pulse .hotspot-dot {
+  animation: hotspotPulse 2s infinite;
+}
+
+.hotspot-marker.revealed .hotspot-dot {
+  background: rgba(76, 175, 80, 0.8);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+.hotspot-label {
+  font-size: 0.7rem;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.hotspot-info-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20, 20, 40, 0.95);
+  border: 1px solid rgba(78, 205, 196, 0.4);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 300px;
+  z-index: 10;
+  animation: fadeIn 0.3s ease-out;
+  cursor: pointer;
+}
+
+.hotspot-info-card h4 {
+  color: #4ECDC4;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.hotspot-info-card p {
+  color: rgba(255,255,255,0.85);
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.dismiss-hint {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.hotspot-progress {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ─── Animations ───────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes hotspotPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(78, 205, 196, 0.5); }
+  50% { transform: scale(1.3); box-shadow: 0 0 25px rgba(78, 205, 196, 0.8); }
+}
