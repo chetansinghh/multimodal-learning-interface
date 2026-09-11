@@ -5,12 +5,25 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, '../data');
+// Determine writable directory (/tmp on Vercel/Serverless, or ../data locally)
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DATA_DIR = isVercel ? '/tmp' : path.join(__dirname, '../data');
 const DB_FILE = path.join(DATA_DIR, 'central_store.json');
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+let memoryStore = {
+  sessions: [],
+  events: [],
+  assessments: [],
+  participants: []
+};
+
+// Safely attempt directory creation without crashing on read-only environments
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('FileSystem directory creation skipped (read-only environment):', e.message);
 }
 
 // Initial DB schema
@@ -21,27 +34,27 @@ const initialDb = {
   participants: []
 };
 
-// Load DB from disk
+// Load DB from disk or memory fallback
 function loadDb() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      saveDb(initialDb);
-      return initialDb;
+      return memoryStore;
     }
     const data = fs.readFileSync(DB_FILE, 'utf8');
     return JSON.parse(data);
   } catch (err) {
-    console.error('Error reading central DB file:', err);
-    return initialDb;
+    console.warn('Error reading central DB file, falling back to memory:', err.message);
+    return memoryStore;
   }
 }
 
-// Save DB to disk
+// Save DB to disk or memory fallback
 function saveDb(data) {
+  memoryStore = data;
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (err) {
-    console.error('Error saving central DB file:', err);
+    console.warn('FileSystem write skipped (read-only environment):', err.message);
   }
 }
 

@@ -10,6 +10,7 @@ import { loginRateLimiter, verifyAdminToken, verifySessionScope } from './middle
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'agy_multimodal_research_jwt_secret_token_key_2026_x89!';
 const EMAIL_MODE = process.env.VITE_EMAIL_MODE || 'dev';
@@ -175,6 +176,12 @@ app.post('/api/db/assessments', verifySessionScope, (req, res) => {
 app.get('/api/db/assessments', verifyAdminToken, (req, res) => {
   const assessments = centralDb.getAssessments();
   res.json(assessments);
+});
+
+// Global JSON error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
 if (process.env.NODE_ENV !== 'production') {
