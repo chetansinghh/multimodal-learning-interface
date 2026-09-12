@@ -86,6 +86,81 @@ export default function OnboardingDemo({ condition = 'C1', storyConfig, onComple
     if (!practiceSuccess) setGazeProgress(0);
   };
 
+  // Video canvas animation for C1
+  const videoCanvasRef = useRef(null);
+  const videoAnimRef = useRef(null);
+
+  useEffect(() => {
+    if (step === 'demo' && condition === 'C1') {
+      const canvas = videoCanvasRef.current;
+      if (!canvas) return;
+      canvas.width = 480;
+      canvas.height = 270;
+      const ctx = canvas.getContext('2d');
+      let t = 0;
+
+      const render = () => {
+        t += 0.03;
+        // Background gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bgGrad.addColorStop(0, '#0a192f');
+        bgGrad.addColorStop(1, '#1e3a8a');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Animated Sun
+        const sx = canvas.width * 0.8;
+        const sy = canvas.height * 0.25;
+        const sGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 45);
+        sGrad.addColorStop(0, 'rgba(255, 215, 0, 0.9)');
+        sGrad.addColorStop(0.6, 'rgba(255, 140, 0, 0.5)');
+        sGrad.addColorStop(1, 'rgba(255, 140, 0, 0)');
+        ctx.fillStyle = sGrad;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Water Waves
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height * 0.7);
+        for (let x = 0; x <= canvas.width; x += 10) {
+          ctx.lineTo(x, canvas.height * 0.7 + Math.sin(x * 0.03 + t * 2) * 6);
+        }
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.fill();
+
+        // Floating Water Droplet (Sample Video Object)
+        const dx = canvas.width * 0.4 + Math.sin(t) * 40;
+        const dy = canvas.height * 0.5 + Math.cos(t * 1.5) * 15;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(dx, dy, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(dx - 4, dy - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Overlay Badge
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(10, 10, 210, 26);
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 12px Inter, sans-serif';
+        ctx.fillText('🎥 Sample Video Preview Active', 18, 27);
+
+        videoAnimRef.current = requestAnimationFrame(render);
+      };
+
+      render();
+
+      return () => {
+        if (videoAnimRef.current) cancelAnimationFrame(videoAnimRef.current);
+      };
+    }
+  }, [step, condition]);
+
   return (
     <div className="onboarding-overlay">
       <div className="onboarding-card">
@@ -117,19 +192,21 @@ export default function OnboardingDemo({ condition = 'C1', storyConfig, onComple
           <div className="onboarding-body">
             <h3>Practice Demo — {condition === 'C1' ? 'Simple Video' : condition === 'C2' ? '3D Spatial Audio' : condition === 'C3' ? 'Interactive Actions' : 'VR 360° Immersion'}</h3>
             <p className="demo-desc">
-              {condition === 'C1' && 'This baseline condition plays plain video and stereo audio. Click play below to test your audio.'}
+              {condition === 'C1' && 'Watch the sample video preview canvas and listen to the audio stream below to confirm your display and sound are clear.'}
               {condition === 'C2' && 'Listen as the sound source moves in 3D space around your ears. Notice how the sound direction changes.'}
               {condition === 'C3' && 'Practice performing an interactive action on the dummy object below before starting the real story.'}
               {condition === 'C4' && 'Practice gazing at the dummy 3D hotspot target below to activate it.'}
             </p>
 
-            {/* C1 / C2 Demo Canvas */}
-            {(condition === 'C1' || condition === 'C2') && (
+            {/* C1 Simple Video Practice */}
+            {condition === 'C1' && (
               <div className="demo-stage">
-                <div className="demo-audio-visualizer">
-                  <div className="sound-pulse" style={{ opacity: panningActive ? 0.9 : 0.4 }} />
+                <div className="demo-video-box">
+                  <canvas ref={videoCanvasRef} className="demo-video-canvas" />
+                </div>
+                <div className="demo-audio-visualizer compact">
                   <span className="demo-icon">🎧</span>
-                  <p>Audio Practice Stream Active</p>
+                  <p>Audio Stream Active</p>
                 </div>
                 <button
                   className="demo-action-btn"
@@ -140,6 +217,27 @@ export default function OnboardingDemo({ condition = 'C1', storyConfig, onComple
                   }}
                 >
                   ✓ Confirm Audio & Video are Clear
+                </button>
+              </div>
+            )}
+
+            {/* C2 3D Spatial Audio Practice */}
+            {condition === 'C2' && (
+              <div className="demo-stage">
+                <div className="demo-audio-visualizer">
+                  <div className="sound-pulse" style={{ opacity: panningActive ? 0.9 : 0.4 }} />
+                  <span className="demo-icon">🎧</span>
+                  <p>3D Spatial Audio Stream Active</p>
+                </div>
+                <button
+                  className="demo-action-btn"
+                  onClick={() => {
+                    setDemoCompleted(true);
+                    setPracticeSuccess(true);
+                    audioSynth.playSFX('success');
+                  }}
+                >
+                  ✓ Confirm Spatial Audio is Clear
                 </button>
               </div>
             )}

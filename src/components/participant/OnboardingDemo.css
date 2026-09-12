@@ -236,3 +236,29 @@
   box-shadow: none;
   cursor: not-allowed;
 }
+
+/* ─── C1 Demo Video Box ───────── */
+.demo-video-box {
+  width: 100%;
+  max-width: 440px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.demo-video-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.demo-audio-visualizer.compact {
+  flex-direction: row;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.demo-audio-visualizer.compact .demo-icon {
+  font-size: 1.4rem;
+}
