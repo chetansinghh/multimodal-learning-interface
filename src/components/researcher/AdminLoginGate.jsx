@@ -1,91 +1,46 @@
-// AdminLoginGate.jsx — Locks the Researcher Console behind server-side authentication
-import React, { useState } from 'react';
-import authService from '../../services/AuthService';
+// AdminLoginGate.jsx — Guards Researcher Console behind admin role check via AuthContext
+import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 import './AdminLoginGate.css';
 
-export default function AdminLoginGate({ children, onLoginSuccess }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isAuthenticated());
-  const [adminId, setAdminId] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+export default function AdminLoginGate({ children }) {
+  const { role, user, isLoggedIn } = useAuth();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!adminId.trim() || !password.trim()) {
-      setError('Please fill in both fields.');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const res = await authService.login(adminId, password);
-    setLoading(false);
-
-    if (res.success) {
-      setIsAuthenticated(true);
-      if (onLoginSuccess) onLoginSuccess();
-    } else {
-      setError(res.error);
-    }
-  };
-
-  const handleLogout = () => {
-    authService.logout();
-    setIsAuthenticated(false);
-  };
-
-  if (!isAuthenticated) {
+  if (!isLoggedIn) {
     return (
       <div className="login-gate-overlay">
         <div className="login-card">
           <div className="login-icon">🔒</div>
-          <h2>Researcher Console Access</h2>
-          <p className="login-subtitle">Please sign in with administrator credentials to view study analytics and export data.</p>
-
-          <form onSubmit={handleLogin} className="login-form">
-            {error && <div className="login-error">{error}</div>}
-
-            <div className="form-group">
-              <label htmlFor="adminId">Admin ID</label>
-              <input
-                id="adminId"
-                type="text"
-                value={adminId}
-                onChange={(e) => setAdminId(e.target.value)}
-                placeholder="Enter Admin ID"
-                autoFocus
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter Password"
-              />
-            </div>
-
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Authenticating…' : '🔑 Sign In to Console'}
-            </button>
-          </form>
+          <h2>Authentication Required</h2>
+          <p className="login-subtitle">
+            Please log in from the home page to access the Researcher Console.
+          </p>
+          <a href="/" className="login-btn" style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+            ← Go to Login
+          </a>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="authenticated-wrapper">
-      <div className="admin-status-bar">
-        <span className="admin-user-tag">👤 Signed in as <strong>{authService.getAdminId()}</strong></span>
-        <button className="logout-btn" onClick={handleLogout}>🚪 Logout</button>
+  if (role !== 'admin') {
+    return (
+      <div className="login-gate-overlay">
+        <div className="login-card">
+          <div className="login-icon">⛔</div>
+          <h2>Access Denied</h2>
+          <p className="login-subtitle">
+            Your account (<strong>{user?.email}</strong>) does not have researcher console access.
+            Please contact your study administrator.
+          </p>
+          <a href="/" className="login-btn" style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+            ← Return Home
+          </a>
+        </div>
       </div>
-      {children}
-    </div>
-  );
+    );
+  }
+
+  return children;
 }
+

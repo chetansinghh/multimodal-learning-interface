@@ -15,6 +15,15 @@ export const loginRateLimiter = rateLimit({
   message: { error: 'Too many login attempts. Please try again after 15 minutes.' }
 });
 
+/** Rate-limiter for OTP verify endpoint — forces all guessing through live server */
+export const otpVerifyRateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10-minute window (matches OTP lifetime)
+  max: 10,                   // max 10 verify attempts per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many verification attempts. Please wait before trying again.' }
+});
+
 /** Verify Admin JWT Token for researcher-only endpoints */
 export function verifyAdminToken(req, res, next) {
   const authHeader = req.headers['authorization'];

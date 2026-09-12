@@ -1,10 +1,49 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import ParticipantFlow from './components/participant/ParticipantFlow';
 import ResearcherDashboard from './components/researcher/ResearcherDashboard';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
 
+// ─── Header Avatar Dropdown ────────────────────────────────────────────
+function UserAvatar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  if (!user) return null;
+
+  const initials = (user.name || user.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const roleLabel = user.role === 'admin' ? '🔬 Researcher' : '🎓 Participant';
+
+  return (
+    <div className="user-avatar-wrap" ref={ref}>
+      <button className="user-avatar-btn" onClick={() => setOpen(o => !o)} title={user.name || user.email}>
+        <span className="avatar-initials">{initials}</span>
+      </button>
+      {open && (
+        <div className="avatar-dropdown">
+          <div className="dropdown-name">{user.name || user.email}</div>
+          <div className="dropdown-role">{roleLabel}</div>
+          <div className="dropdown-divider" />
+          <button className="dropdown-logout" onClick={() => { logout(); navigate('/'); setOpen(false); }}>
+            Sign Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Global Header ────────────────────────────────────────────
 function GlobalHeader() {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
@@ -22,15 +61,16 @@ function GlobalHeader() {
           <Link to="/participant" className={`nav-link ${location.pathname === '/participant' ? 'active' : ''}`}>Participant</Link>
           <Link to="/researcher" className={`nav-link ${location.pathname === '/researcher' ? 'active' : ''}`}>Researcher Console</Link>
         </nav>
-
         <button className="theme-toggle-btn" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
           {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
         </button>
+        <UserAvatar />
       </div>
     </header>
   );
 }
 
+// ─── Landing Page ────────────────────────────────────────────
 function LandingPage() {
   return (
     <div className="landing-page">
@@ -135,8 +175,9 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
-

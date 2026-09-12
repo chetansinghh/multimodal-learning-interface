@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { eventLogger } from '../../services/EventLogger';
 import { sessionClock } from '../../services/SessionClock';
 import { loadStoryConfig, CONDITIONS } from '../../services/StoryLoader';
+import { useAuth } from '../../context/AuthContext';
 import SimpleVideoPlayer from '../player/SimpleVideoPlayer';
 import SpatialAudioPlayer from '../player/SpatialAudioPlayer';
 import InteractivePlayer from '../player/InteractivePlayer';
@@ -11,6 +12,7 @@ import AssessmentEngine from '../assessment/AssessmentEngine';
 import ParticipantSignupModal from './ParticipantSignupModal';
 import OnboardingDemo from './OnboardingDemo';
 import './ParticipantFlow.css';
+
 
 const PHASES = ['setup', 'instructions', 'experience', 'assessment', 'complete'];
 

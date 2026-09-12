@@ -1,16 +1,19 @@
-// ParticipantSignupModal.jsx — Form for participant registration and email OTP verification
+// ParticipantSignupModal.jsx — Unified email OTP signup for both participants and admins
 import React, { useState } from 'react';
 import participantAuthService from '../../services/ParticipantAuthService';
+import { useAuth } from '../../context/AuthContext';
 import './ParticipantSignupModal.css';
 
 export default function ParticipantSignupModal({ onComplete, initialCondition = 'C1', sessionId }) {
+  const { login } = useAuth();
   const [step, setStep] = useState('register'); // 'register' | 'otp'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [ageGroup, setAgeGroup] = useState('18-24');
   const [condition, setCondition] = useState(initialCondition);
   const [otpCode, setOtpCode] = useState('');
-
+  const [otpToken, setOtpToken] = useState(null);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [devOtpCode, setDevOtpCode] = useState(null);
@@ -21,7 +24,6 @@ export default function ParticipantSignupModal({ onComplete, initialCondition = 
       setError('Please provide your name and email address.');
       return;
     }
-
     setLoading(true);
     setError(null);
 
@@ -29,9 +31,8 @@ export default function ParticipantSignupModal({ onComplete, initialCondition = 
     setLoading(false);
 
     if (res.success) {
-      if (res.code) {
-        setDevOtpCode(res.code);
-      }
+      setOtpToken(res.otpToken);
+      if (res.code) setDevOtpCode(res.code); // dev mode only
       setStep('otp');
     } else {
       setError(res.error);
@@ -44,22 +45,37 @@ export default function ParticipantSignupModal({ onComplete, initialCondition = 
       setError('Please enter the 6-digit verification code.');
       return;
     }
-
     setLoading(true);
     setError(null);
 
-    const res = await participantAuthService.verifyOTP(email, otpCode, sessionId);
+    const res = await participantAuthService.verifyOTP(otpToken, otpCode, sessionId);
     setLoading(false);
 
     if (res.success) {
+      // Persist auth in global context
+      login({
+        token: res.token,
+        user: {
+          name: res.identity?.name || name,
+          email: res.identity?.email || email,
+          participant_id: res.participant_id,
+          role: res.role,
+          age_group: res.identity?.age_group || ageGroup,
+          condition: res.identity?.condition || condition,
+        }
+      });
       onComplete({
         participant_id: res.participant_id,
         identity: res.identity,
-        condition,
-        token: res.token
+        condition: res.identity?.condition || condition,
+        token: res.token,
+        role: res.role,
       });
     } else {
       setError(res.error);
+      // Update otpToken with new attempt count from server
+      if (res.newOtpToken) setOtpToken(res.newOtpToken);
+      if (typeof res.attemptsRemaining === 'number') setAttemptsRemaining(res.attemptsRemaining);
     }
   };
 
@@ -165,13 +181,16 @@ export default function ParticipantSignupModal({ onComplete, initialCondition = 
                 className="otp-input"
                 autoFocus
               />
+              {attemptsRemaining < 5 && attemptsRemaining > 0 && (
+                <p className="attempts-hint">⚠️ {attemptsRemaining} attempt{attemptsRemaining === 1 ? '' : 's'} remaining before you need to request a new code.</p>
+              )}
             </div>
 
             <button type="submit" className="submit-btn" disabled={loading}>
               {loading ? 'Verifying…' : '✅ Verify & Begin Study'}
             </button>
 
-            <button type="button" className="back-link" onClick={() => setStep('register')}>
+            <button type="button" className="back-link" onClick={() => { setStep('register'); setError(null); setOtpToken(null); setAttemptsRemaining(5); }}>
               ← Change Email or Details
             </button>
           </form>
