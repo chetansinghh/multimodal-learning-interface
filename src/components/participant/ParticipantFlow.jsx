@@ -18,16 +18,16 @@ const PHASES = ['setup', 'instructions', 'experience', 'assessment', 'complete']
 
 export default function ParticipantFlow() {
   const { user, isLoggedIn, role } = useAuth();
-  const [phase, setPhase] = useState('setup');
+  const [phase, setPhase] = useState('setup'); // 'setup' | 'instructions' | 'experience' | 'assessment' | 'complete'
   const [participantId, setParticipantId] = useState('');
   const [participantIdentity, setParticipantIdentity] = useState(null);
   const [sessionId] = useState(() => uuidv4());
+  const [ageGroup, setAgeGroup] = useState('18-24');
   const [condition, setCondition] = useState('C1');
   const [storyUrl, setStoryUrl] = useState('/stories/water_cycle_v1.json');
   const [storyConfig, setStoryConfig] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [initializedFromAuth, setInitializedFromAuth] = useState(false);
 
   // Load story config
   const loadStory = useCallback(async () => {
@@ -53,17 +53,23 @@ export default function ParticipantFlow() {
     return (hash >>> 0).toString(16);
   };
 
-  /** Triggered when Participant completes OTP Signup */
-  const handleSignupComplete = useCallback(async (signupData) => {
-    const pid = signupData.participant_id;
-    const cond = signupData.condition || condition;
+  /** Triggered when Participant completes Setup (Age Bracket & Condition selection) */
+  const handleStartSession = useCallback(async (e) => {
+    if (e) e.preventDefault();
+    const pid = user?.participant_id || `P_${user?.name?.replace(/\s+/g, '') || 'user'}_${Date.now().toString().slice(-4)}`;
+    const identity = {
+      name: user?.name || 'Participant',
+      email: user?.email || '',
+      age_group: ageGroup,
+      condition,
+    };
+    
     setParticipantId(pid);
-    setParticipantIdentity(signupData.identity);
-    setCondition(cond);
+    setParticipantIdentity(identity);
 
     await eventLogger.init();
     await loadStory();
-    eventLogger.startSession(pid, sessionId, cond);
+    eventLogger.startSession(pid, sessionId, condition);
     sessionClock.start();
     eventLogger.log('VIDEO_START', { action: 'session_begin' });
 
@@ -73,7 +79,7 @@ export default function ParticipantFlow() {
       study_version: loadedConfig.version || '1.0',
       story_id: loadedConfig.story_id,
       story_version: loadedConfig.version || '1.0',
-      condition: cond,
+      condition,
       condition_config_version: '1.0',
       segment_layout_hash: computeSegmentLayoutHash(loadedConfig.segments),
     };
@@ -81,10 +87,10 @@ export default function ParticipantFlow() {
     const sessionPayload = {
       session_id: sessionId,
       participant_id: pid,
-      participant_name: signupData.identity?.name || '',
-      participant_email: signupData.identity?.email || '',
-      participant_age: signupData.identity?.age_group || '',
-      condition: cond,
+      participant_name: identity.name,
+      participant_email: identity.email,
+      participant_age: ageGroup,
+      condition,
       story_id: storyUrl,
       start_time: new Date().toISOString(),
       status: 'in_progress',
@@ -95,26 +101,16 @@ export default function ParticipantFlow() {
     await eventLogger.saveSession(sessionPayload);
 
     setPhase('instructions');
-  }, [sessionId, condition, storyUrl, loadStory]);
+  }, [user, ageGroup, condition, sessionId, storyUrl, loadStory]);
 
-  // Auto-skip signup modal if already logged in via AuthContext
-  useEffect(() => {
-    if (isLoggedIn && user && role === 'participant' && !initializedFromAuth) {
-      setInitializedFromAuth(true);
-      const pid = user.participant_id || `P_${user.name || 'user'}`;
-      const cond = user.condition || condition;
-      handleSignupComplete({
-        participant_id: pid,
-        condition: cond,
-        identity: {
-          name: user.name,
-          email: user.email,
-          age_group: user.age_group,
-          condition: cond,
-        }
-      });
-    }
-  }, [isLoggedIn, user, role, initializedFromAuth, condition, handleSignupComplete]);
+  if (!isLoggedIn) {
+    return (
+      <ParticipantSignupModal
+        sessionId={sessionId}
+        onComplete={() => {}}
+      />
+    );
+  }
 
   if (isLoggedIn && role === 'admin') {
     return (
@@ -176,11 +172,43 @@ export default function ParticipantFlow() {
   return (
     <div className="participant-flow">
       {phase === 'setup' && (
-        <ParticipantSignupModal
-          sessionId={sessionId}
-          initialCondition={condition}
-          onComplete={handleSignupComplete}
-        />
+        <div className="signup-modal-overlay">
+          <div className="signup-modal-card">
+            <div className="signup-modal-header">
+              <div className="modal-icon">🎓</div>
+              <h2>Participant Study Setup</h2>
+              <p>Welcome <strong>{user?.name || user?.email}</strong>! Please configure your study session parameters.</p>
+            </div>
+
+            <form onSubmit={handleStartSession} className="signup-form">
+              <div className="form-row">
+                <div className="form-group half">
+                  <label>Age Bracket</label>
+                  <select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
+                    <option value="18-24">18 – 24</option>
+                    <option value="25-34">25 – 34</option>
+                    <option value="35-44">35 – 44</option>
+                    <option value="45+">45+</option>
+                  </select>
+                </div>
+
+                <div className="form-group half">
+                  <label>Assigned Condition</label>
+                  <select value={condition} onChange={(e) => setCondition(e.target.value)}>
+                    <option value="C1">C1 – Simple Video</option>
+                    <option value="C2">C2 – Spatial Audio</option>
+                    <option value="C3">C3 – Interactive</option>
+                    <option value="C4">C4 – VR Immersive</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" className="submit-btn">
+                🚀 Launch Study Session
+              </button>
+            </form>
+          </div>
+        </div>
       )}
 
       {phase === 'instructions' && (
