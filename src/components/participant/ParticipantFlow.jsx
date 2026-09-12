@@ -17,6 +17,7 @@ import './ParticipantFlow.css';
 const PHASES = ['setup', 'instructions', 'experience', 'assessment', 'complete'];
 
 export default function ParticipantFlow() {
+  const { user, isLoggedIn, role } = useAuth();
   const [phase, setPhase] = useState('setup');
   const [participantId, setParticipantId] = useState('');
   const [participantIdentity, setParticipantIdentity] = useState(null);
@@ -26,6 +27,7 @@ export default function ParticipantFlow() {
   const [storyConfig, setStoryConfig] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [initializedFromAuth, setInitializedFromAuth] = useState(false);
 
   // Load story config
   const loadStory = useCallback(async () => {
@@ -94,6 +96,42 @@ export default function ParticipantFlow() {
 
     setPhase('instructions');
   }, [sessionId, condition, storyUrl, loadStory]);
+
+  // Auto-skip signup modal if already logged in via AuthContext
+  useEffect(() => {
+    if (isLoggedIn && user && role === 'participant' && !initializedFromAuth) {
+      setInitializedFromAuth(true);
+      const pid = user.participant_id || `P_${user.name || 'user'}`;
+      const cond = user.condition || condition;
+      handleSignupComplete({
+        participant_id: pid,
+        condition: cond,
+        identity: {
+          name: user.name,
+          email: user.email,
+          age_group: user.age_group,
+          condition: cond,
+        }
+      });
+    }
+  }, [isLoggedIn, user, role, initializedFromAuth, condition, handleSignupComplete]);
+
+  if (isLoggedIn && role === 'admin') {
+    return (
+      <div className="login-gate-overlay">
+        <div className="login-card">
+          <div className="login-icon">🔬</div>
+          <h2>Researcher Account Active</h2>
+          <p className="login-subtitle">
+            You are logged in as a researcher (<strong>{user?.email}</strong>). Please access the Researcher Console.
+          </p>
+          <a href="/researcher" className="login-btn" style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+            Go to Researcher Console →
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const beginExperience = () => {
     setPhase('experience');

@@ -473,6 +473,33 @@
   color: var(--text-muted);
 }
 
+/* ─── Homepage Login Section & Single Card ───────── */
+.homepage-login-section {
+  width: 100%;
+  max-width: 460px;
+  margin: 1.5rem auto 2.5rem;
+}
+
+.homepage-login-section .signup-modal-overlay {
+  position: static;
+  background: transparent;
+  backdrop-filter: none;
+  padding: 0;
+  z-index: 1;
+}
+
+.homepage-login-section .signup-modal-card {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+}
+
+.landing-card.single-card {
+  max-width: 600px;
+  margin: 0 auto;
+  grid-column: 1 / -1;
+  text-align: left;
+}
+
 /* ─── Responsive ───────── */
 @media (max-width: 640px) {
   .hero-title { font-size: 2rem; }

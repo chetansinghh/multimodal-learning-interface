@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import ParticipantFlow from './components/participant/ParticipantFlow';
 import ResearcherDashboard from './components/researcher/ResearcherDashboard';
+import AdminLoginGate from './components/researcher/AdminLoginGate';
+import ParticipantSignupModal from './components/participant/ParticipantSignupModal';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
@@ -46,6 +48,7 @@ function UserAvatar() {
 // ─── Global Header ────────────────────────────────────────────
 function GlobalHeader() {
   const { theme, toggleTheme } = useTheme();
+  const { isLoggedIn, role } = useAuth();
   const location = useLocation();
 
   return (
@@ -58,9 +61,18 @@ function GlobalHeader() {
       <div className="header-actions">
         <nav className="header-nav-links">
           <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Home</Link>
-          <Link to="/participant" className={`nav-link ${location.pathname === '/participant' ? 'active' : ''}`}>Participant</Link>
-          <Link to="/researcher" className={`nav-link ${location.pathname === '/researcher' ? 'active' : ''}`}>Researcher Console</Link>
+          
+          {/* Show Participant tab ONLY when logged in as participant */}
+          {isLoggedIn && role === 'participant' && (
+            <Link to="/participant" className={`nav-link ${location.pathname === '/participant' ? 'active' : ''}`}>Participant Portal</Link>
+          )}
+
+          {/* Show Researcher Console tab ONLY when logged in as admin */}
+          {isLoggedIn && role === 'admin' && (
+            <Link to="/researcher" className={`nav-link ${location.pathname === '/researcher' ? 'active' : ''}`}>Researcher Console</Link>
+          )}
         </nav>
+        
         <button className="theme-toggle-btn" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
           {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
         </button>
@@ -72,6 +84,9 @@ function GlobalHeader() {
 
 // ─── Landing Page ────────────────────────────────────────────
 function LandingPage() {
+  const { isLoggedIn, role, user } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div className="landing-page">
       <div className="landing-bg" />
@@ -86,32 +101,56 @@ function LandingPage() {
             A story-agnostic research platform supporting 4 experience conditions — Simple Video, Spatial Audio, Interactive, and VR Immersive — with integrated assessment, email OTP login, and server-side data sync.
           </p>
 
-          <div className="landing-cards">
-            <Link to="/participant" className="landing-card participant-card">
-              <div className="card-icon">🎓</div>
-              <h3>Participant Entry</h3>
-              <p>Start a study session — register with email OTP, complete the guided demo, and view the story experience.</p>
-              <div className="card-conditions">
-                <span className="cond-chip">C1 Video</span>
-                <span className="cond-chip">C2 Audio</span>
-                <span className="cond-chip">C3 Interactive</span>
-                <span className="cond-chip">C4 VR</span>
-              </div>
-              <span className="card-arrow">→</span>
-            </Link>
+          {/* 1. NOT LOGGED IN: Show unified email OTP login modal right on homepage */}
+          {!isLoggedIn && (
+            <div className="homepage-login-section">
+              <ParticipantSignupModal
+                sessionId="home_session"
+                onComplete={(data) => {
+                  if (data.role === 'admin') {
+                    navigate('/researcher');
+                  } else {
+                    navigate('/participant');
+                  }
+                }}
+              />
+            </div>
+          )}
 
-            <Link to="/researcher" className="landing-card researcher-card">
-              <div className="card-icon">🔬</div>
-              <h3>Researcher Console</h3>
-              <p>Study dashboard, server auth, multi-device analytics, story config management, and CSV exports.</p>
-              <div className="card-features">
-                <span className="feat-chip">🔒 Admin Auth</span>
-                <span className="feat-chip">📊 Analytics</span>
-                <span className="feat-chip">💾 Anonymized CSV</span>
-              </div>
-              <span className="card-arrow">→</span>
-            </Link>
-          </div>
+          {/* 2. LOGGED IN AS PARTICIPANT: Show ONLY Participant Entry Card */}
+          {isLoggedIn && role === 'participant' && (
+            <div className="landing-cards">
+              <Link to="/participant" className="landing-card participant-card single-card">
+                <div className="card-icon">🎓</div>
+                <h3>Participant Portal — Welcome {user?.name || user?.email}!</h3>
+                <p>You are logged in as a study participant. Click below to launch your study session experience.</p>
+                <div className="card-conditions">
+                  <span className="cond-chip">C1 Video</span>
+                  <span className="cond-chip">C2 Audio</span>
+                  <span className="cond-chip">C3 Interactive</span>
+                  <span className="cond-chip">C4 VR</span>
+                </div>
+                <span className="card-arrow">▶ Continue Experience →</span>
+              </Link>
+            </div>
+          )}
+
+          {/* 3. LOGGED IN AS ADMIN: Show ONLY Researcher Console Card */}
+          {isLoggedIn && role === 'admin' && (
+            <div className="landing-cards">
+              <Link to="/researcher" className="landing-card researcher-card single-card">
+                <div className="card-icon">🔬</div>
+                <h3>Researcher Console — Welcome Admin ({user?.email})</h3>
+                <p>Manage study sessions, view real-time participant analytics, and export dataset CSVs.</p>
+                <div className="card-features">
+                  <span className="feat-chip">🔒 Admin Auth</span>
+                  <span className="feat-chip">📊 Analytics</span>
+                  <span className="feat-chip">💾 Anonymized CSV</span>
+                </div>
+                <span className="card-arrow">🔬 Open Researcher Console →</span>
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="landing-stories">
@@ -166,7 +205,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/participant" element={<ParticipantFlow />} />
-        <Route path="/researcher" element={<ResearcherDashboard />} />
+        <Route path="/researcher" element={<AdminLoginGate><ResearcherDashboard /></AdminLoginGate>} />
       </Routes>
     </BrowserRouter>
   );
