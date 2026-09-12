@@ -25,10 +25,12 @@ function hashCode(code) {
   return createHmac('sha256', OTP_HASH_SECRET).update(String(code)).digest('hex');
 }
 
-/** Determine role from email against ADMIN_EMAIL_ALLOWLIST env var */
+/** Determine role from email against ADMIN_EMAIL_ALLOWLIST env var or default admin emails */
 function resolveRole(email) {
+  const defaultAdmins = ['chetan24162@iiitd.ac.in', 'admin@example.com', 'your-admin-email@example.com'];
   const list = (process.env.ADMIN_EMAIL_ALLOWLIST || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  return list.includes(email.toLowerCase()) ? 'admin' : 'participant';
+  const allAdmins = [...defaultAdmins, ...list];
+  return allAdmins.includes(email.toLowerCase()) ? 'admin' : 'participant';
 }
 
 // ─── Health Check ────
