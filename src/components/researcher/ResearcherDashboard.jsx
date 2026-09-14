@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { eventLogger } from '../../services/EventLogger';
-import { AVAILABLE_STORIES, CONDITIONS, loadStoryConfig, validateStoryConfig, formatTime } from '../../services/StoryLoader';
+import { AVAILABLE_STORIES, CONDITIONS, loadStoryConfig, loadAvailableStories, validateStoryConfig, formatTime } from '../../services/StoryLoader';
 import { computeSessionMeasures } from '../../services/SessionMeasures';
 import authService from '../../services/AuthService';
 import AdminLoginGate from './AdminLoginGate';
@@ -21,12 +21,14 @@ function ResearcherDashboardContent() {
   const [assessments, setAssessments] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [storyConfigs, setStoryConfigs] = useState({});
+  const [availableStories, setAvailableStories] = useState(AVAILABLE_STORIES);
   const [uploadResult, setUploadResult] = useState(null);
   const fileInputRef = useRef(null);
 
   // Load data on mount
   useEffect(() => {
     loadData();
+    loadAvailableStories().then(setAvailableStories);
   }, []);
 
   const loadData = async () => {
@@ -321,7 +323,7 @@ function ResearcherDashboardContent() {
         <h2>Story Configurations</h2>
 
         <div className="stories-grid">
-          {AVAILABLE_STORIES.map(story => (
+          {availableStories.map(story => (
             <div key={story.id} className="story-card">
               <h3>{story.title}</h3>
               <p className="story-id">ID: {story.id}</p>

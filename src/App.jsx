@@ -8,6 +8,8 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
 
+import { loadAvailableStories } from './services/StoryLoader';
+
 // ─── Header Avatar Dropdown ────────────────────────────────────────────
 function UserAvatar() {
   const { user, logout } = useAuth();
@@ -86,6 +88,11 @@ function GlobalHeader() {
 function LandingPage() {
   const { isLoggedIn, role, user } = useAuth();
   const navigate = useNavigate();
+  const [stories, setStories] = useState([]);
+
+  useEffect(() => {
+    loadAvailableStories().then(setStories);
+  }, []);
 
   return (
     <div className="landing-page">
@@ -156,37 +163,23 @@ function LandingPage() {
         <div className="landing-stories">
           <h2>Available Stories</h2>
           <div className="story-preview-grid">
-            <div className="story-preview-card">
-              <div className="story-card-banner water-banner">
-                <span className="story-emoji">🌊</span>
-              </div>
-              <div className="story-card-body">
-                <h4>The Journey of a Water Droplet</h4>
-                <p>Water Cycle — 4 segments, 10 interactions, 8 assessment questions</p>
-                <div className="story-segments">
-                  <span style={{ background: '#FF6B35' }}>Evaporation</span>
-                  <span style={{ background: '#4ECDC4' }}>Condensation</span>
-                  <span style={{ background: '#45B7D1' }}>Precipitation</span>
-                  <span style={{ background: '#96CEB4' }}>Collection</span>
+            {stories.map(s => (
+              <div key={s.id} className="story-preview-card">
+                <div className={`story-card-banner ${s.banner_class || 'garden-banner'}`}>
+                  <span className="story-emoji">{s.emoji || '📖'}</span>
+                </div>
+                <div className="story-card-body">
+                  <h4>{s.title}</h4>
+                  <p>{s.subtitle || `${s.segments_count || 4} segments, ${s.interactions_count || 4} interactions, ${s.assessment_count || 4} assessment questions`}</p>
+                  <div className="story-segments">
+                    <span style={{ background: '#FF6B35' }}>Interactive</span>
+                    <span style={{ background: '#4ECDC4' }}>3D Audio</span>
+                    <span style={{ background: '#45B7D1' }}>VR 360°</span>
+                    <span style={{ background: '#96CEB4' }}>Video</span>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="story-preview-card">
-              <div className="story-card-banner leaf-banner">
-                <span className="story-emoji">🌿</span>
-              </div>
-              <div className="story-card-body">
-                <h4>The Leaf Factory</h4>
-                <p>Photosynthesis — 4 segments, 4 interactions, 4 assessment questions</p>
-                <div className="story-segments">
-                  <span style={{ background: '#FFD700' }}>Light</span>
-                  <span style={{ background: '#00CED1' }}>Water</span>
-                  <span style={{ background: '#32CD32' }}>Carbon</span>
-                  <span style={{ background: '#FF6347' }}>Sugar</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

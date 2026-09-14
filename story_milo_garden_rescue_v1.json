@@ -1,0 +1,147 @@
+{
+  "story_id": "milo_garden_rescue_v1",
+  "title": "Milo and the Little Garden Rescue",
+  "version": "1.0",
+  "duration_sec": 600,
+  "media": {
+    "video_flat": "path/to/milo_garden_flat.mp4",
+    "video_360": "path/to/milo_garden_360.mp4",
+    "audio_stereo": "path/to/milo_garden_stereo.mp3",
+    "audio_spatial": "path/to/milo_garden_spatial.wav",
+    "thumbnail": "path/to/milo_garden_thumb.png"
+  },
+  "segments": [
+    { "id": "seg1", "label": "The Drooping Flower", "start": "00:00", "end": "02:30" },
+    { "id": "seg2", "label": "Fixing the Watering Can", "start": "02:30", "end": "05:00" },
+    { "id": "seg3", "label": "The Mystery Sound & Grandma's Lesson", "start": "05:00", "end": "07:30" },
+    { "id": "seg4", "label": "Look, Think, Help", "start": "07:30", "end": "10:00" }
+  ],
+  "interactions": [
+    {
+      "id": "int_01",
+      "segment_id": "seg1",
+      "verb": "select_hotspot",
+      "trigger_time": "00:35",
+      "object_id": "drooping_flower_01",
+      "prompt": "Tap the flower that looks unwell",
+      "success_criteria": "correct flower selected among healthy ones nearby",
+      "logged_events": ["HOTSPOT_OPEN", "SELECT"]
+    },
+    {
+      "id": "int_02",
+      "segment_id": "seg1",
+      "verb": "hold_charge",
+      "trigger_time": "01:20",
+      "object_id": "watering_can",
+      "prompt": "Hold to tip the watering can and see what happens",
+      "success_criteria": "held long enough to reveal the leak animation",
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_03",
+      "segment_id": "seg2",
+      "verb": "trace_path",
+      "trigger_time": "03:00",
+      "object_id": "wooden_bridge",
+      "prompt": "Trace Milo's steps across the bridge",
+      "success_criteria": "path traced matches bridge template within tolerance",
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_04",
+      "segment_id": "seg2",
+      "verb": "drag_sort",
+      "trigger_time": "03:50",
+      "object_id": "toolbox_items",
+      "prompt": "Grandma's toolbox has tape, ribbon, and a cloth — drag the one that can fix a leak into the watering can",
+      "success_criteria": "blue tape dragged onto the watering can, not ribbon/cloth",
+      "logged_events": ["SELECT", "DESELECT", "OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_05",
+      "segment_id": "seg3",
+      "verb": "select_hotspot",
+      "trigger_time": "05:40",
+      "object_id": "flower_bed_three",
+      "prompt": "Look carefully — which of the three flowers needs help?",
+      "success_criteria": "yellow (drooping) flower selected, not pink or orange",
+      "logged_events": ["HOTSPOT_OPEN", "SELECT"]
+    },
+    {
+      "id": "int_06",
+      "segment_id": "seg3",
+      "verb": "trace_path",
+      "trigger_time": "06:30",
+      "object_id": "footprint_trail",
+      "prompt": "Follow the big footprints to find out who they belong to",
+      "success_criteria": "traced along turtle footprints to the clearing",
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_07",
+      "segment_id": "seg4",
+      "verb": "assemble",
+      "trigger_time": "08:15",
+      "object_id": "lesson_steps",
+      "prompt": "Put Grandma's advice in the right order: Look, Think, Help",
+      "success_criteria": "steps arranged in correct sequence (Look \u2192 Think \u2192 Help)",
+      "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"]
+    },
+    {
+      "id": "int_08",
+      "segment_id": "seg4",
+      "verb": "hold_charge",
+      "trigger_time": "09:10",
+      "object_id": "yellow_flower",
+      "prompt": "Hold to pour water on the soil and watch the flower recover",
+      "success_criteria": "held long enough for the flower-recovery animation to complete",
+      "logged_events": ["OBJECT_INTERACT"]
+    }
+  ],
+  "vr_scene": {
+    "environment": "inside_the_garden_at_golden_hour",
+    "hotspots": [
+      { "id": "h1", "position": [-1.2, 1.4, -2.0], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "drooping_flower_01" },
+      { "id": "h2", "position": [0.8, 0.9, -1.5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "watering_can" },
+      { "id": "h3", "position": [2.0, 1.0, -3.0], "trigger": "gaze_dwell_2000ms", "action": "VR_INTERACTION", "label": "toolbox_items" },
+      { "id": "h4", "position": [-0.5, 0.5, -2.5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "footprint_trail" },
+      { "id": "h5", "position": [1.5, 1.6, -4.0], "trigger": "gaze_dwell_2000ms", "action": "VR_INTERACTION", "label": "flower_bed_three" }
+    ]
+  },
+  "assessment": {
+    "recall_understand": [
+      {
+        "id": "Q1",
+        "prompt": "What was wrong with Milo's watering can?",
+        "type": "multiple_choice",
+        "options": ["It was too heavy", "It had a small hole and was leaking", "It was the wrong color", "It was empty"],
+        "correct": "It had a small hole and was leaking"
+      },
+      {
+        "id": "Q2",
+        "prompt": "According to Grandma Turtle, what three things does a garden need?",
+        "type": "multiple_choice",
+        "options": ["Sunlight, water, and care", "Soil, seeds, and rain", "Wind, shade, and music", "Tools, time, and patience"],
+        "correct": "Sunlight, water, and care"
+      }
+    ],
+    "apply": [
+      {
+        "id": "Q3",
+        "prompt": "If you saw a houseplant at home with drooping leaves, what should you do first — before immediately watering it?",
+        "type": "multiple_choice",
+        "options": ["Look carefully to figure out what's actually wrong first", "Pour as much water as possible right away", "Move it outside in the wind", "Ignore it, plants fix themselves"],
+        "correct": "Look carefully to figure out what's actually wrong first"
+      }
+    ],
+    "implement": [
+      {
+        "id": "Q4",
+        "prompt": "Arrange Grandma's advice in the correct order.",
+        "type": "ordering",
+        "items": ["Look", "Think", "Help"],
+        "correct_order": ["Look", "Think", "Help"]
+      }
+    ]
+  }
+}

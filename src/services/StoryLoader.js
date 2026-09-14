@@ -95,11 +95,25 @@ export function getVRSegmentConfig(vrScene, segmentId) {
   return vrScene.segments.find(s => s.segment_id === segmentId);
 }
 
-/** List of available story IDs (hardcoded for now — could be dynamic) */
+/** Fallback list of available stories */
 export const AVAILABLE_STORIES = [
   { id: 'water_cycle_v1', path: '/stories/water_cycle_v1.json', title: 'The Journey of a Water Droplet' },
   { id: 'photosynthesis_v1', path: '/stories/photosynthesis_v1.json', title: 'The Leaf Factory' },
+  { id: 'milo_garden_rescue_v1', path: '/stories/story_milo_garden_rescue_v1.json', title: 'Milo and the Little Garden Rescue' },
 ];
+
+/** Dynamically fetch auto-discovered available stories from manifest */
+export async function loadAvailableStories() {
+  try {
+    const res = await fetch('/stories/index.json');
+    if (!res.ok) throw new Error(`Failed to load index: ${res.statusText}`);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) return data;
+  } catch (err) {
+    console.warn('Could not fetch /stories/index.json, using fallback:', err);
+  }
+  return AVAILABLE_STORIES;
+}
 
 export const CONDITIONS = [
   { id: 'C1', label: 'C1 – Simple Video', description: 'Story as plain video + audio. No interaction.' },

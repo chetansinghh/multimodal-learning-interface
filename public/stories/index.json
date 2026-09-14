@@ -1,0 +1,46 @@
+[
+  {
+    "id": "water_cycle_v1",
+    "path": "/stories/water_cycle_v1.json",
+    "title": "The Journey of a Water Droplet",
+    "subtitle": "Understanding the Water Cycle",
+    "emoji": "🌊",
+    "banner_class": "water-banner",
+    "segments_count": 4,
+    "interactions_count": 10,
+    "assessment_count": 8
+  },
+  {
+    "id": "photosynthesis_v1",
+    "path": "/stories/photosynthesis_v1.json",
+    "title": "The Leaf Factory",
+    "subtitle": "How Plants Make Food from Sunlight",
+    "emoji": "🌿",
+    "banner_class": "leaf-banner",
+    "segments_count": 4,
+    "interactions_count": 4,
+    "assessment_count": 4
+  },
+  {
+    "id": "milo_garden_rescue_v1",
+    "path": "/stories/story_milo_garden_rescue_v1.json",
+    "title": "Milo and the Little Garden Rescue",
+    "subtitle": "A Gentle Storybook Adventure",
+    "emoji": "🐰",
+    "banner_class": "garden-banner",
+    "segments_count": 4,
+    "interactions_count": 8,
+    "assessment_count": 4
+  },
+  {
+    "id": "dummy_test_v1",
+    "path": "/stories/dummy_test_v1.json",
+    "title": "Auto-Discovered Test Story",
+    "subtitle": "Testing Zero-Code Story Auto-Discovery",
+    "emoji": "✨",
+    "banner_class": "test-banner",
+    "segments_count": 3,
+    "interactions_count": 2,
+    "assessment_count": 3
+  }
+]

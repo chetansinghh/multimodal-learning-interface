@@ -1,0 +1,267 @@
+{
+  "story_id": "milo_garden_rescue_v1",
+  "title": "Milo and the Little Garden Rescue",
+  "subtitle": "A Gentle Storybook Adventure",
+  "version": "1.0",
+  "duration_sec": 600,
+  "description": "Join Milo the rabbit, Pip the bird, and Grandma Turtle as they fix a leaking watering can and learn how to care for drooping flowers.",
+  "media": {
+    "video_flat": "/stories/media/milo_garden_flat.mp4",
+    "video_360": "/stories/media/milo_garden_360.mp4",
+    "audio_stereo": "/stories/media/milo_garden_stereo.mp3",
+    "audio_spatial": "/stories/media/milo_garden_spatial.mp3",
+    "thumbnail": "/stories/media/milo_garden_thumb.jpg"
+  },
+  "segments": [
+    { "id": "seg1", "label": "The Drooping Flower", "description": "Milo discovers a drooping flower next to a leaking watering can.", "start": "00:00", "end": "02:30", "color": "#FF6B35" },
+    { "id": "seg2", "label": "Fixing the Watering Can", "description": "Milo crosses the wooden bridge to Grandma's toolbox and patches the leak with tape.", "start": "02:30", "end": "05:00", "color": "#4ECDC4" },
+    { "id": "seg3", "label": "The Mystery Sound & Grandma's Lesson", "description": "Following footprints through the red gate, Milo learns the 3 rules of garden care.", "start": "05:00", "end": "07:30", "color": "#45B7D1" },
+    { "id": "seg4", "label": "Look, Think, Help", "description": "Applying Grandma's advice, Milo waters the flower and watches it recover at sunset.", "start": "07:30", "end": "10:00", "color": "#96CEB4" }
+  ],
+  "interactions": [
+    {
+      "id": "int_01",
+      "segment_id": "seg1",
+      "verb": "select_hotspot",
+      "trigger_time": "00:35",
+      "duration": 8,
+      "object_id": "drooping_flower_01",
+      "prompt": "Tap the flower that looks unwell",
+      "description": "Select the drooping flower among the healthy ones nearby.",
+      "success_criteria": "correct_flower_selected",
+      "config": {
+        "hotspots": [
+          { "id": "drooping_flower_01", "x": 0.35, "y": 0.55, "label": "Drooping Flower", "info": "This flower's leaves are hanging low — it needs help!" },
+          { "id": "healthy_flower_01", "x": 0.65, "y": 0.50, "label": "Healthy Pink Flower", "info": "Standing tall with bright petals." },
+          { "id": "healthy_flower_02", "x": 0.80, "y": 0.60, "label": "Healthy Orange Flower", "info": "Strong stem and fresh leaves." }
+        ]
+      },
+      "logged_events": ["HOTSPOT_OPEN", "SELECT"]
+    },
+    {
+      "id": "int_02",
+      "segment_id": "seg1",
+      "verb": "hold_charge",
+      "trigger_time": "01:20",
+      "duration": 6,
+      "object_id": "watering_can",
+      "prompt": "Hold to tip the watering can and see what happens",
+      "description": "Hold to tip the watering can and reveal the leak.",
+      "success_criteria": "meter_filled_100",
+      "config": {
+        "meter_label": "Tip Watering Can",
+        "fill_duration_ms": 3000,
+        "color": "#FFD700"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_03",
+      "segment_id": "seg2",
+      "verb": "trace_path",
+      "trigger_time": "03:00",
+      "duration": 8,
+      "object_id": "wooden_bridge",
+      "prompt": "Trace Milo's steps across the wooden bridge",
+      "description": "Follow the bridge path to reach Grandma's toolbox.",
+      "success_criteria": "path_match_70_percent",
+      "config": {
+        "path_points": [
+          { "x": 0.15, "y": 0.65 },
+          { "x": 0.32, "y": 0.60 },
+          { "x": 0.50, "y": 0.58 },
+          { "x": 0.68, "y": 0.62 },
+          { "x": 0.85, "y": 0.65 }
+        ],
+        "tolerance": 0.12,
+        "color": "#8B4513"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_04",
+      "segment_id": "seg2",
+      "verb": "drag_sort",
+      "trigger_time": "03:50",
+      "duration": 12,
+      "object_id": "toolbox_items",
+      "prompt": "Grandma's toolbox has tape, ribbon, and a cloth — drag the one that can fix a leak into the watering can",
+      "description": "Drag the blue tape to patch the hole.",
+      "success_criteria": "correct_item_dragged",
+      "config": {
+        "items": [
+          { "id": "tape", "label": "Blue Tape 🟦", "icon": "🩹", "description": "Waterproof tape — fixes leaks!" },
+          { "id": "ribbon", "label": "Ribbon 🎀", "icon": "🎀", "description": "Pretty ribbon, but won't stop water." },
+          { "id": "cloth", "label": "Cloth 🧹", "icon": "🧹", "description": "Soft cloth, but water passes through." }
+        ],
+        "zones": [
+          { "id": "watering_can_zone", "label": "Watering Can", "correct_items": ["tape"] }
+        ]
+      },
+      "logged_events": ["SELECT", "DESELECT", "OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_05",
+      "segment_id": "seg3",
+      "verb": "select_hotspot",
+      "trigger_time": "05:40",
+      "duration": 8,
+      "object_id": "flower_bed_three",
+      "prompt": "Look carefully — which of the three flowers needs help?",
+      "description": "Identify the flower in distress.",
+      "success_criteria": "correct_flower_selected",
+      "config": {
+        "hotspots": [
+          { "id": "yellow_drooping", "x": 0.40, "y": 0.50, "label": "Yellow Drooping Flower", "info": "Correct! This flower is drooping and needs care." },
+          { "id": "pink_healthy", "x": 0.20, "y": 0.55, "label": "Pink Healthy Flower", "info": "This flower is healthy and blooming." },
+          { "id": "orange_healthy", "x": 0.70, "y": 0.52, "label": "Orange Healthy Flower", "info": "This flower has plenty of sunlight and water." }
+        ]
+      },
+      "logged_events": ["HOTSPOT_OPEN", "SELECT"]
+    },
+    {
+      "id": "int_06",
+      "segment_id": "seg3",
+      "verb": "trace_path",
+      "trigger_time": "06:30",
+      "duration": 8,
+      "object_id": "footprint_trail",
+      "prompt": "Follow the big footprints to find out who they belong to",
+      "description": "Trace along the large turtle footprints toward the clearing.",
+      "success_criteria": "path_match_70_percent",
+      "config": {
+        "path_points": [
+          { "x": 0.20, "y": 0.75 },
+          { "x": 0.35, "y": 0.65 },
+          { "x": 0.50, "y": 0.55 },
+          { "x": 0.65, "y": 0.48 },
+          { "x": 0.80, "y": 0.45 }
+        ],
+        "tolerance": 0.12,
+        "color": "#228B22"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_07",
+      "segment_id": "seg4",
+      "verb": "assemble",
+      "trigger_time": "08:15",
+      "duration": 15,
+      "object_id": "lesson_steps",
+      "prompt": "Put Grandma's advice in the right order: Look, Think, Help",
+      "description": "Assemble the three steps in sequence.",
+      "success_criteria": "all_pieces_correct_order",
+      "config": {
+        "pieces": [
+          { "id": "look", "label": "Look 👀", "icon": "👀", "correct_slot": 0, "description": "1st: Look carefully at what the garden needs" },
+          { "id": "think", "label": "Think 🤔", "icon": "🤔", "correct_slot": 1, "description": "2nd: Think about how to solve the problem" },
+          { "id": "help", "label": "Help ❤️", "icon": "❤️", "correct_slot": 2, "description": "3rd: Take action to help" }
+        ],
+        "slots": [
+          { "id": "s0", "label": "Step 1", "x": 0.25, "y": 0.5 },
+          { "id": "s1", "label": "Step 2", "x": 0.50, "y": 0.5 },
+          { "id": "s2", "label": "Step 3", "x": 0.75, "y": 0.5 }
+        ]
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"]
+    },
+    {
+      "id": "int_08",
+      "segment_id": "seg4",
+      "verb": "hold_charge",
+      "trigger_time": "09:10",
+      "duration": 6,
+      "object_id": "yellow_flower",
+      "prompt": "Hold to pour water on the soil and watch the flower recover",
+      "description": "Hold to water the plant until it blooms again.",
+      "success_criteria": "meter_filled_100",
+      "config": {
+        "meter_label": "Pour Water",
+        "fill_duration_ms": 3000,
+        "color": "#38bdf8"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    }
+  ],
+  "vr_scene": {
+    "environment": "inside_the_garden_at_golden_hour",
+    "ambient_color": "#FF8C00",
+    "segments": [
+      { "segment_id": "seg1", "environment": "garden_path_morning", "description": "Morning light on the garden path", "ambient_audio": "birds_morning", "skybox_color": "#87CEEB" },
+      { "segment_id": "seg2", "environment": "bridge_and_stream", "description": "Wooden bridge over a gentle stream", "ambient_audio": "stream_water", "skybox_color": "#708090" },
+      { "segment_id": "seg3", "environment": "red_gate_clearing", "description": "Flower bed and red gate leading to Grandma's tree", "ambient_audio": "wind_chimes", "skybox_color": "#FF7F50" },
+      { "segment_id": "seg4", "environment": "garden_sunset", "description": "Golden-hour sunset as the flower stands tall", "ambient_audio": "crickets_evening", "skybox_color": "#FF4500" }
+    ],
+    "hotspots": [
+      { "id": "h1", "segment_id": "seg1", "position": [-1.2, 1.4, -2.0], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Drooping Flower", "info": "A drooping flower next to the path." },
+      { "id": "h2", "segment_id": "seg1", "position": [0.8, 0.9, -1.5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Leaking Watering Can", "info": "Milo's yellow watering can with a drip leak." },
+      { "id": "h3", "segment_id": "seg2", "position": [2.0, 1.0, -3.0], "trigger": "gaze_dwell_2000ms", "action": "VR_INTERACTION", "label": "Grandma's Toolbox", "info": "Toolbox containing waterproof tape, ribbon, and cloth." },
+      { "id": "h4", "segment_id": "seg3", "position": [-0.5, 0.5, -2.5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "Footprint Trail", "info": "Large turtle footprints leading through the red gate." },
+      { "id": "h5", "segment_id": "seg3", "position": [1.5, 1.6, -4.0], "trigger": "gaze_dwell_2000ms", "action": "VR_INTERACTION", "label": "Flower Bed Comparison", "info": "Compare the drooping yellow flower with the pink and orange ones." }
+    ]
+  },
+  "assessment": {
+    "instructions": "Answer the following questions about Milo's garden rescue story.",
+    "time_limit_per_question_sec": 60,
+    "levels": [
+      {
+        "level": "recall_understand",
+        "label": "Recall & Understand",
+        "description": "Test your recall of key story details.",
+        "items": [
+          {
+            "id": "Q1",
+            "type": "multiple_choice",
+            "question": "What was wrong with Milo's watering can?",
+            "options": ["It was too heavy", "It had a small hole and was leaking", "It was the wrong color", "It was empty"],
+            "correct_answer": 1,
+            "explanation": "Milo's watering can had a small hole and was leaking water."
+          },
+          {
+            "id": "Q2",
+            "type": "multiple_choice",
+            "question": "According to Grandma Turtle, what three things does a garden need?",
+            "options": ["Sunlight, water, and care", "Soil, seeds, and rain", "Wind, shade, and music", "Tools, time, and patience"],
+            "correct_answer": 0,
+            "explanation": "Grandma Turtle taught that a garden needs sunlight, water, and care."
+          }
+        ]
+      },
+      {
+        "level": "apply",
+        "label": "Apply",
+        "description": "Apply Grandma's lesson to new situations.",
+        "items": [
+          {
+            "id": "Q3",
+            "type": "multiple_choice",
+            "question": "If you saw a houseplant at home with drooping leaves, what should you do first — before immediately watering it?",
+            "options": ["Look carefully to figure out what's actually wrong first", "Pour as much water as possible right away", "Move it outside in the wind", "Ignore it, plants fix themselves"],
+            "correct_answer": 0,
+            "explanation": "Grandma Turtle's rule is to Look first to see what the plant actually needs."
+          }
+        ]
+      },
+      {
+        "level": "implement",
+        "label": "Implement",
+        "description": "Construct and order Grandma's advice.",
+        "items": [
+          {
+            "id": "Q4",
+            "type": "drag_order",
+            "question": "Arrange Grandma's advice in the correct order.",
+            "items_to_order": [
+              { "id": "Look", "label": "Look" },
+              { "id": "Think", "label": "Think" },
+              { "id": "Help", "label": "Help" }
+            ],
+            "correct_order": ["Look", "Think", "Help"],
+            "explanation": "Grandma's 3-step advice sequence is: Look → Think → Help."
+          }
+        ]
+      }
+    ]
+  }
+}

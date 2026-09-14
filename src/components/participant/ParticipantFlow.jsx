@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { eventLogger } from '../../services/EventLogger';
 import { sessionClock } from '../../services/SessionClock';
-import { loadStoryConfig, CONDITIONS } from '../../services/StoryLoader';
+import { loadStoryConfig, loadAvailableStories, CONDITIONS } from '../../services/StoryLoader';
 import { useAuth } from '../../context/AuthContext';
 import SimpleVideoPlayer from '../player/SimpleVideoPlayer';
 import SpatialAudioPlayer from '../player/SpatialAudioPlayer';
@@ -25,9 +25,19 @@ export default function ParticipantFlow() {
   const [ageGroup, setAgeGroup] = useState('18-24');
   const [condition, setCondition] = useState('C1');
   const [storyUrl, setStoryUrl] = useState('/stories/water_cycle_v1.json');
+  const [availableStories, setAvailableStories] = useState([]);
   const [storyConfig, setStoryConfig] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadAvailableStories().then(stories => {
+      setAvailableStories(stories);
+      if (stories.length > 0 && !storyUrl) {
+        setStoryUrl(stories[0].path);
+      }
+    });
+  }, []);
 
   // Load story config
   const loadStory = useCallback(async () => {
@@ -181,6 +191,15 @@ export default function ParticipantFlow() {
             </div>
 
             <form onSubmit={handleStartSession} className="signup-form">
+              <div className="form-group">
+                <label>Select Study Story</label>
+                <select value={storyUrl} onChange={(e) => setStoryUrl(e.target.value)}>
+                  {availableStories.map(s => (
+                    <option key={s.id} value={s.path}>{s.title}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="form-row">
                 <div className="form-group half">
                   <label>Age Bracket</label>
