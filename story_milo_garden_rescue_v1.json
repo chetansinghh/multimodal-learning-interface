@@ -84,7 +84,7 @@
       "trigger_time": "08:15",
       "object_id": "lesson_steps",
       "prompt": "Put Grandma's advice in the right order: Look, Think, Help",
-      "success_criteria": "steps arranged in correct sequence (Look \u2192 Think \u2192 Help)",
+      "success_criteria": "steps arranged in correct sequence (Look → Think → Help)",
       "logged_events": ["OBJECT_INTERACT", "SELECT", "DESELECT"]
     },
     {
@@ -108,6 +108,13 @@
       { "id": "h5", "position": [1.5, 1.6, -4.0], "trigger": "gaze_dwell_2000ms", "action": "VR_INTERACTION", "label": "flower_bed_three" }
     ]
   },
+  "complexity_profile": {
+    "characters": 3,
+    "key_objects": 8,
+    "sequential_events": 10,
+    "interaction_count": 8,
+    "target_level": "medium"
+  },
   "assessment": {
     "recall_understand": [
       {
@@ -123,6 +130,22 @@
         "type": "multiple_choice",
         "options": ["Sunlight, water, and care", "Soil, seeds, and rain", "Wind, shade, and music", "Tools, time, and patience"],
         "correct": "Sunlight, water, and care"
+      },
+      {
+        "id": "Q1b",
+        "prompt": "What color was Milo's backpack?",
+        "type": "multiple_choice",
+        "options": ["Red", "Blue", "Green", "Yellow"],
+        "correct": "Blue",
+        "measure": "perception"
+      },
+      {
+        "id": "Q1c",
+        "prompt": "What color was the flower that was drooping?",
+        "type": "multiple_choice",
+        "options": ["Pink", "Orange", "Yellow", "White"],
+        "correct": "Yellow",
+        "measure": "perception"
       }
     ],
     "apply": [
@@ -142,6 +165,12 @@
         "items": ["Look", "Think", "Help"],
         "correct_order": ["Look", "Think", "Help"]
       }
+    ],
+    "experience_survey": [
+      { "id": "E1", "prompt": "How clearly did you understand what was happening in the story?", "type": "likert_1_5" },
+      { "id": "E2", "prompt": "How memorable was the story?", "type": "likert_1_5" },
+      { "id": "E3", "prompt": "How engaged did you feel while experiencing the story?", "type": "likert_1_5" },
+      { "id": "E4", "prompt": "Did this way of experiencing the story help you understand it?", "type": "likert_1_5" }
     ]
   }
 }

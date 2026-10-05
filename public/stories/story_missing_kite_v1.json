@@ -1,0 +1,262 @@
+{
+  "story_id": "missing_kite_v1",
+  "title": "The Missing Kite",
+  "subtitle": "An Afternoon Adventure in the Park",
+  "version": "1.0",
+  "duration_sec": 240,
+  "description": "Follow Aarav and Meera on a sunny afternoon in the park as a strong gust of wind carries Aarav's red kite away.",
+  "media": {
+    "video_flat": "/stories/media/missing_kite_flat.mp4",
+    "video_360": "/stories/media/missing_kite_360.mp4",
+    "audio_stereo": "/stories/media/missing_kite_stereo.mp3",
+    "audio_spatial": "/stories/media/missing_kite_spatial.wav",
+    "thumbnail": "/stories/media/missing_kite_thumb.png"
+  },
+  "segments": [
+    { "id": "seg1", "label": "The Park", "description": "It is a sunny afternoon in a neighborhood park. Aarav arrives with his red kite while Meera sits near the bench drawing.", "start": "00:00", "end": "00:30", "color": "#78c0f0" },
+    { "id": "seg2", "label": "The Kite Flies", "description": "Aarav runs into the wide open field, releases the kite into the breeze, and watches it soar into the sky.", "start": "00:30", "end": "01:50", "color": "#4fb0e6" },
+    { "id": "seg3", "label": "The Problem", "description": "Suddenly, a strong wind gust pulls the string away from Aarav's hand, and the kite drifts behind a large bush.", "start": "01:50", "end": "02:30", "color": "#e0443a" },
+    { "id": "seg4", "label": "Finding It", "description": "Aarav and Meera search the park, find the red kite behind the bush, and gently remove a stuck leaf.", "start": "02:30", "end": "03:10", "color": "#3a8c44" },
+    { "id": "seg5", "label": "The Ending", "description": "Returning to the field, Aarav holds the string firmly, and the red kite soars high into the sunny sky.", "start": "03:10", "end": "04:00", "color": "#f5c400" }
+  ],
+  "interactions": [
+    {
+      "id": "int_01",
+      "segment_id": "seg2",
+      "verb": "hold_charge",
+      "trigger_time": "00:40",
+      "duration": 8,
+      "object_id": "kite",
+      "prompt": "Hold to help Aarav release the kite into the wind",
+      "success_criteria": "held long enough for the release animation to complete",
+      "config": {
+        "meter_label": "Release Kite",
+        "fill_duration_ms": 2500,
+        "color": "#e02a2a"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_02",
+      "segment_id": "seg2",
+      "verb": "trace_path",
+      "trigger_time": "01:05",
+      "duration": 8,
+      "object_id": "kite_string_left",
+      "prompt": "Trace a pull to the left to turn the kite",
+      "success_criteria": "path traced matches left-turn template",
+      "config": {
+        "path_points": [
+          { "x": 0.65, "y": 0.50 },
+          { "x": 0.45, "y": 0.45 },
+          { "x": 0.25, "y": 0.55 }
+        ],
+        "tolerance": 0.15,
+        "color": "#4fb0e6"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_03",
+      "segment_id": "seg2",
+      "verb": "trace_path",
+      "trigger_time": "01:22",
+      "duration": 8,
+      "object_id": "kite_string_right",
+      "prompt": "Trace a pull to the right to turn the kite",
+      "success_criteria": "path traced matches right-turn template",
+      "config": {
+        "path_points": [
+          { "x": 0.35, "y": 0.50 },
+          { "x": 0.55, "y": 0.45 },
+          { "x": 0.75, "y": 0.55 }
+        ],
+        "tolerance": 0.15,
+        "color": "#4fb0e6"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_04",
+      "segment_id": "seg3",
+      "verb": "select_hotspot",
+      "trigger_time": "01:52",
+      "duration": 8,
+      "object_id": "kite_string",
+      "prompt": "Tap quickly to try to hold on!",
+      "success_criteria": "tapped within the window (outcome is the same either way — the wind is too strong, keeps the story equivalent across conditions)",
+      "config": {
+        "hotspots": [
+          { "id": "string_grip", "x": 0.48, "y": 0.55, "label": "Kite String Grip", "info": "Holding on tight against the gust!" }
+        ]
+      },
+      "logged_events": ["HOTSPOT_OPEN", "SELECT"]
+    },
+    {
+      "id": "int_05",
+      "segment_id": "seg4",
+      "verb": "trace_path",
+      "trigger_time": "02:35",
+      "duration": 8,
+      "object_id": "path_to_bush",
+      "prompt": "Walk with Aarav and Meera toward the bush, past the fountain and the yellow bicycle",
+      "success_criteria": "path traced from field to bush",
+      "config": {
+        "path_points": [
+          { "x": 0.20, "y": 0.70 },
+          { "x": 0.46, "y": 0.65 },
+          { "x": 0.65, "y": 0.68 },
+          { "x": 0.85, "y": 0.70 }
+        ],
+        "tolerance": 0.14,
+        "color": "#8a5a2b"
+      },
+      "logged_events": ["OBJECT_INTERACT", "SELECT"]
+    },
+    {
+      "id": "int_06",
+      "segment_id": "seg4",
+      "verb": "select_hotspot",
+      "trigger_time": "02:52",
+      "duration": 8,
+      "object_id": "red_corner_behind_bush",
+      "prompt": "Look carefully — can you spot the kite?",
+      "success_criteria": "correct hotspot (red corner behind bush) selected, not the fountain or bicycle",
+      "config": {
+        "hotspots": [
+          { "id": "red_corner_behind_bush", "x": 0.86, "y": 0.68, "label": "Red Kite Corner 🪁", "info": "Found it! The red kite is tucked behind the bush." },
+          { "id": "fountain_spot", "x": 0.46, "y": 0.62, "label": "Park Fountain", "info": "Water splashing in the sunlight." },
+          { "id": "bicycle_spot", "x": 0.65, "y": 0.70, "label": "Yellow Bicycle", "info": "A parked yellow bicycle." }
+        ]
+      },
+      "logged_events": ["HOTSPOT_OPEN", "SELECT"]
+    },
+    {
+      "id": "int_07",
+      "segment_id": "seg4",
+      "verb": "hold_charge",
+      "trigger_time": "03:05",
+      "duration": 6,
+      "object_id": "kite_leaf",
+      "prompt": "Hold to gently brush the leaf off the kite",
+      "success_criteria": "held long enough for the leaf-removal animation to complete",
+      "config": {
+        "meter_label": "Remove Leaf",
+        "fill_duration_ms": 2500,
+        "color": "#58b02e"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    },
+    {
+      "id": "int_08",
+      "segment_id": "seg5",
+      "verb": "hold_charge",
+      "trigger_time": "03:40",
+      "duration": 8,
+      "object_id": "kite_string",
+      "prompt": "Hold the string firmly this time as the kite flies",
+      "success_criteria": "held for the full duration of the final flight animation",
+      "config": {
+        "meter_label": "Hold Firmly",
+        "fill_duration_ms": 3000,
+        "color": "#e02a2a"
+      },
+      "logged_events": ["OBJECT_INTERACT"]
+    }
+  ],
+  "vr_scene": {
+    "environment": "neighborhood_park_afternoon",
+    "hotspots": [
+      { "id": "h1", "position": [-1.5, 1.2, -2.5], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "meera_on_bench", "info": "Meera sitting by the bench drawing in her notebook." },
+      { "id": "h2", "position": [2.0, 2.5, -4.0], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "kite_in_sky", "info": "Aarav's red diamond kite soaring against the blue sky." },
+      { "id": "h3", "position": [0.5, 0.8, -3.0], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "fountain", "info": "Park water fountain bubbling along the path." },
+      { "id": "h4", "position": [1.8, 0.6, -2.0], "trigger": "gaze_dwell_1500ms", "action": "OBJECT_LOOKED_AT", "label": "yellow_bicycle", "info": "A bright yellow bicycle parked by the grass." },
+      { "id": "h5", "position": [3.0, 1.0, -5.0], "trigger": "gaze_dwell_2000ms", "action": "VR_INTERACTION", "label": "bush_with_kite", "info": "A dense green bush where the kite landed safely." }
+    ]
+  },
+  "complexity_profile": {
+    "characters": 2,
+    "key_objects": 7,
+    "sequential_events": 10,
+    "interaction_count": 8,
+    "target_level": "medium"
+  },
+  "assessment": {
+    "recall_understand": [
+      {
+        "id": "Q1",
+        "prompt": "What color was Aarav's kite?",
+        "type": "multiple_choice",
+        "options": ["Blue", "Red", "Green", "Yellow"],
+        "correct": "Red"
+      },
+      {
+        "id": "Q2",
+        "prompt": "Why did the kite land behind the bush?",
+        "type": "multiple_choice",
+        "options": [
+          "Aarav threw it there on purpose",
+          "A strong wind pulled it away and the string slipped",
+          "Meera took it there",
+          "It ran out of string"
+        ],
+        "correct": "A strong wind pulled it away and the string slipped"
+      },
+      {
+        "id": "Q1b",
+        "prompt": "What color was the bicycle they passed?",
+        "type": "multiple_choice",
+        "options": ["Red", "Blue", "Yellow", "Green"],
+        "correct": "Yellow",
+        "measure": "perception"
+      },
+      {
+        "id": "Q1c",
+        "prompt": "How many birds were flying above the trees?",
+        "type": "multiple_choice",
+        "options": ["1", "2", "3", "4"],
+        "correct": "3",
+        "measure": "perception"
+      }
+    ],
+    "apply": [
+      {
+        "id": "Q3",
+        "prompt": "If you were flying a kite and felt a sudden strong gust of wind, what would be the best thing to do to avoid losing it?",
+        "type": "multiple_choice",
+        "options": [
+          "Hold the string firmly and reel it in a little",
+          "Let go completely so it doesn't break",
+          "Run away from the kite",
+          "Ignore it and look elsewhere"
+        ],
+        "correct": "Hold the string firmly and reel it in a little"
+      }
+    ],
+    "implement": [
+      {
+        "id": "Q4",
+        "prompt": "Arrange these events in the order they happened in the story.",
+        "type": "ordering",
+        "items": [
+          "Aarav releases the kite",
+          "Wind pulls the kite away",
+          "They find the kite behind the bush",
+          "Aarav flies the kite again, holding firmly"
+        ],
+        "correct_order": [
+          "Aarav releases the kite",
+          "Wind pulls the kite away",
+          "They find the kite behind the bush",
+          "Aarav flies the kite again, holding firmly"
+        ]
+      }
+    ],
+    "experience_survey": [
+      { "id": "E1", "prompt": "How clearly did you understand what was happening in the story?", "type": "likert_1_5" },
+      { "id": "E2", "prompt": "How memorable was the story?", "type": "likert_1_5" },
+      { "id": "E3", "prompt": "How engaged did you feel while experiencing the story?", "type": "likert_1_5" },
+      { "id": "E4", "prompt": "Did this way of experiencing the story help you understand it?", "type": "likert_1_5" }
+    ]
+  }
+}

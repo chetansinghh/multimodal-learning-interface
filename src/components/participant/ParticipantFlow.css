@@ -20,8 +20,8 @@
 .setup-card {
   width: 100%;
   max-width: 480px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 2.5rem;
   backdrop-filter: blur(20px);
@@ -36,12 +36,12 @@
 .setup-card h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-color);
   margin: 0 0 0.5rem 0;
 }
 
 .setup-subtitle {
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin: 0 0 2rem 0;
 }
@@ -55,7 +55,7 @@
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
   margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -66,9 +66,9 @@
   width: 100%;
   padding: 0.7rem 1rem;
   border-radius: 10px;
-  border: 2px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
-  color: #fff;
+  border: 2px solid var(--border-color);
+  background: var(--color-surface);
+  color: var(--text-color);
   font-size: 0.9rem;
   font-family: 'Inter', sans-serif;
   transition: border-color 0.2s;
@@ -88,7 +88,7 @@
 
 .form-group select option {
   background: #1a1a2e;
-  color: #fff;
+  color: var(--text-color);
 }
 
 .error-msg {
@@ -107,7 +107,7 @@
   border: none;
   border-radius: 12px;
   background: linear-gradient(135deg, #4ECDC4, #44A08D);
-  color: #fff;
+  color: var(--text-color);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -138,8 +138,8 @@
 .instructions-card {
   width: 100%;
   max-width: 560px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 2.5rem;
   backdrop-filter: blur(20px);
@@ -149,7 +149,7 @@
 .instructions-card h2 {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-color);
   margin: 0 0 1.5rem 0;
 }
 
@@ -165,7 +165,7 @@
 }
 
 .condition-instructions p {
-  color: rgba(255,255,255,0.8);
+  color: var(--text-color);
   font-size: 0.9rem;
   line-height: 1.6;
   margin: 0 0 0.75rem 0;
@@ -176,7 +176,7 @@
   border: none;
   border-radius: 12px;
   background: linear-gradient(135deg, #4ECDC4, #44A08D);
-  color: #fff;
+  color: var(--text-color);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -212,10 +212,10 @@
   right: 20px;
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid var(--border-color);
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(10px);
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-size: 0.75rem;
   cursor: pointer;
   z-index: 100;
@@ -224,8 +224,8 @@
 }
 
 .skip-btn:hover {
-  color: #fff;
-  border-color: rgba(255,255,255,0.3);
+  color: var(--text-color);
+  border-color: var(--text-muted);
 }
 
 /* ─── Assessment Screen ───────── */
@@ -249,8 +249,8 @@
 
 .complete-card {
   max-width: 480px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 3rem;
   backdrop-filter: blur(20px);
@@ -263,12 +263,12 @@
 }
 
 .complete-card h2 {
-  color: #fff;
+  color: var(--text-color);
   margin: 0 0 0.5rem 0;
 }
 
 .complete-card p {
-  color: rgba(255,255,255,0.7);
+  color: var(--text-color);
   font-size: 0.9rem;
   margin: 0 0 0.5rem 0;
 }
@@ -279,7 +279,7 @@
 }
 
 .session-info code {
-  background: rgba(255,255,255,0.1);
+  background: var(--border-color);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'SF Mono', monospace;
@@ -296,6 +296,6 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-size: 1rem;
 }

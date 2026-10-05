@@ -414,6 +414,7 @@ function ResearcherDashboardContent() {
         'question_id',
         'level',
         'question_type',
+        'measure',
         'start_time_iso',
         'end_time_iso',
         'given_answer_json',
@@ -426,7 +427,7 @@ function ResearcherDashboardContent() {
       const csv = [headers.join(',')];
       assessments.forEach(a => {
         const givenAns = JSON.stringify(a.answer ?? a.final_answer ?? '');
-        const correctAns = JSON.stringify(a.correct_answer ?? '');
+        const correctAns = a.correct_answer != null ? JSON.stringify(a.correct_answer) : '';
         const row = [
           a.session_id || '',
           a.participant_id || '',
@@ -435,11 +436,12 @@ function ResearcherDashboardContent() {
           a.question_id || '',
           a.level || '',
           a.question_type || 'multiple_choice',
+          a.measure || (a.level === 'experience_survey' ? 'experience' : 'conceptual'),
           a.start_time ? new Date(a.start_time).toISOString() : '',
           a.end_time ? new Date(a.end_time).toISOString() : '',
           givenAns ? `"${givenAns.replace(/"/g, '""')}"` : '',
           correctAns ? `"${correctAns.replace(/"/g, '""')}"` : '',
-          a.accuracy === 1 ? 1 : 0,
+          a.accuracy === 1 ? 1 : (a.accuracy === 0 ? 0 : ''),
           Math.round(a.response_time_ms || 0),
           a.answer_changes || 0,
           a.confidence_rating != null ? a.confidence_rating : ''
@@ -466,6 +468,8 @@ function ResearcherDashboardContent() {
         'replay_count',
         'pause_count',
         'interaction_count',
+        'action_count',
+        'action_errors',
         'gaze_event_count',
         'l1_accuracy',
         'l2_accuracy',
@@ -483,8 +487,12 @@ function ResearcherDashboardContent() {
         const recallAssess = sessAssess.filter(a => a.level === 'recall_understand');
         const applyAssess = sessAssess.filter(a => a.level === 'apply');
         const implementAssess = sessAssess.filter(a => a.level === 'implement');
+        const gradedAssess = sessAssess.filter(a => a.accuracy !== null && a.accuracy !== undefined);
 
         const calcAcc = (arr) => arr.length > 0 ? (arr.reduce((acc, a) => acc + (a.accuracy === 1 ? 1 : 0), 0) / arr.length).toFixed(2) : '';
+
+        const actionCount = sessEvents.filter(e => ['OBJECT_INTERACT', 'SELECT', 'DESELECT', 'HOTSPOT_OPEN', 'VR_INTERACTION'].includes(e.event)).length;
+        const actionErrors = sessEvents.filter(e => e.action === 'action_error' || String(e.response).includes('error') || (e.action === 'assessment_submit' && sessAssess.some(a => a.question_id === e.object_id && a.accuracy === 0))).length;
 
         const row = [
           s.session_id || '',
@@ -502,11 +510,13 @@ function ResearcherDashboardContent() {
           sessEvents.filter(e => e.event === 'VIDEO_REPLAY').length,
           sessEvents.filter(e => e.event === 'VIDEO_PAUSE').length,
           sessEvents.filter(e => e.event === 'OBJECT_INTERACT').length,
+          actionCount,
+          actionErrors,
           sessEvents.filter(e => e.event?.startsWith('GAZE_')).length,
           calcAcc(recallAssess),
           calcAcc(applyAssess),
           calcAcc(implementAssess),
-          calcAcc(sessAssess)
+          calcAcc(gradedAssess)
         ];
         csv.push(row.join(','));
       });

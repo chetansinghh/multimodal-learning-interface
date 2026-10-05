@@ -1,26 +1,44 @@
-// Assessment Engine — 3-level config-driven evaluation
-// Recall/Understand → Apply → Implement
-// Logs per response: question ID, level, start time, answer, accuracy, response time, revisions.
+// AssessmentEngine.jsx — 3-Level Evaluation Engine + Post-Assessment Experience Survey
+// Supports Recall/Understand (with perception measures preserved), Apply, Implement (drag ordering),
+// and Likert 1-5 Experience Survey.
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { eventLogger } from '../../services/EventLogger';
 import { sessionClock } from '../../services/SessionClock';
+import { normalizeAssessment } from '../../services/StoryLoader';
 import './Assessment.css';
 
-export default function AssessmentEngine({ assessment, sessionId, participantId, condition, onComplete }) {
+export default function AssessmentEngine({
+  assessment,
+  sessionId,
+  participantId,
+  condition,
+  storyId,
+  onComplete
+}) {
+  // Normalize assessment data
+  const normalized = normalizeAssessment(assessment);
+  const levels = normalized.levels || [];
+  const experienceSurvey = normalized.experience_survey || [];
+
   const [currentLevel, setCurrentLevel] = useState(0);
   const [currentItem, setCurrentItem] = useState(0);
-  const [answers, setAnswers] = useState({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [dragOrder, setDragOrder] = useState([]);
   const [answerChanges, setAnswerChanges] = useState(0);
   const [results, setResults] = useState([]);
+
+  // Survey state
+  const [surveyMode, setSurveyMode] = useState(false);
+  const [surveyIndex, setSurveyIndex] = useState(0);
+  const [surveyRatings, setSurveyRatings] = useState({});
+  const [surveyResults, setSurveyResults] = useState([]);
+
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const questionStartTime = useRef(null);
 
-  const levels = assessment?.levels || [];
   const currentLevelData = levels[currentLevel];
   const items = currentLevelData?.items || [];
   const currentItemData = items[currentItem];
@@ -34,9 +52,8 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
     setSubmitted(false);
 
     if (currentItemData?.type === 'drag_order') {
-      // Shuffle items
-      const shuffled = [...(currentItemData.items_to_order || [])].sort(() => Math.random() - 0.5);
-      setDragOrder(shuffled);
+      const initial = [...(currentItemData.items_to_order || [])];
+      setDragOrder(initial);
     }
   }, [currentLevel, currentItem]);
 
@@ -58,7 +75,7 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
   };
 
   const submitAnswer = useCallback(() => {
-    if (submitted) return;
+    if (submitted || !currentItemData) return;
     setSubmitted(true);
 
     const responseTime = sessionClock.now() - (questionStartTime.current || 0);
@@ -80,9 +97,13 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
       session_id: sessionId,
       participant_id: participantId,
       condition,
+      story_id: storyId,
       question_id: currentItemData.id,
       level: currentLevelData.level,
+      question_type: currentItemData.type,
+      measure: currentItemData.measure || 'conceptual', // Preserves 'perception' tag!
       start_time: questionStartTime.current,
+      end_time: sessionClock.now(),
       answer: answerValue,
       correct_answer: correctValue,
       accuracy: isCorrect ? 1 : 0,
@@ -94,7 +115,7 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
     setResults(prev => [...prev, result]);
     setShowExplanation(true);
 
-    // Log to event logger
+    // Event Log
     eventLogger.log('OBJECT_INTERACT', {
       objectId: currentItemData.id,
       action: 'assessment_submit',
@@ -102,13 +123,14 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
         answer: answerValue,
         correct: isCorrect,
         time_ms: responseTime,
-        changes: answerChanges
+        changes: answerChanges,
+        measure: result.measure
       })
     });
 
-    // Also save to assessments store
+    // Save to local IndexedDB & central backend
     eventLogger.saveAssessmentResponse(result);
-  }, [submitted, selectedAnswer, dragOrder, currentItemData, currentLevelData, answerChanges, sessionId, participantId, condition]);
+  }, [submitted, selectedAnswer, dragOrder, currentItemData, currentLevelData, answerChanges, sessionId, participantId, condition, storyId]);
 
   const nextQuestion = useCallback(() => {
     if (currentItem < items.length - 1) {
@@ -117,20 +139,153 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
       setCurrentLevel(prev => prev + 1);
       setCurrentItem(0);
     } else {
-      // Assessment complete
-      setAssessmentComplete(true);
-      if (onComplete) onComplete(results);
+      // 3-Level Assessment Complete — transition to Experience Survey if available
+      if (experienceSurvey.length > 0) {
+        setSurveyMode(true);
+        setSurveyIndex(0);
+        questionStartTime.current = sessionClock.now();
+      } else {
+        setAssessmentComplete(true);
+        if (onComplete) onComplete(results);
+      }
     }
-  }, [currentItem, currentLevel, items.length, levels.length, results, onComplete]);
+  }, [currentItem, currentLevel, items.length, levels.length, experienceSurvey.length, results, onComplete]);
+
+  // ─── Experience Survey Handlers ────
+  const handleSurveySelect = (qId, rating) => {
+    setSurveyRatings(prev => ({ ...prev, [qId]: rating }));
+  };
+
+  const handleSurveySubmit = () => {
+    const surveyItem = experienceSurvey[surveyIndex];
+    if (!surveyItem) return;
+
+    const rating = surveyRatings[surveyItem.id];
+    if (!rating) return;
+
+    const responseTime = sessionClock.now() - (questionStartTime.current || 0);
+
+    const surveyEntry = {
+      session_id: sessionId,
+      participant_id: participantId,
+      condition,
+      story_id: storyId,
+      question_id: surveyItem.id,
+      level: 'experience_survey',
+      question_type: 'likert_1_5',
+      measure: 'experience',
+      start_time: questionStartTime.current,
+      end_time: sessionClock.now(),
+      answer: rating,
+      correct_answer: null,
+      accuracy: null, // Self-reported experience, NOT factored into correctness score
+      response_time_ms: responseTime,
+      answer_changes: 0,
+      final_answer: rating
+    };
+
+    const updatedSurveyResults = [...surveyResults, surveyEntry];
+    setSurveyResults(updatedSurveyResults);
+    eventLogger.saveAssessmentResponse(surveyEntry);
+
+    if (surveyIndex < experienceSurvey.length - 1) {
+      setSurveyIndex(prev => prev + 1);
+      questionStartTime.current = sessionClock.now();
+    } else {
+      // All done!
+      setSurveyMode(false);
+      setAssessmentComplete(true);
+      if (onComplete) onComplete([...results, ...updatedSurveyResults]);
+    }
+  };
 
   if (!assessment || levels.length === 0) {
     return <div className="assessment-container"><p>No assessment configured.</p></div>;
   }
 
+  // ─── Results View ────
   if (assessmentComplete) {
-    return <AssessmentResults results={results} levels={levels} />;
+    return <AssessmentResults results={results} levels={levels} surveyResults={surveyResults} />;
   }
 
+  // ─── Experience Survey View ────
+  if (surveyMode) {
+    const surveyItem = experienceSurvey[surveyIndex];
+    const currentRating = surveyRatings[surveyItem?.id];
+
+    return (
+      <div className="assessment-container">
+        <div className="assessment-header">
+          <div className="assessment-level-badge" style={{ backgroundColor: '#8b5cf6', color: '#fff' }}>
+            🌟 Experience Survey
+          </div>
+          <div className="assessment-progress-text">
+            Survey {surveyIndex + 1} of {experienceSurvey.length}
+          </div>
+        </div>
+
+        <div className="assessment-progress-bar">
+          <div className="level-progress-segment" style={{ width: '100%' }}>
+            {experienceSurvey.map((_, idx) => (
+              <div
+                key={idx}
+                className={`progress-dot ${idx < surveyIndex ? 'done' : idx === surveyIndex ? 'active' : ''}`}
+                style={{ backgroundColor: idx < surveyIndex ? '#8b5cf6' : idx === surveyIndex ? '#a78bfa' : 'rgba(255,255,255,0.15)' }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="assessment-question-card">
+          <h3 className="question-text" style={{ fontSize: '1.25rem', marginBottom: '24px' }}>
+            {surveyItem.prompt}
+          </h3>
+
+          <div className="likert-scale-container" style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', margin: '24px 0' }}>
+            {[1, 2, 3, 4, 5].map((val) => (
+              <button
+                key={val}
+                className={`likert-btn ${currentRating === val ? 'selected' : ''}`}
+                onClick={() => handleSurveySelect(surveyItem.id, val)}
+                style={{
+                  flex: 1,
+                  padding: '16px 8px',
+                  borderRadius: '10px',
+                  border: currentRating === val ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.15)',
+                  background: currentRating === val ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255,255,255,0.05)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem', fontWeight: 700 }}>{val}</span>
+                <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+                  {val === 1 ? 'Not at all' : val === 3 ? 'Moderately' : val === 5 ? 'Extremely' : ''}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="assessment-actions" style={{ marginTop: '28px' }}>
+            <button
+              className="submit-btn"
+              onClick={handleSurveySubmit}
+              disabled={!currentRating}
+              style={{ background: currentRating ? '#8b5cf6' : 'rgba(255,255,255,0.2)' }}
+            >
+              {surveyIndex < experienceSurvey.length - 1 ? 'Next Question' : 'Complete Study'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── 3-Level Assessment View ────
   const totalQuestions = levels.reduce((sum, l) => sum + (l.items?.length || 0), 0);
   const answeredQuestions = results.length;
 
@@ -163,7 +318,7 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
         ))}
       </div>
 
-      {/* Question */}
+      {/* Question Card */}
       <div className="assessment-question-card">
         <h3 className="question-text">{currentItemData.question}</h3>
 
@@ -225,7 +380,7 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
             <button className="next-btn" onClick={nextQuestion}>
               {currentItem < items.length - 1 ? 'Next Question' :
                 currentLevel < levels.length - 1 ? `Next Level: ${levels[currentLevel + 1].label}` :
-                  'View Results'}
+                  experienceSurvey.length > 0 ? 'Proceed to Experience Survey' : 'View Results'}
             </button>
           )}
         </div>
@@ -235,7 +390,7 @@ export default function AssessmentEngine({ assessment, sessionId, participantId,
 }
 
 // ─── Results Summary ────
-function AssessmentResults({ results, levels }) {
+function AssessmentResults({ results, levels, surveyResults = [] }) {
   const levelResults = {};
   for (const r of results) {
     if (!levelResults[r.level]) levelResults[r.level] = [];
@@ -285,6 +440,20 @@ function AssessmentResults({ results, levels }) {
             );
           })}
         </div>
+
+        {surveyResults.length > 0 && (
+          <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', textAlign: 'left' }}>
+            <h4 style={{ margin: '0 0 10px', fontSize: '0.95rem', color: '#a78bfa' }}>Self-Reported Experience Ratings</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+              {surveyResults.map(s => (
+                <div key={s.question_id} style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>{s.question_id}</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#38bdf8' }}>⭐ {s.answer}/5</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

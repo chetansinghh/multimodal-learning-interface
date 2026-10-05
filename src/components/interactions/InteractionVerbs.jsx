@@ -1,8 +1,6 @@
-// Interaction Verb Library — reusable, config-driven, story-agnostic interaction components
-// Each verb is a physical, story-relevant gesture rendered as an interactive overlay.
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { eventLogger } from '../../services/EventLogger';
+import { audioSynth } from '../../services/AudioSynthesizer';
 import './InteractionVerbs.css';
 
 // ─── TRACE PATH ─────────────────────────────────────────────────────
@@ -109,9 +107,12 @@ export function TracePath({ config, interaction, onComplete, videoTimestamp }) {
 
     if (acc >= 0.7) {
       setCompleted(true);
+      audioSynth.playSFX('success');
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
       eventLogger.log('OBJECT_INTERACT', { videoTimestamp, objectId: interaction.object_id, action: 'trace_complete', response: `accuracy:${acc.toFixed(2)}` });
       setTimeout(() => onComplete && onComplete(acc), 800);
     } else {
+      audioSynth.playSFX('select');
       setUserPath([]);
       eventLogger.log('OBJECT_INTERACT', { videoTimestamp, objectId: interaction.object_id, action: 'trace_retry', response: `accuracy:${acc.toFixed(2)}` });
     }
@@ -563,6 +564,8 @@ export function HoldCharge({ config, interaction, onComplete, videoTimestamp }) 
   const startHold = () => {
     if (completed) return;
     setHolding(true);
+    audioSynth.playSFX('hold_charge');
+    if (navigator.vibrate) navigator.vibrate(30);
     eventLogger.log('OBJECT_INTERACT', { videoTimestamp, objectId: interaction.object_id, action: 'hold_start' });
     const stepMs = 30;
     const increment = (stepMs / fillDuration) * 100;
@@ -573,6 +576,8 @@ export function HoldCharge({ config, interaction, onComplete, videoTimestamp }) 
           clearInterval(intervalRef.current);
           setHolding(false);
           setCompleted(true);
+          audioSynth.playSFX('success');
+          if (navigator.vibrate) navigator.vibrate([50, 70, 50]);
           eventLogger.log('OBJECT_INTERACT', { videoTimestamp, objectId: interaction.object_id, action: 'hold_complete' });
           setTimeout(() => onComplete && onComplete(1), 600);
           return 100;
@@ -634,6 +639,8 @@ export function SelectHotspot({ config, interaction, onComplete, videoTimestamp 
   const handleSelect = (hs) => {
     if (completed) return;
 
+    audioSynth.playSFX('select_hotspot');
+    if (navigator.vibrate) navigator.vibrate(25);
     eventLogger.log('HOTSPOT_OPEN', { videoTimestamp, objectId: hs.id, action: 'select_hotspot' });
 
     const newRevealed = new Set(revealed);
@@ -643,6 +650,8 @@ export function SelectHotspot({ config, interaction, onComplete, videoTimestamp 
 
     if (newRevealed.size === hotspots.length) {
       setCompleted(true);
+      audioSynth.playSFX('discovery_chime');
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
       eventLogger.log('OBJECT_INTERACT', { videoTimestamp, objectId: interaction.object_id, action: 'all_hotspots_selected' });
       setTimeout(() => onComplete && onComplete(1), 1500);
     }

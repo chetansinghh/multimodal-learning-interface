@@ -99,7 +99,7 @@
 
 .autofill-btn {
   background: #3b82f6;
-  color: #fff;
+  color: var(--text-color);
   border: none;
   padding: 6px 12px;
   border-radius: 8px;
@@ -201,7 +201,7 @@
   margin-top: 8px;
   padding: 14px;
   background: linear-gradient(135deg, var(--color-primary, #4ecdc4) 0%, #0d9488 100%);
-  color: #ffffff;
+  color: var(--text-color);
   font-weight: 700;
   font-size: 0.95rem;
   border: none;

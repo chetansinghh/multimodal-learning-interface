@@ -13,8 +13,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
-  background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -32,7 +32,7 @@
 .brand-text {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-color);
 }
 
 .nav-tabs {
@@ -45,7 +45,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -53,27 +53,27 @@
   transition: all 0.2s;
 }
 
-.nav-tab:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.05); }
+.nav-tab:hover { color: var(--text-color); background: var(--color-surface); }
 
 .nav-tab.active {
-  color: #fff;
+  color: var(--text-color);
   background: rgba(78, 205, 196, 0.15);
   border: 1px solid rgba(78, 205, 196, 0.2);
 }
 
 .refresh-btn {
   padding: 6px 12px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.6);
+  background: var(--color-surface);
+  color: var(--text-muted);
   font-size: 0.75rem;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s;
 }
 
-.refresh-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.refresh-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-color); }
 
 /* ─── Main Content ───────── */
 .researcher-main {
@@ -86,19 +86,19 @@
 
 .dashboard-content h2 {
   font-size: 1.3rem;
-  color: #fff;
+  color: var(--text-color);
   margin: 0 0 1.5rem 0;
 }
 
 .dashboard-content h3 {
   font-size: 1rem;
-  color: rgba(255,255,255,0.7);
+  color: var(--text-color);
   margin: 2rem 0 1rem 0;
 }
 
 .dashboard-content h4 {
   font-size: 0.9rem;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
   margin: 1.5rem 0 0.75rem 0;
 }
 
@@ -110,8 +110,8 @@
 }
 
 .summary-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 1.25rem;
   text-align: center;
@@ -120,13 +120,13 @@
 .card-value {
   font-size: 2rem;
   font-weight: 800;
-  color: #4ECDC4;
+  color: var(--color-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .card-label {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.45);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-top: 0.25rem;
@@ -140,8 +140,8 @@
 }
 
 .condition-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1rem;
 }
@@ -156,7 +156,7 @@
 .condition-id {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #4ECDC4;
+  color: var(--color-primary);
   background: rgba(78,205,196,0.15);
   padding: 2px 8px;
   border-radius: 4px;
@@ -164,12 +164,12 @@
 
 .condition-count {
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
 }
 
 .condition-card-label {
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.7);
+  color: var(--text-color);
   margin-bottom: 0.75rem;
 }
 
@@ -181,11 +181,11 @@
 
 .stat {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
 }
 
 .stat-val {
-  color: #fff;
+  color: var(--text-color);
   font-weight: 600;
   margin-right: 4px;
 }
@@ -194,7 +194,7 @@
 .sessions-table-wrapper {
   overflow-x: auto;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-color);
 }
 
 .sessions-table {
@@ -207,18 +207,18 @@
   padding: 0.6rem 0.75rem;
   font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
 }
 
 .sessions-table td {
   padding: 0.5rem 0.75rem;
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.7);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
 }
 
 .sessions-table tr.selected td {
@@ -228,7 +228,7 @@
 .sessions-table code {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.75rem;
-  background: rgba(255,255,255,0.06);
+  background: var(--card-bg);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -239,7 +239,7 @@
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(78,205,196,0.15);
-  color: #4ECDC4;
+  color: var(--color-primary);
 }
 
 .status-badge {
@@ -261,9 +261,9 @@
 .table-btn {
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid var(--border-color);
   background: transparent;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
   font-size: 0.7rem;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
@@ -272,14 +272,14 @@
 
 .table-btn:hover {
   background: rgba(255,255,255,0.1);
-  color: #fff;
+  color: var(--text-color);
 }
 
 /* ─── Session Detail ───────── */
 .session-detail {
   margin-top: 1.5rem;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 1.5rem;
 }
@@ -292,16 +292,16 @@
 
 .detail-header h3 {
   margin: 0;
-  color: #fff;
+  color: var(--text-color);
 }
 
 .close-btn {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--border-color);
   background: transparent;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 0.9rem;
 }
@@ -314,21 +314,21 @@
 
 .mini-stat {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
 }
 
 .mini-stat span {
   display: block;
   font-size: 1.2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-color);
 }
 
 .event-log-scroll {
   max-height: 300px;
   overflow-y: auto;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--border-color);
 }
 
 .event-log-table {
@@ -342,17 +342,17 @@
   top: 0;
   text-align: left;
   padding: 0.4rem 0.5rem;
-  background: rgba(20,20,40,0.9);
-  color: rgba(255,255,255,0.4);
+  background: var(--card-bg);
+  color: var(--text-muted);
   font-size: 0.65rem;
   text-transform: uppercase;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--border-color);
 }
 
 .event-log-table td {
   padding: 0.3rem 0.5rem;
-  color: rgba(255,255,255,0.6);
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
 }
 
 .event-type {
@@ -361,7 +361,7 @@
   padding: 1px 5px;
   border-radius: 3px;
   background: rgba(78,205,196,0.1);
-  color: #4ECDC4;
+  color: var(--color-primary);
 }
 
 .response-cell {
@@ -382,21 +382,21 @@
 }
 
 .story-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.25rem;
 }
 
 .story-card h3 {
   font-size: 1rem;
-  color: #fff;
+  color: var(--text-color);
   margin: 0 0 0.5rem 0;
 }
 
 .story-id, .story-path {
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.35);
+  color: var(--text-muted);
   margin: 0.2rem 0;
   font-family: monospace;
 }
@@ -404,16 +404,16 @@
 .config-preview {
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: rgba(255,255,255,0.03);
+  background: var(--color-surface);
   border-radius: 8px;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
 }
 
 .config-preview p { margin: 0.2rem 0; }
 
 .upload-area {
-  background: rgba(255,255,255,0.03);
+  background: var(--color-surface);
   border: 2px dashed rgba(255,255,255,0.12);
   border-radius: 12px;
   padding: 2rem;
@@ -425,7 +425,7 @@
   border-radius: 10px;
   border: 1px solid rgba(78,205,196,0.3);
   background: rgba(78,205,196,0.1);
-  color: #4ECDC4;
+  color: var(--color-primary);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -437,7 +437,7 @@
 
 .upload-hint {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.35);
+  color: var(--text-muted);
   margin-top: 0.5rem;
 }
 
@@ -462,7 +462,7 @@
 
 /* ─── Export ───────── */
 .export-desc {
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-size: 0.85rem;
   margin-bottom: 1.5rem;
 }
@@ -474,21 +474,21 @@
 }
 
 .export-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 1.5rem;
 }
 
 .export-card h3 {
   font-size: 1rem;
-  color: #fff;
+  color: var(--text-color);
   margin: 0 0 0.5rem 0;
 }
 
 .export-card p {
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   margin: 0 0 0.5rem 0;
 }
 
@@ -509,7 +509,7 @@
   border-radius: 8px;
   border: 1px solid rgba(78,205,196,0.3);
   background: rgba(78,205,196,0.1);
-  color: #4ECDC4;
+  color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -548,7 +548,7 @@
 .danger-btn:hover { background: rgba(244,67,54,0.2); }
 
 .empty-state {
-  color: rgba(255,255,255,0.35);
+  color: var(--text-muted);
   font-size: 0.85rem;
   text-align: center;
   padding: 2rem;

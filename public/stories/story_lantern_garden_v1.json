@@ -1,0 +1,545 @@
+{
+  "schema": "story-modalities/1.0",
+  "story_id": "lantern_garden_v1",
+  "id": "lantern_garden_v1",
+  "title": "The Lantern in Grandmother's Garden",
+  "subtitle": "An Evening Adventure in Grandmother's Garden",
+  "version": "2.0",
+  "duration_sec": 300,
+  "units": "metres, y-up, default camera looks toward -z, +x is the viewer's right",
+  "locale": "en-IN",
+  "description": "Join Aman and his sister Tara on an evening visit to their grandmother's garden as they discover butterflies, wind chimes, and solve the mystery of a loose lantern battery cover.",
+  "media": {
+    "video_flat": "/stories/media/lantern_garden_flat.mp4",
+    "video_360": "/stories/media/lantern_garden_360.mp4",
+    "audio_stereo": "/stories/media/lantern_garden_stereo.mp3",
+    "audio_spatial": "/stories/media/lantern_garden_spatial.wav",
+    "thumbnail": "/stories/media/lantern_garden_thumb.png"
+  },
+  "segments": [
+    { "id": "seg1", "label": "Garden Establishing", "description": "Wide shot of grandmother's garden at sunset: house, path, pond, flowers, stone, and wind chime.", "start": "00:00", "end": "00:25", "color": "#78c0f0" },
+    { "id": "seg2", "label": "Characters Enter", "description": "Aman and Tara enter through the wooden gate. Aman carries a glowing lantern.", "start": "00:25", "end": "00:50", "color": "#4fb0e6" },
+    { "id": "seg3", "label": "Two Butterflies", "description": "They stop at a flower where exactly two butterflies are resting.", "start": "00:50", "end": "01:20", "color": "#38bdf8" },
+    { "id": "seg4", "label": "The Wind Chime", "description": "A melodious wind chime rings on the right side of the garden. Tara and Aman turn to listen.", "start": "01:20", "end": "01:50", "color": "#f59e0b" },
+    { "id": "seg5", "label": "Exploring the Garden", "description": "Tara explores toward the vegetable patch while Aman walks toward the stone pond.", "start": "01:50", "end": "02:15", "color": "#10b981" },
+    { "id": "seg6", "label": "Lantern Goes Out", "description": "The sky darkens into night. As Aman returns, the lantern suddenly turns off.", "start": "02:15", "end": "02:45", "color": "#ef4444" },
+    { "id": "seg7", "label": "Investigating Problem", "description": "Aman turns the lantern and finds the battery cover loose. It slips off and lands by the stone.", "start": "02:45", "end": "03:15", "color": "#f97316" },
+    { "id": "seg8", "label": "Searching with Flashlight", "description": "Tara turns on her phone flashlight, and they search the flowers, pond, and path.", "start": "03:15", "end": "03:45", "color": "#a855f7" },
+    { "id": "seg9", "label": "Finding the Cover", "description": "Tara spots the battery cover beside the large stone, and Aman picks it up.", "start": "03:45", "end": "04:15", "color": "#3b82f6" },
+    { "id": "seg10", "label": "Repairing the Lantern", "description": "Aman attaches the cover and clicks the switch. The warm lantern light returns.", "start": "04:15", "end": "04:40", "color": "#22c55e" },
+    { "id": "seg11", "label": "Return Home", "description": "Guided by the lantern light, they walk safely back to the house as the chime sounds again.", "start": "04:40", "end": "05:00", "color": "#eab308" }
+  ],
+  "conditions": [
+    {
+      "id": "C1",
+      "name": "Simple Video",
+      "manipulation": "baseline",
+      "camera": "cinematic",
+      "audio": "normal (centered, non-spatial)",
+      "interaction": "none"
+    },
+    {
+      "id": "C2",
+      "name": "Spatial Audio",
+      "manipulation": "auditory/spatial enhancement",
+      "camera": "cinematic (identical to C1)",
+      "audio": "HRTF 3D audio, listener follows camera",
+      "interaction": "none"
+    },
+    {
+      "id": "C3",
+      "name": "Interactive",
+      "manipulation": "user interaction",
+      "camera": "cinematic (identical to C1)",
+      "audio": "normal (as C1)",
+      "interaction": "6 checkpoints; story pauses until the glowing target is selected"
+    },
+    {
+      "id": "C4",
+      "name": "VR Immersive",
+      "manipulation": "immersion/presence",
+      "camera": "user-controlled look (drag, gyro or WebXR headset) on a fixed story rail",
+      "audio": "HRTF 3D audio, listener follows head",
+      "interaction": "gaze/dwell glints on story objects; no free exploration"
+    }
+  ],
+  "world": {
+    "targets": {
+      "gate": [0, 1.2, 22],
+      "flowers": [-4, 0.7, 6],
+      "butterflies": [-4, 0.9, 6],
+      "pond": [-9, 0.2, -2],
+      "chime": [14, 2.4, 0],
+      "stone": [4.2, 0.5, -3.6],
+      "veg": [9, 0.5, -9],
+      "path": [0, 0.3, -1.5],
+      "house": [0, 3, -24]
+    },
+    "objects": [
+      "house",
+      "garden path",
+      "pond",
+      "flowers",
+      "vegetable patch",
+      "large stone",
+      "wind chime",
+      "trees",
+      "gate",
+      "lantern",
+      "battery cover",
+      "phone"
+    ],
+    "night": [
+      [0, 0],
+      [25, 0.25],
+      [100, 0.5],
+      [135, 0.6],
+      [150, 0.85],
+      [300, 0.95]
+    ],
+    "lanternOn": [
+      [25, 142],
+      [268, 300]
+    ],
+    "flashOn": [
+      [197, 270]
+    ],
+    "coverEvents": {
+      "loose": 165,
+      "falls": 173,
+      "landsByStone": 176,
+      "pickedUp": 235,
+      "refitted": 258
+    }
+  },
+  "actors": {
+    "aman": {
+      "shirt": "#2f6fdd",
+      "hair": "#2a1b12",
+      "scale": 1.0,
+      "carries": "lantern",
+      "wp": [
+        [0, 0, 40],
+        [25, 0, 23.2],
+        [50, -2, 7.5],
+        [80, -2, 7.5],
+        [105, 0.5, 1],
+        [110, 0.5, 1],
+        [120, -5.5, -1.5],
+        [130, -5.5, -1.5],
+        [142, -3, -2.6],
+        [150, -1, -3],
+        [196, -1, -3],
+        [208, -3.5, 5.5],
+        [218, -5.3, -1],
+        [225, -1, -1.8],
+        [230, -1, -1.8],
+        [238, 3.2, -2.8],
+        [280, 3.2, -2.8],
+        [285, 0.5, -6],
+        [298, 0, -19],
+        [300, 0, -20]
+      ]
+    },
+    "tara": {
+      "shirt": "#e0568c",
+      "hair": "#1a120d",
+      "scale": 0.88,
+      "carries": "phone",
+      "wp": [
+        [0, 1.2, 41],
+        [25, 1.2, 23.8],
+        [50, -0.8, 7.2],
+        [80, -0.8, 7.2],
+        [105, 2.2, 1.6],
+        [110, 2.2, 1.6],
+        [124, 8, -8.2],
+        [132, 8, -8.2],
+        [150, 1.4, -4.2],
+        [196, 1.4, -4.2],
+        [206, -2.4, 5],
+        [216, -4, -0.5],
+        [224, 2.5, -2.2],
+        [280, 2.5, -2.2],
+        [285, 1, -6],
+        [298, 0.8, -19],
+        [300, 0.8, -20.5]
+      ]
+    }
+  },
+  "face": [
+    ["both", 50, 80, [-4, 6]],
+    ["both", 105, 112, [14, 0]],
+    ["aman", 120, 130, [-9, -2]],
+    ["tara", 124, 132, [10, -10]],
+    ["aman", 130, 150, "tara"],
+    ["tara", 132, 196, "aman"],
+    ["tara", 224, 238, [4.2, -3.6]],
+    ["aman", 256, 270, [3.2, -2.8]]
+  ],
+  "camera": [
+    [0, 8, 4, 24, [0, 2, -8]],
+    [25, 4, 2.6, 16, [0, 2, -6]],
+    [27, 6, 1.7, 12, [0, 1.2, 20]],
+    [45, 3, 1.7, 10, [-1, 1.1, 10]],
+    [50, 1.5, 1.5, 11.5, [-3, 0.9, 6.5]],
+    [65, 0.2, 1.0, 9.5, [-4, 0.8, 6]],
+    [78, -1, 1.7, 10, [-3, 1.2, 7]],
+    [88, -6, 1.8, 9, [10, 1.6, 3]],
+    [100, 4, 1.7, 6, [3, 1.2, 1]],
+    [112, 2, 3.6, 6, [0, 1, -4]],
+    [130, 2, 3.2, 5, [0, 1, -5]],
+    [140, 3.5, 1.7, 3.5, "A"],
+    [150, 3, 2, 2, [1, 1.2, -4]],
+    [162, 1.6, 1.6, -0.6, "L"],
+    [168, 0.9, 1.35, -1.1, "L"],
+    [190, 1.0, 1.4, -1.0, "L"],
+    [198, 4, 2.4, 3, [0, 0.5, -2]],
+    [212, 3, 2.2, 3, [-4, 0.5, 3]],
+    [224, 1, 1.8, 2, [4, 0.4, -3.5]],
+    [236, 2.2, 1.0, -0.2, "C"],
+    [248, 3, 1.6, -0.5, [3, 1, -3]],
+    [256, 2.0, 1.4, -0.8, "L"],
+    [270, 1.9, 1.5, -0.9, "L"],
+    [276, 0.5, 2.2, 2, "A"],
+    [281, 3.5, 1.8, 3.5, "A"],
+    [292, 1, 1.9, -8, [0, 1.2, -20]],
+    [300, 0.5, 1.9, -12, [0, 1.2, -22]]
+  ],
+  "rail": [
+    [0, 4, 1.6, 14],
+    [25, 4, 1.6, 14],
+    [50, 1, 1.6, 10],
+    [80, 1, 1.6, 10],
+    [105, 6, 1.6, 3],
+    [135, 4, 1.6, 0.5],
+    [165, 2.5, 1.6, -0.6],
+    [195, 2.5, 1.6, -0.6],
+    [225, 5, 1.6, 0],
+    [255, 2.5, 1.6, -1],
+    [280, 0, 1.6, -2],
+    [300, 0, 1.6, -8]
+  ],
+  "lines": [
+    { "t": 29, "who": "narrator", "text": "One evening, Aman and his sister Tara visited their grandmother's garden. Since it was getting dark, Aman carried a small lantern." },
+    { "t": 52, "who": "narrator", "text": "Near a flower, they stopped. Two butterflies were resting on it." },
+    { "t": 88, "who": "tara", "text": "Did you hear that?" },
+    { "t": 112, "who": "narrator", "text": "Tara walked toward the vegetable patch, and Aman walked toward the pond." },
+    { "t": 143, "who": "narrator", "text": "Suddenly, the lantern went out." },
+    { "t": 167, "who": "aman", "text": "The battery cover is loose." },
+    { "t": 199, "who": "narrator", "text": "Tara switched on her phone flashlight, and they began to search." },
+    { "t": 232, "who": "tara", "text": "Here it is!" },
+    { "t": 283, "who": "narrator", "text": "With the lantern working again, Aman and Tara returned home." }
+  ],
+  "audio": {
+    "sounds": [
+      { "id": "chime", "type": "oneshot", "position": [14, 3, 0], "importance": 5, "note": "right side of garden" },
+      { "id": "footsteps", "type": "oneshot", "position": "actor", "importance": 4 },
+      { "id": "lanternClick", "type": "oneshot", "position": "aman", "importance": 4 },
+      { "id": "pond", "type": "loop", "position": [-9, 0.3, -2], "importance": 3 },
+      { "id": "flashClick", "type": "oneshot", "position": "tara", "importance": 3 },
+      { "id": "wind", "type": "loop", "position": [[-30, 3, 0], [30, 3, 0]], "importance": 3 },
+      { "id": "insects", "type": "loop", "position": [[-14, 1, 10], [14, 1, 10], [-14, 1, -14], [14, 1, -14]], "importance": 2 },
+      { "id": "coverTink", "type": "oneshot", "position": [4.4, 0.1, -3.9], "importance": 3, "note": "cover lands beside the stone" },
+      { "id": "coverSnap", "type": "oneshot", "position": "lantern", "importance": 3 }
+    ],
+    "cues": [
+      { "t": 82, "id": "chime" },
+      { "t": 85, "id": "chime" },
+      { "t": 142, "id": "lanternClick", "at": "aman" },
+      { "t": 176, "id": "coverTink" },
+      { "t": 197, "id": "flashClick", "at": "tara" },
+      { "t": 258, "id": "coverSnap", "at": "lantern" },
+      { "t": 267.5, "id": "lanternClick", "at": "aman" },
+      { "t": 286, "id": "chime" },
+      { "t": 289, "id": "chime" }
+    ]
+  },
+  "interactions": {
+    "C3": [
+      { "at": 27, "label": "Enter the garden", "targets": ["gate"], "verb": "select_hotspot", "prompt": "Tap the glowing gate to enter the garden" },
+      { "at": 51, "label": "Look at the butterflies", "targets": ["butterflies"], "verb": "select_hotspot", "prompt": "Tap the two resting butterflies" },
+      { "at": 83, "label": "Follow the wind chime sound", "targets": ["chime"], "verb": "select_hotspot", "prompt": "Tap the wind chime on the right" },
+      { "at": 166, "label": "Inspect the lantern", "targets": ["L"], "verb": "select_hotspot", "prompt": "Inspect the loose battery cover on the lantern" },
+      { "at": 198, "label": "Search: flowers, then pond, then path", "targets": ["flowers", "pond", "path"], "verb": "select_hotspot", "prompt": "Search: tap flowers, then pond, then path" },
+      { "at": 257, "label": "Repair the lantern", "targets": ["L"], "verb": "select_hotspot", "prompt": "Attach the battery cover to fix the lantern" }
+    ],
+    "C4": {
+      "dwellSec": 1.2,
+      "angleDeg": 8,
+      "gaze": [
+        { "id": "butterflies", "label": "Two Butterflies" },
+        { "id": "chime", "label": "Wind Chime" },
+        { "id": "pond", "label": "Stone Pond" },
+        { "id": "flowers", "label": "Flower Bed" },
+        { "id": "L", "label": "Aman's Lantern" },
+        { "id": "stone", "label": "Large Garden Stone" },
+        { "id": "C", "label": "Battery Cover", "from": 176 }
+      ]
+    }
+  },
+  "scenes": [
+    {
+      "n": 1,
+      "t": [0, 25],
+      "title": "Garden establishing",
+      "visual": "Wide shot of the grandmother's garden at sunset fading to evening: house, path, pond, flowers, vegetable patch, stone, wind chime, trees.",
+      "audio": "Evening ambience, insects, light wind, very soft wind chime.",
+      "testable": ["garden", "house", "pond", "flowers"]
+    },
+    {
+      "n": 2,
+      "t": [25, 50],
+      "title": "Characters enter",
+      "visual": "Aman and Tara enter through the gate. Aman carries a small lantern.",
+      "audio": "Footsteps arrive from behind; narration.",
+      "testable": ["who", "where", "why lantern", "who carries it"]
+    },
+    {
+      "n": 3,
+      "t": [50, 80],
+      "title": "Two butterflies",
+      "visual": "They stop at a flower with exactly two butterflies. Aman points; Tara watches.",
+      "audio": "Soft insects.",
+      "testable": ["two butterflies"]
+    },
+    {
+      "n": 4,
+      "t": [80, 110],
+      "title": "The wind chime",
+      "visual": "TING, TING. Tara turns toward a wind chime on the right side of the garden. Aman looks too.",
+      "audio": "Wind chime from the right (spatial in C2/C4).",
+      "testable": ["sound source", "right side"]
+    },
+    {
+      "n": 5,
+      "t": [110, 135],
+      "title": "Exploring",
+      "visual": "Tara goes to the vegetable patch, Aman to the pond. Then both turn back.",
+      "audio": "Footsteps; pond ambience near the pond.",
+      "testable": ["who went where"]
+    },
+    {
+      "n": 6,
+      "t": [135, 165],
+      "title": "Lantern goes out",
+      "visual": "Sky darkens. Aman walks back to Tara. CLICK. The lantern goes out.",
+      "audio": "Lantern click near Aman.",
+      "testable": ["main problem"]
+    },
+    {
+      "n": 7,
+      "t": [165, 195],
+      "title": "Investigating",
+      "visual": "Close-up: Aman turns the lantern and finds the battery cover loose. It slips off.",
+      "audio": "Soft tink as it lands by the stone.",
+      "testable": ["cause of the problem"]
+    },
+    {
+      "n": 8,
+      "t": [195, 225],
+      "title": "Searching",
+      "visual": "Tara switches on her phone flashlight. They search flowers, then pond, then path.",
+      "audio": "Flashlight click near Tara; footsteps; distant chime.",
+      "testable": ["joint action", "search order"]
+    },
+    {
+      "n": 9,
+      "t": [225, 255],
+      "title": "Finding the cover",
+      "visual": "Tara spots the cover beside the large stone. Aman picks it up.",
+      "audio": "\"Here it is!\"",
+      "testable": ["what was lost", "who found it", "where"]
+    },
+    {
+      "n": 10,
+      "t": [255, 280],
+      "title": "Repair",
+      "visual": "Aman refits the cover, switches the lantern on. Light returns; Tara smiles.",
+      "audio": "Snap, then lantern click.",
+      "testable": ["sequence: find, attach, switch, light"]
+    },
+    {
+      "n": 11,
+      "t": [280, 300],
+      "title": "Return home",
+      "visual": "They walk to the house with the glowing lantern. The chime sounds again. Fade out.",
+      "audio": "Narration; wind chime.",
+      "testable": ["ending", "order of events"]
+    }
+  ],
+  "assessment": {
+    "version": "2.0",
+    "purpose": "standardized cross-story assessment for recall, perception, application, implementation, and experience",
+    "scoring": {
+      "recallUnderstand": { "maxScore": 4, "scorePerCorrect": 1 },
+      "perception": { "maxScore": 2, "scorePerCorrect": 1 },
+      "apply": { "maxScore": 1, "scorePerCorrect": 1 },
+      "implement": { "maxScore": 1, "scorePerCorrect": 1 },
+      "totalObjectiveScore": 8,
+      "experienceScale": "1-5 Likert"
+    },
+    "recallUnderstand": [
+      {
+        "id": "LG-R1",
+        "scene": 1,
+        "type": "multipleChoice",
+        "question": "Where does the story take place?",
+        "options": [
+          "At Grandmother's garden",
+          "At a school playground",
+          "At a railway station",
+          "At a city market"
+        ],
+        "correctOption": 0,
+        "correct": "At Grandmother's garden"
+      },
+      {
+        "id": "LG-R2",
+        "scene": 2,
+        "type": "multipleChoice",
+        "question": "Why did Aman carry a lantern?",
+        "options": [
+          "It was getting dark",
+          "He wanted to decorate the garden",
+          "He was looking for butterflies",
+          "Tara asked him to carry it"
+        ],
+        "correctOption": 0,
+        "correct": "It was getting dark"
+      },
+      {
+        "id": "LG-R3",
+        "scene": 7,
+        "type": "multipleChoice",
+        "question": "What caused the lantern to stop working?",
+        "options": [
+          "The battery cover was loose",
+          "The lantern fell into the pond",
+          "The phone flashlight stopped working",
+          "The lantern ran out of fuel"
+        ],
+        "correctOption": 0,
+        "correct": "The battery cover was loose"
+      },
+      {
+        "id": "LG-R4",
+        "scene": 10,
+        "type": "multipleChoice",
+        "question": "What was the correct sequence for fixing the lantern?",
+        "options": [
+          "Find the cover → attach the cover → switch the lantern on → light returns",
+          "Switch the lantern on → find the cover → light returns → attach the cover",
+          "Attach the cover → find the cover → switch the lantern on → light returns",
+          "Find the cover → switch the lantern on → attach the cover → light returns"
+        ],
+        "correctOption": 0,
+        "correct": "Find the cover → attach the cover → switch the lantern on → light returns"
+      }
+    ],
+    "perception": [
+      {
+        "id": "LG-P1",
+        "scene": 2,
+        "type": "multipleChoice",
+        "question": "What color was Aman's shirt?",
+        "options": [
+          "Blue",
+          "Pink",
+          "Green",
+          "Yellow"
+        ],
+        "correctOption": 0,
+        "correct": "Blue",
+        "measurement": "visual detail perception"
+      },
+      {
+        "id": "LG-P2",
+        "scene": 9,
+        "type": "multipleChoice",
+        "question": "Where was the battery cover found?",
+        "options": [
+          "Beside the large stone",
+          "Inside the pond",
+          "Near the gate",
+          "Inside the house"
+        ],
+        "correctOption": 0,
+        "correct": "Beside the large stone",
+        "measurement": "spatial/object detail perception"
+      }
+    ],
+    "apply": [
+      {
+        "id": "LG-A1",
+        "scene": 7,
+        "type": "scenarioMultipleChoice",
+        "question": "Imagine you are using a small battery-powered lantern and it suddenly stops working. You notice that its battery cover is loose. Based on what Aman did in the story, what should you do first?",
+        "options": [
+          "Check and secure the loose battery cover",
+          "Throw the lantern away immediately",
+          "Search for a phone before checking the lantern",
+          "Put the lantern in the pond"
+        ],
+        "correctOption": 0,
+        "correct": "Check and secure the loose battery cover",
+        "measurement": "transfer/application of causal problem-solving"
+      }
+    ],
+    "implement": [
+      {
+        "id": "LG-I1",
+        "scene": 10,
+        "type": "ordering",
+        "question": "Put the repair actions in the correct order.",
+        "items": [
+          { "id": "find", "text": "Find the battery cover", "label": "Find the battery cover" },
+          { "id": "attach", "text": "Attach the battery cover", "label": "Attach the battery cover" },
+          { "id": "switch", "text": "Switch the lantern on", "label": "Switch the lantern on" },
+          { "id": "light", "text": "Light returns", "label": "Light returns" }
+        ],
+        "correctOrder": [
+          "find",
+          "attach",
+          "switch",
+          "light"
+        ],
+        "correct_order": [
+          "find",
+          "attach",
+          "switch",
+          "light"
+        ],
+        "measurement": "procedural sequencing/implementation"
+      }
+    ],
+    "experience": {
+      "scale": {
+        "min": 1,
+        "max": 5,
+        "labels": {
+          "1": "Strongly disagree",
+          "2": "Disagree",
+          "3": "Neutral",
+          "4": "Agree",
+          "5": "Strongly agree"
+        }
+      },
+      "questions": [
+        { "id": "LG-E1", "text": "I felt engaged while experiencing the story." },
+        { "id": "LG-E2", "text": "I felt present in the story environment." },
+        { "id": "LG-E3", "text": "The story was easy to follow and understand." },
+        { "id": "LG-E4", "text": "I enjoyed experiencing the story in this format." }
+      ]
+    }
+  },
+  "complexityProfile": {
+    "characters": 2,
+    "scenes": 11,
+    "keyObjects": 12,
+    "interactiveCheckpoints": 6,
+    "vrGazeTargets": 7,
+    "durationSec": 300,
+    "difficulty": "medium"
+  }
+}

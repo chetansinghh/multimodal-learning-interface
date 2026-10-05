@@ -9,7 +9,6 @@ import SpatialAudioPlayer from '../player/SpatialAudioPlayer';
 import InteractivePlayer from '../player/InteractivePlayer';
 import VRPlayer from '../player/VRPlayer';
 import AssessmentEngine from '../assessment/AssessmentEngine';
-import ParticipantSignupModal from './ParticipantSignupModal';
 import OnboardingDemo from './OnboardingDemo';
 import './ParticipantFlow.css';
 
@@ -18,13 +17,12 @@ const PHASES = ['setup', 'instructions', 'experience', 'assessment', 'complete']
 
 export default function ParticipantFlow() {
   const { user, isLoggedIn, role } = useAuth();
-  const [phase, setPhase] = useState('setup'); // 'setup' | 'instructions' | 'experience' | 'assessment' | 'complete'
-  const [participantId, setParticipantId] = useState('');
-  const [participantIdentity, setParticipantIdentity] = useState(null);
-  const [sessionId] = useState(() => uuidv4());
-  const [ageGroup, setAgeGroup] = useState('18-24');
-  const [condition, setCondition] = useState('C1');
-  const [storyUrl, setStoryUrl] = useState('/stories/water_cycle_v1.json');
+  const [phase, setPhase] = useState('instructions');
+  const [participantId, setParticipantId] = useState(user?.participant_id || '');
+  const [participantIdentity, setParticipantIdentity] = useState(user || null);
+  const [sessionId] = useState(() => user?.sessionId || uuidv4());
+  const [condition, setCondition] = useState(user?.condition || 'C1');
+  const [storyUrl, setStoryUrl] = useState(user?.storyUrl || '/stories/story_missing_kite_v1.json');
   const [availableStories, setAvailableStories] = useState([]);
   const [storyConfig, setStoryConfig] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -33,9 +31,6 @@ export default function ParticipantFlow() {
   useEffect(() => {
     loadAvailableStories().then(stories => {
       setAvailableStories(stories);
-      if (stories.length > 0 && !storyUrl) {
-        setStoryUrl(stories[0].path);
-      }
     });
   }, []);
 
@@ -52,6 +47,13 @@ export default function ParticipantFlow() {
     setLoading(false);
   }, [storyUrl]);
 
+  // Ensure storyConfig is loaded when component mounts and storyUrl is available
+  useEffect(() => {
+    if (storyUrl) {
+      loadStory();
+    }
+  }, [storyUrl, loadStory]);
+
   /** Generate a deterministic hash from segment start/end times */
   const computeSegmentLayoutHash = (segments) => {
     if (!segments || segments.length === 0) return 'empty';
@@ -63,14 +65,14 @@ export default function ParticipantFlow() {
     return (hash >>> 0).toString(16);
   };
 
-  /** Triggered when Participant completes Setup (Age Bracket & Condition selection) */
+  /** Triggered when Participant completes Setup (Modality & Story selection) */
   const handleStartSession = useCallback(async (e) => {
     if (e) e.preventDefault();
     const pid = user?.participant_id || `P_${user?.name?.replace(/\s+/g, '') || 'user'}_${Date.now().toString().slice(-4)}`;
     const identity = {
       name: user?.name || 'Participant',
       email: user?.email || '',
-      age_group: ageGroup,
+      age_group: user?.age_group || '12-13',
       condition,
     };
     
@@ -92,34 +94,34 @@ export default function ParticipantFlow() {
       condition,
       condition_config_version: '1.0',
       segment_layout_hash: computeSegmentLayoutHash(loadedConfig.segments),
+      consent_acknowledged: user?.consent_acknowledged,
+      consent_timestamp: user?.consent_timestamp
     };
 
     const sessionPayload = {
       session_id: sessionId,
       participant_id: pid,
       participant_name: identity.name,
-      participant_email: identity.email,
-      participant_age: ageGroup,
+      participant_email: '',
+      participant_age: identity.age_group,
       condition,
       story_id: storyUrl,
       start_time: new Date().toISOString(),
       status: 'in_progress',
-      version_snapshot: versionSnapshot,
+      version_snapshot: versionSnapshot
     };
 
     // Save locally to IndexedDB & sync to central backend DB
     await eventLogger.saveSession(sessionPayload);
 
-    setPhase('instructions');
-  }, [user, ageGroup, condition, sessionId, storyUrl, loadStory]);
+    setPhase('experience');
+    eventLogger.log('VIDEO_START', { action: 'experience_begin' });
+  }, [user, condition, sessionId, storyUrl, loadStory]);
 
   if (!isLoggedIn) {
-    return (
-      <ParticipantSignupModal
-        sessionId={sessionId}
-        onComplete={() => {}}
-      />
-    );
+    // In normal flow, they log in on LandingPage. If they get here unauthenticated, redirect home.
+    window.location.href = '/';
+    return null;
   }
 
   if (isLoggedIn && role === 'admin') {
@@ -141,7 +143,7 @@ export default function ParticipantFlow() {
 
   const beginExperience = () => {
     setPhase('experience');
-    eventLogger.log('VIDEO_START', { action: 'experience_begin' });
+    // Logging moved to handleStartSession
   };
 
   const onExperienceComplete = useCallback(() => {
@@ -181,13 +183,19 @@ export default function ParticipantFlow() {
 
   return (
     <div className="participant-flow">
+      {phase === 'instructions' && (
+        <OnboardingDemo
+          onComplete={() => setPhase('setup')}
+        />
+      )}
+
       {phase === 'setup' && (
         <div className="signup-modal-overlay">
           <div className="signup-modal-card">
             <div className="signup-modal-header">
-              <div className="modal-icon">🎓</div>
-              <h2>Participant Study Setup</h2>
-              <p>Welcome <strong>{user?.name || user?.email}</strong>! Please configure your study session parameters.</p>
+              <div className="modal-icon">⚙️</div>
+              <h2>Select Modality & Story</h2>
+              <p>Configure the experience parameters below to begin.</p>
             </div>
 
             <form onSubmit={handleStartSession} className="signup-form">
@@ -200,26 +208,14 @@ export default function ParticipantFlow() {
                 </select>
               </div>
 
-              <div className="form-row">
-                <div className="form-group half">
-                  <label>Age Bracket</label>
-                  <select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
-                    <option value="18-24">18 – 24</option>
-                    <option value="25-34">25 – 34</option>
-                    <option value="35-44">35 – 44</option>
-                    <option value="45+">45+</option>
-                  </select>
-                </div>
-
-                <div className="form-group half">
-                  <label>Assigned Condition</label>
-                  <select value={condition} onChange={(e) => setCondition(e.target.value)}>
-                    <option value="C1">C1 – Simple Video</option>
-                    <option value="C2">C2 – Spatial Audio</option>
-                    <option value="C3">C3 – Interactive</option>
-                    <option value="C4">C4 – VR Immersive</option>
-                  </select>
-                </div>
+              <div className="form-group">
+                <label>Assigned Condition</label>
+                <select value={condition} onChange={(e) => setCondition(e.target.value)}>
+                  <option value="C1">C1 – Simple Video</option>
+                  <option value="C2">C2 – Spatial Audio</option>
+                  <option value="C3">C3 – Interactive</option>
+                  <option value="C4">C4 – VR Immersive</option>
+                </select>
               </div>
 
               <button type="submit" className="submit-btn">
@@ -228,14 +224,6 @@ export default function ParticipantFlow() {
             </form>
           </div>
         </div>
-      )}
-
-      {phase === 'instructions' && (
-        <OnboardingDemo
-          condition={condition}
-          storyConfig={storyConfig}
-          onComplete={beginExperience}
-        />
       )}
 
       {phase === 'experience' && (
@@ -254,6 +242,7 @@ export default function ParticipantFlow() {
             sessionId={sessionId}
             participantId={participantId}
             condition={condition}
+            storyId={storyConfig.story_id}
             onComplete={onAssessmentComplete}
           />
         </div>

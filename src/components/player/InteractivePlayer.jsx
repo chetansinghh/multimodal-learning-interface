@@ -7,9 +7,18 @@ import { eventLogger } from '../../services/EventLogger';
 import { getCurrentSegment, getActiveInteraction, parseTime, formatTime } from '../../services/StoryLoader';
 import { InteractionRenderer } from '../interactions/InteractionVerbs';
 import { audioSynth } from '../../services/AudioSynthesizer';
+import KiteStoryCanvas from './KiteStoryCanvas';
+import LanternGardenCanvas from './LanternGardenCanvas';
 import './PlayerCommon.css';
 
 export default function InteractivePlayer({ storyConfig, onComplete }) {
+  if (storyConfig?.story_id === 'missing_kite_v1') {
+    return <KiteStoryCanvas condition="C3" storyConfig={storyConfig} onComplete={onComplete} interactions={storyConfig.interactions} />;
+  }
+  if (storyConfig?.story_id === 'lantern_garden_v1' || storyConfig?.story_id === 'lantern-garden') {
+    return <LanternGardenCanvas condition="C3" storyConfig={storyConfig} onComplete={onComplete} />;
+  }
+
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);

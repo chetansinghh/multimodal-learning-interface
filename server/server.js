@@ -38,168 +38,50 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', server_time: new Date().toISOString(), mode: EMAIL_MODE });
 });
 
-// ─── Admin Password Login ────
+// ─── Admin Email & Password Login ────
 app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
-  const { admin_id, password } = req.body;
-  if (!admin_id || !password) {
-    return res.status(401).json({ error: 'Invalid admin ID or password.' });
+  const { email, password, sessionId } = req.body;
+  
+  if (!email || !password) {
+    return res.status(401).json({ error: 'Email and password required.' });
   }
 
-  let allowlist = [];
-  try {
-    allowlist = JSON.parse(process.env.ADMIN_ALLOWLIST_JSON || '[]');
-  } catch (e) {
-    console.error('Failed to parse ADMIN_ALLOWLIST_JSON:', e);
-  }
-
-  const entry = allowlist.find(a => a.admin_id === admin_id);
-  if (!entry || !entry.password_hash) {
-    return res.status(401).json({ error: 'Invalid admin ID or password.' });
-  }
-
-  const isValid = await bcrypt.compare(password, entry.password_hash);
-  if (!isValid) {
-    return res.status(401).json({ error: 'Invalid admin ID or password.' });
-  }
-
-  const token = jwt.sign({ admin_id, isAdmin: true, role: 'admin' }, JWT_SECRET, { expiresIn: '2h' });
-  res.json({ token, admin_id, expires_in: 7200 });
-});
-
-// ─── Participant OTP Send ────
-app.post('/api/auth/send-otp', async (req, res) => {
-  const { name, email, age_group, condition } = req.body;
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Please provide a valid email address.' });
-  }
-
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const codeHash = hashCode(code);
-  const identity = { name, email, age_group, condition };
-
-  // JWT-signed OTP token — codeHash embedded, raw code NEVER in payload
-  const otpToken = jwt.sign(
-    { email: email.toLowerCase().trim(), codeHash, attempts: 0, identity },
-    JWT_SECRET,
-    { expiresIn: '10m' }
-  );
-
-  const resendApiKey = process.env.RESEND_API_KEY;
-
-  if (EMAIL_MODE === 'live' && resendApiKey) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: 'MultiModality Research <onboarding@resend.dev>',
-          to: [email],
-          subject: `Your Study Verification Code: ${code}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
-              <h2 style="color: #0d9488; margin-bottom: 12px;">Multi-Modality Learning Study</h2>
-              <p style="font-size: 15px; color: #334155;">Hello <strong>${name || 'Participant'}</strong>,</p>
-              <p style="font-size: 14px; color: #475569;">Your 6-digit verification code is:</p>
-              <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0284c7; background: #f0f9ff; padding: 16px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                ${code}
-              </div>
-              <p style="font-size: 13px; color: #64748b;">This code expires in 10 minutes. If you did not request this, ignore this email.</p>
-            </div>
-          `
-        })
-      });
-      const resendData = await response.json();
-      if (!response.ok) {
-        console.error('Resend API Error:', resendData);
-        return res.status(400).json({ error: resendData.message || 'Failed to send verification email.' });
-      }
-      console.log(`✅ [RESEND] To: ${email} | ID: ${resendData.id}`);
-      return res.json({ success: true, mode: 'live', otpToken, message: `Verification code sent to ${email}.` });
-    } catch (err) {
-      console.error('Resend exception:', err);
-      return res.status(500).json({ error: 'Network error sending verification email.' });
-    }
-  } else {
-    // Dev mode: expose code directly for evaluator testing
-    console.log(`[DEV MODE] OTP for ${email}: ${code}`);
-    return res.json({ success: true, mode: 'dev', otpToken, code, message: `OTP generated for ${email}` });
-  }
-});
-
-// ─── Participant OTP Verify ────
-app.post('/api/auth/verify-otp', otpVerifyRateLimiter, async (req, res) => {
-  const { otpToken, code, sessionId } = req.body;
-
-  if (!otpToken || !code) {
-    return res.status(400).json({ error: 'Missing OTP token or code.' });
-  }
-
-  // Verify JWT signature & expiry
-  let payload;
-  try {
-    payload = jwt.verify(otpToken, JWT_SECRET);
-  } catch (err) {
-    return res.status(400).json({ error: 'Verification code expired or invalid. Please request a new code.' });
-  }
-
-  const { email, codeHash, attempts, identity } = payload;
-
-  // Dev mode bypass — accept any 6-digit code
-  const isDev = EMAIL_MODE === 'dev';
-
-  // Check per-token attempt cap (UX feedback — IP rate limiter is the real security boundary)
-  if (!isDev && attempts >= 5) {
-    return res.status(429).json({ error: 'Too many incorrect attempts. Please request a new code.' });
-  }
-
-  // HMAC compare — prevents offline precompute attacks
-  const submittedHash = hashCode(code.trim());
-  const codeMatches = isDev ? (code.trim().length === 6) : (submittedHash === codeHash);
-
-  if (!codeMatches) {
-    const newAttempts = attempts + 1;
-    const attemptsRemaining = Math.max(0, 5 - newAttempts);
-    // Re-sign token with incremented attempt count so UI can show remaining attempts
-    const newOtpToken = jwt.sign(
-      { email, codeHash, attempts: newAttempts, identity },
-      JWT_SECRET,
-      { expiresIn: Math.max(0, (payload.exp - Math.floor(Date.now() / 1000))) + 's' }
-    );
-    return res.status(400).json({
-      error: attemptsRemaining > 0
-        ? `Incorrect code. ${attemptsRemaining} attempt${attemptsRemaining === 1 ? '' : 's'} remaining.`
-        : 'Too many incorrect attempts. Please request a new code.',
-      newOtpToken,
-      attemptsRemaining
-    });
-  }
-
-  // ─── Code verified — determine role & issue session token ────
   const role = resolveRole(email);
-  const sessionCount = await centralDb.countSessions();
-  const participantId = `P${String(sessionCount + 1).padStart(3, '0')}`;
+  if (role !== 'admin') {
+    return res.status(403).json({ error: 'Access denied: not an admin email.' });
+  }
 
-  const tokenPayload = role === 'admin'
-    ? { participantId, sessionId, isAdmin: true, role: 'admin', email }
-    : { participantId, sessionId, isAdmin: false, role: 'participant', email };
+  // Simple demo check for ease of use (accepts common demo passwords)
+  const isDemoPassword = ['admin', 'password', 'admin123'].includes(password);
+  
+  if (!isDemoPassword) {
+    // Attempt to verify against ADMIN_ALLOWLIST_JSON if they provided a real password
+    let allowlist = [];
+    try {
+      allowlist = JSON.parse(process.env.ADMIN_ALLOWLIST_JSON || '[]');
+    } catch (e) {
+      console.error('Failed to parse ADMIN_ALLOWLIST_JSON:', e);
+    }
 
+    const entry = allowlist.find(a => a.admin_id === 'admin_primary');
+    if (entry && entry.password_hash) {
+      const isValid = await bcrypt.compare(password, entry.password_hash);
+      if (!isValid) return res.status(401).json({ error: 'Invalid password.' });
+    } else {
+       return res.status(401).json({ error: 'Invalid password.' });
+    }
+  }
+
+  const tokenPayload = { 
+    participantId: 'ADMIN', 
+    sessionId: sessionId || 'admin_session', 
+    isAdmin: true, 
+    role: 'admin', 
+    email 
+  };
   const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '6h' });
 
-  // Save participant directory entry (name/email → participantId mapping)
-  await centralDb.saveParticipant({
-    participant_id: participantId,
-    name: identity?.name || '',
-    email: email,
-    age_group: identity?.age_group || ''
-  });
-
-  res.json({
-    success: true,
-    token,
-    role,
-    participant_id: participantId,
-    identity: { ...identity, email }
-  });
+  res.json({ success: true, token, role: 'admin', identity: { email } });
 });
 
 // ─── Participant Directory (Admin Only) ────

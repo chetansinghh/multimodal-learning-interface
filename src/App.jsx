@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 're
 import ParticipantFlow from './components/participant/ParticipantFlow';
 import ResearcherDashboard from './components/researcher/ResearcherDashboard';
 import AdminLoginGate from './components/researcher/AdminLoginGate';
-import ParticipantSignupModal from './components/participant/ParticipantSignupModal';
+import AdminLoginModal from './components/researcher/AdminLoginModal';
+import ParticipantSignupForm from './components/participant/ParticipantSignupForm';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
@@ -89,6 +90,7 @@ function LandingPage() {
   const { isLoggedIn, role, user } = useAuth();
   const navigate = useNavigate();
   const [stories, setStories] = useState([]);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
 
   useEffect(() => {
     loadAvailableStories().then(setStories);
@@ -109,18 +111,30 @@ function LandingPage() {
           </p>
 
           {/* 1. NOT LOGGED IN: Show unified email OTP login modal right on homepage */}
-          {!isLoggedIn && (
+          {!isLoggedIn && !showAdminLogin && (
             <div className="homepage-login-section">
-              <ParticipantSignupModal
+              <ParticipantSignupForm />
+            </div>
+          )}
+
+          {!isLoggedIn && showAdminLogin && (
+            <div className="homepage-login-section">
+              <AdminLoginModal
                 sessionId="home_session"
                 onComplete={(data) => {
                   if (data.role === 'admin') {
                     navigate('/researcher');
-                  } else {
-                    navigate('/participant');
                   }
                 }}
               />
+              <div style={{ textAlign: 'center', marginTop: '15px' }}>
+                <button 
+                  onClick={() => setShowAdminLogin(false)} 
+                  style={{ background: 'none', border: 'none', color: '#4ecdc4', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.95rem' }}
+                >
+                  ← Back to Participant Login
+                </button>
+              </div>
             </div>
           )}
 
@@ -185,6 +199,17 @@ function LandingPage() {
 
         <footer className="landing-footer">
           <p>Story-Agnostic Multi-Modality Learning Interface • Stage 1 Research Prototype</p>
+          {!isLoggedIn && (
+            <button 
+              onClick={() => {
+                setShowAdminLogin(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.85rem', marginTop: '10px' }}
+            >
+              Admin Login
+            </button>
+          )}
         </footer>
       </div>
     </div>

@@ -6,9 +6,18 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { eventLogger } from '../../services/EventLogger';
 import { getCurrentSegment, parseTime, formatTime } from '../../services/StoryLoader';
 import { audioSynth } from '../../services/AudioSynthesizer';
+import KiteStoryCanvas from './KiteStoryCanvas';
+import LanternGardenCanvas from './LanternGardenCanvas';
 import './PlayerCommon.css';
 
 export default function SimpleVideoPlayer({ storyConfig, onComplete }) {
+  if (storyConfig?.story_id === 'missing_kite_v1') {
+    return <KiteStoryCanvas condition="C1" storyConfig={storyConfig} onComplete={onComplete} />;
+  }
+  if (storyConfig?.story_id === 'lantern_garden_v1' || storyConfig?.story_id === 'lantern-garden') {
+    return <LanternGardenCanvas condition="C1" storyConfig={storyConfig} onComplete={onComplete} />;
+  }
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const animRef = useRef(null);
