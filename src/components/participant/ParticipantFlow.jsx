@@ -80,16 +80,18 @@ export default function ParticipantFlow() {
     setParticipantIdentity(identity);
 
     await eventLogger.init();
-    await loadStory();
-    eventLogger.startSession(pid, sessionId, condition);
-    sessionClock.start();
-    eventLogger.log('VIDEO_START', { action: 'session_begin' });
-
     const loadedConfig = await loadStoryConfig(storyUrl);
+    setStoryConfig(loadedConfig);
+
+    eventLogger.startSession(pid, sessionId, condition, loadedConfig.story_id, loadedConfig.title);
+    sessionClock.start();
+    eventLogger.log('VIDEO_START', { action: 'session_begin', storyId: loadedConfig.story_id });
+
     const versionSnapshot = {
       study_id: loadedConfig.story_id + '_study',
       study_version: loadedConfig.version || '1.0',
       story_id: loadedConfig.story_id,
+      story_title: loadedConfig.title,
       story_version: loadedConfig.version || '1.0',
       condition,
       condition_config_version: '1.0',
@@ -105,7 +107,8 @@ export default function ParticipantFlow() {
       participant_email: '',
       participant_age: identity.age_group,
       condition,
-      story_id: storyUrl,
+      story_id: loadedConfig.story_id,
+      story_title: loadedConfig.title,
       start_time: new Date().toISOString(),
       status: 'in_progress',
       version_snapshot: versionSnapshot
@@ -115,8 +118,8 @@ export default function ParticipantFlow() {
     await eventLogger.saveSession(sessionPayload);
 
     setPhase('experience');
-    eventLogger.log('VIDEO_START', { action: 'experience_begin' });
-  }, [user, condition, sessionId, storyUrl, loadStory]);
+    eventLogger.log('VIDEO_START', { action: 'experience_begin', storyId: loadedConfig.story_id });
+  }, [user, condition, sessionId, storyUrl]);
 
   if (!isLoggedIn) {
     // In normal flow, they log in on LandingPage. If they get here unauthenticated, redirect home.
@@ -143,7 +146,6 @@ export default function ParticipantFlow() {
 
   const beginExperience = () => {
     setPhase('experience');
-    // Logging moved to handleStartSession
   };
 
   const onExperienceComplete = useCallback(() => {
@@ -160,13 +162,14 @@ export default function ParticipantFlow() {
       session_id: sessionId,
       participant_id: participantId,
       condition,
-      story_id: storyUrl,
+      story_id: storyConfig?.story_id || existingSession?.story_id || storyUrl,
+      story_title: storyConfig?.title || existingSession?.story_title,
       status: 'complete',
       end_time: new Date().toISOString()
     });
     await eventLogger.endSession();
     setPhase('complete');
-  }, [sessionId, participantId, condition, storyUrl]);
+  }, [sessionId, participantId, condition, storyConfig, storyUrl]);
 
   // Render the correct player for the condition
   const renderPlayer = () => {

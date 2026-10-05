@@ -41,6 +41,8 @@ class EventLogger {
     this.sessionId = null;
     this.participantId = null;
     this.condition = null;
+    this.storyId = null;
+    this.storyTitle = null;
     this.eventBuffer = [];
     this.flushInterval = null;
     this.isInitialized = false;
@@ -53,10 +55,13 @@ class EventLogger {
   }
 
   /** Start a new logging session */
-  startSession(participantId, sessionId, condition) {
+  startSession(participantId, sessionId, condition, storyId = null, storyTitle = null) {
     this.participantId = participantId;
     this.sessionId = sessionId;
     this.condition = condition;
+    this.storyId = storyId;
+    this.storyTitle = storyTitle;
+    if (this.flushInterval) clearInterval(this.flushInterval);
     // Autosave flush every 2 seconds
     this.flushInterval = setInterval(() => this.flush(), 2000);
   }
@@ -68,12 +73,14 @@ class EventLogger {
     action = null,
     response = null,
     duration = null,
+    storyId = null,
     extra = {}
   } = {}) {
     const entry = {
       participant_id: this.participantId,
       session_id: this.sessionId,
       condition: this.condition,
+      story_id: storyId || this.storyId || null,
       timestamp: sessionClock.now(),
       wall_clock: sessionClock.wallClock(),
       video_timestamp: videoTimestamp,
@@ -237,6 +244,81 @@ class EventLogger {
       this.flushInterval = null;
     }
     await this.flush();
+  }
+
+  /** Delete a specific session and its associated events and assessments */
+  async deleteSession(sessionId) {
+    if (!this.db) return;
+    const tx = this.db.transaction([EVENTS_STORE, SESSIONS_STORE, ASSESSMENTS_STORE], 'readwrite');
+    const sesStore = tx.objectStore(SESSIONS_STORE);
+    sesStore.delete(sessionId);
+
+    // Delete events matching session_id
+    const evStore = tx.objectStore(EVENTS_STORE);
+    const evIndex = evStore.index('session_id');
+    const evReq = evIndex.openCursor(sessionId);
+    evReq.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        cursor.delete();
+        cursor.continue();
+      }
+    };
+
+    // Delete assessments matching session_id
+    const assStore = tx.objectStore(ASSESSMENTS_STORE);
+    const assIndex = assStore.index('session_id');
+    const assReq = assIndex.openCursor(sessionId);
+    assReq.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        cursor.delete();
+        cursor.continue();
+      }
+    };
+
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  /** Import a batch of sessions, events, and assessments */
+  async importData({ sessions = [], events = [], assessments = [] }) {
+    if (!this.db) await this.init();
+    const tx = this.db.transaction([EVENTS_STORE, SESSIONS_STORE, ASSESSMENTS_STORE], 'readwrite');
+    const sesStore = tx.objectStore(SESSIONS_STORE);
+    const evStore = tx.objectStore(EVENTS_STORE);
+    const assStore = tx.objectStore(ASSESSMENTS_STORE);
+
+    for (const s of sessions) {
+      sesStore.put(s);
+    }
+    for (const e of events) {
+      evStore.add(e);
+    }
+    for (const a of assessments) {
+      assStore.add(a);
+    }
+
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  /** Export all local database content as a structured JSON object */
+  async exportAllData() {
+    const sessions = await this.getAllSessions();
+    const events = await this.getAllEvents();
+    const assessments = await this.getAllAssessments();
+    return {
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+      sessions,
+      events,
+      assessments
+    };
   }
 
   /** Clear all data (for dev/testing) */

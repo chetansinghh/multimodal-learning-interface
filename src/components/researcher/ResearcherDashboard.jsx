@@ -6,6 +6,28 @@ import authService from '../../services/AuthService';
 import AdminLoginGate from './AdminLoginGate';
 import './ResearcherDashboard.css';
 
+// Helper to identify story details cleanly
+export function getStoryInfo(sessionOrStoryId) {
+  if (!sessionOrStoryId) return { id: 'story_missing_kite', title: 'The Missing Kite', emoji: '🪁', badgeClass: 'story-badge-kite' };
+  const s = typeof sessionOrStoryId === 'object' ? sessionOrStoryId : { story_id: sessionOrStoryId };
+  const idStr = String(s.story_id || s.story_title || s.version_snapshot?.story_id || s.version_snapshot?.story_title || '').toLowerCase();
+
+  if (idStr.includes('lantern') || idStr.includes('garden')) {
+    return {
+      id: 'story_lantern_garden',
+      title: s.story_title || s.version_snapshot?.story_title || "The Lantern in Grandmother's Garden",
+      emoji: '🏮',
+      badgeClass: 'story-badge-lantern'
+    };
+  }
+  return {
+    id: 'story_missing_kite',
+    title: s.story_title || s.version_snapshot?.story_title || 'The Missing Kite',
+    emoji: '🪁',
+    badgeClass: 'story-badge-kite'
+  };
+}
+
 export default function ResearcherDashboard() {
   return (
     <AdminLoginGate>
@@ -23,7 +45,14 @@ function ResearcherDashboardContent() {
   const [storyConfigs, setStoryConfigs] = useState({});
   const [availableStories, setAvailableStories] = useState(AVAILABLE_STORIES);
   const [uploadResult, setUploadResult] = useState(null);
+
+  // Filters
+  const [storyFilter, setStoryFilter] = useState('all');
+  const [conditionFilter, setConditionFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const fileInputRef = useRef(null);
+  const importInputRef = useRef(null);
 
   // Load data on mount
   useEffect(() => {
@@ -53,9 +82,24 @@ function ResearcherDashboardContent() {
               mergedSessions.push(ls);
             }
           });
+
+          const mergedEvents = [...(serverData.events || [])];
+          localE.forEach(le => {
+            if (!mergedEvents.some(me => me.session_id === le.session_id && me.timestamp === le.timestamp && me.event === le.event)) {
+              mergedEvents.push(le);
+            }
+          });
+
+          const mergedAssessments = [...(serverData.assessments || [])];
+          localA.forEach(la => {
+            if (!mergedAssessments.some(ma => ma.session_id === la.session_id && ma.question_id === la.question_id)) {
+              mergedAssessments.push(la);
+            }
+          });
+
           setSessions(mergedSessions);
-          setEvents(serverData.events?.length ? serverData.events : localE);
-          setAssessments(serverData.assessments?.length ? serverData.assessments : localA);
+          setEvents(mergedEvents);
+          setAssessments(mergedAssessments);
           return;
         }
       }
@@ -68,26 +112,273 @@ function ResearcherDashboardContent() {
     setAssessments(localA);
   };
 
+  // Delete a session
+  const handleDeleteSession = async (sessionId, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm('Delete this session and all its logged events & assessments?')) return;
+    await eventLogger.deleteSession(sessionId);
+    if (selectedSession === sessionId) setSelectedSession(null);
+    await loadData();
+  };
+
+  // Import JSON backup
+  const handleImportJSON = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data.sessions || data.events || data.assessments) {
+        await eventLogger.importData(data);
+        alert(`Successfully imported ${data.sessions?.length || 0} sessions, ${data.events?.length || 0} events, ${data.assessments?.length || 0} assessments!`);
+        await loadData();
+      } else if (Array.isArray(data)) {
+        await eventLogger.importData({ sessions: data });
+        alert(`Successfully imported ${data.length} sessions!`);
+        await loadData();
+      } else {
+        alert('Unrecognized backup format. Please provide a JSON exported from the research portal.');
+      }
+    } catch (err) {
+      alert(`Import error: ${err.message}`);
+    }
+  };
+
+  // Export full JSON backup
+  const handleExportBackup = async () => {
+    const backup = await eventLogger.exportAllData();
+    downloadFile(`research_study_backup_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), 'application/json');
+  };
+
+  // Generate Demo Study Data for both stories
+  const handleGenerateSampleData = async () => {
+    if (!window.confirm('Generate 8 representative sample research sessions (4 Kite, 4 Lantern across C1-C4) with realistic events, gaze data, and assessment results?')) return;
+
+    const sampleSessions = [
+      // 🪁 The Missing Kite Sessions
+      {
+        session_id: 'SESS_KITE_C1_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Aarav_01',
+        participant_name: 'Aarav Sharma',
+        participant_email: 'aarav@example.edu',
+        participant_age: '12-13',
+        condition: 'C1',
+        story_id: 'story_missing_kite',
+        story_title: 'The Missing Kite',
+        start_time: new Date(Date.now() - 3600000 * 3).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 3 + 195000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+      },
+      {
+        session_id: 'SESS_KITE_C2_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Priya_02',
+        participant_name: 'Priya Nair',
+        participant_email: 'priya@example.edu',
+        participant_age: '12-13',
+        condition: 'C2',
+        story_id: 'story_missing_kite',
+        story_title: 'The Missing Kite',
+        start_time: new Date(Date.now() - 3600000 * 2.5).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 2.5 + 210000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+      },
+      {
+        session_id: 'SESS_KITE_C3_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Rohan_03',
+        participant_name: 'Rohan Gupta',
+        participant_email: 'rohan@example.edu',
+        participant_age: '12-13',
+        condition: 'C3',
+        story_id: 'story_missing_kite',
+        story_title: 'The Missing Kite',
+        start_time: new Date(Date.now() - 3600000 * 2).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 2 + 235000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+      },
+      {
+        session_id: 'SESS_KITE_C4_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Ananya_04',
+        participant_name: 'Ananya Verma',
+        participant_email: 'ananya@example.edu',
+        participant_age: '12-13',
+        condition: 'C4',
+        story_id: 'story_missing_kite',
+        story_title: 'The Missing Kite',
+        start_time: new Date(Date.now() - 3600000 * 1.5).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 1.5 + 260000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+      },
+
+      // 🏮 The Lantern in Grandmother's Garden Sessions
+      {
+        session_id: 'SESS_LANT_C1_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Tara_05',
+        participant_name: 'Tara Patel',
+        participant_email: 'tara@example.edu',
+        participant_age: '12-13',
+        condition: 'C1',
+        story_id: 'story_lantern_garden',
+        story_title: "The Lantern in Grandmother's Garden",
+        start_time: new Date(Date.now() - 3600000 * 1.2).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 1.2 + 310000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
+      },
+      {
+        session_id: 'SESS_LANT_C2_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Kabir_06',
+        participant_name: 'Kabir Mehta',
+        participant_email: 'kabir@example.edu',
+        participant_age: '12-13',
+        condition: 'C2',
+        story_id: 'story_lantern_garden',
+        story_title: "The Lantern in Grandmother's Garden",
+        start_time: new Date(Date.now() - 3600000 * 0.9).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 0.9 + 325000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
+      },
+      {
+        session_id: 'SESS_LANT_C3_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Diya_07',
+        participant_name: 'Diya Sen',
+        participant_email: 'diya@example.edu',
+        participant_age: '12-13',
+        condition: 'C3',
+        story_id: 'story_lantern_garden',
+        story_title: "The Lantern in Grandmother's Garden",
+        start_time: new Date(Date.now() - 3600000 * 0.5).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 0.5 + 350000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
+      },
+      {
+        session_id: 'SESS_LANT_C4_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Zaid_08',
+        participant_name: 'Zaid Khan',
+        participant_email: 'zaid@example.edu',
+        participant_age: '12-13',
+        condition: 'C4',
+        story_id: 'story_lantern_garden',
+        story_title: "The Lantern in Grandmother's Garden",
+        start_time: new Date(Date.now() - 3600000 * 0.2).toISOString(),
+        end_time: new Date(Date.now() - 3600000 * 0.2 + 375000).toISOString(),
+        status: 'complete',
+        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
+      }
+    ];
+
+    const sampleEvents = [];
+    const sampleAssessments = [];
+
+    sampleSessions.forEach(s => {
+      const isLantern = s.story_id.includes('lantern');
+      const baseTime = new Date(s.start_time).getTime();
+
+      // Standard Video Events
+      sampleEvents.push(
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime, wall_clock: s.start_time, video_timestamp: 0, event: 'VIDEO_START', action: 'session_begin' },
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 45000, wall_clock: new Date(baseTime + 45000).toISOString(), video_timestamp: 45, event: 'SEGMENT_ENTER', action: 'scene_transition' }
+      );
+
+      // Condition-specific events
+      if (s.condition === 'C3') {
+        sampleEvents.push(
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 75000, wall_clock: new Date(baseTime + 75000).toISOString(), video_timestamp: 75, event: 'CHECKPOINT_HIT', object_id: isLantern ? 'butterflies' : 'tree_branch', action: 'solve_checkpoint', durationMs: 3200, correct: true },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 135000, wall_clock: new Date(baseTime + 135000).toISOString(), video_timestamp: 135, event: 'CHECKPOINT_HIT', object_id: isLantern ? 'repair_lantern' : 'kite_recover', action: 'solve_checkpoint', durationMs: 4100, correct: true }
+        );
+      } else if (s.condition === 'C4') {
+        sampleEvents.push(
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 30000, wall_clock: new Date(baseTime + 30000).toISOString(), video_timestamp: 30, event: 'VR_ENTER', action: 'webxr_start' },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 85000, wall_clock: new Date(baseTime + 85000).toISOString(), video_timestamp: 85, event: 'OBJECT_INTERACT', object_id: isLantern ? 'wind_chime' : 'flying_kite', action: isLantern ? 'ring_chime' : 'kite_loop' },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 110000, wall_clock: new Date(baseTime + 110000).toISOString(), video_timestamp: 110, event: 'GAZE_DWELL', object_id: isLantern ? 'pond' : 'park_fountain', duration: 1800 }
+        );
+      }
+
+      sampleEvents.push(
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 190000, wall_clock: new Date(baseTime + 190000).toISOString(), video_timestamp: 190, event: 'VIDEO_COMPLETE', action: 'experience_end' }
+      );
+
+      // Assessment Responses (8 questions)
+      for (let q = 1; q <= 8; q++) {
+        sampleAssessments.push({
+          session_id: s.session_id,
+          participant_id: s.participant_id,
+          condition: s.condition,
+          story_id: s.story_id,
+          question_id: `Q${q}`,
+          level: q <= 4 ? 'recall_understand' : q <= 6 ? 'apply' : 'implement',
+          accuracy: q === 5 && s.condition === 'C1' ? 0 : 1,
+          response_time_ms: Math.floor(2500 + Math.random() * 4000),
+          answer_changes: Math.random() > 0.7 ? 1 : 0
+        });
+      }
+    });
+
+    await eventLogger.importData({ sessions: sampleSessions, events: sampleEvents, assessments: sampleAssessments });
+    alert('Sample research dataset generated with 8 sessions!');
+    await loadData();
+  };
+
+  // ─── Filtered Sessions ────
+  const filteredSessions = sessions.filter(s => {
+    const info = getStoryInfo(s);
+    if (storyFilter !== 'all' && info.id !== storyFilter) return false;
+    if (conditionFilter !== 'all' && s.condition !== conditionFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchPid = (s.participant_id || '').toLowerCase().includes(q);
+      const matchName = (s.participant_name || '').toLowerCase().includes(q);
+      const matchEmail = (s.participant_email || '').toLowerCase().includes(q);
+      if (!matchPid && !matchName && !matchEmail) return false;
+    }
+    return true;
+  });
+
   // ─── Dashboard Tab ────
   const renderDashboard = () => {
     const sessionsByCondition = {};
     CONDITIONS.forEach(c => { sessionsByCondition[c.id] = []; });
-    sessions.forEach(s => {
+    filteredSessions.forEach(s => {
       if (sessionsByCondition[s.condition]) sessionsByCondition[s.condition].push(s);
     });
 
     return (
       <div className="dashboard-content">
-        <h2>Study Overview</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <h2>Study Overview</h2>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <input
+              type="file"
+              ref={importInputRef}
+              accept=".json"
+              onChange={handleImportJSON}
+              style={{ display: 'none' }}
+            />
+            <button className="action-btn-sm" onClick={() => importInputRef.current?.click()} title="Import JSON backup from localhost or another device">
+              📥 Import JSON
+            </button>
+            <button className="action-btn-sm" onClick={handleExportBackup} title="Export full study JSON backup">
+              📤 Backup All JSON
+            </button>
+            <button className="action-btn-sm action-btn-demo" onClick={handleGenerateSampleData} title="Populate demo data for testing">
+              🧪 Generate Sample Data
+            </button>
+          </div>
+        </div>
 
         {/* Summary cards */}
         <div className="summary-cards">
           <div className="summary-card">
-            <div className="card-value">{sessions.length}</div>
+            <div className="card-value">{filteredSessions.length}</div>
             <div className="card-label">Total Sessions</div>
           </div>
           <div className="summary-card">
-            <div className="card-value">{new Set(sessions.map(s => s.participant_id)).size}</div>
+            <div className="card-value">{new Set(filteredSessions.map(s => s.participant_id)).size}</div>
             <div className="card-label">Unique Participants</div>
           </div>
           <div className="summary-card">
@@ -108,7 +399,7 @@ function ResearcherDashboardContent() {
             const condEvents = events.filter(e => e.condition === c.id);
             const condAssessments = assessments.filter(a => a.condition === c.id);
             const avgAccuracy = condAssessments.length > 0
-              ? Math.round((condAssessments.reduce((s, a) => s + a.accuracy, 0) / condAssessments.length) * 100)
+              ? Math.round((condAssessments.reduce((s, a) => s + (a.accuracy === 1 ? 1 : 0), 0) / condAssessments.length) * 100)
               : 0;
 
             return (
@@ -128,35 +419,84 @@ function ResearcherDashboardContent() {
           })}
         </div>
 
-        {/* Participant table with administrative Identity */}
+        {/* Filter Bar */}
+        <div className="dashboard-filter-bar">
+          <div className="filter-group-left">
+            <input
+              type="text"
+              className="dashboard-search-input"
+              placeholder="🔍 Search participant, ID, email…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            <select
+              className="dashboard-select"
+              value={storyFilter}
+              onChange={(e) => setStoryFilter(e.target.value)}
+            >
+              <option value="all">📖 All Stories ({sessions.length})</option>
+              <option value="story_missing_kite">🪁 The Missing Kite</option>
+              <option value="story_lantern_garden">🏮 Grandmother's Garden</option>
+            </select>
+
+            <select
+              className="dashboard-select"
+              value={conditionFilter}
+              onChange={(e) => setConditionFilter(e.target.value)}
+            >
+              <option value="all">🎛️ All Modalities (C1–C4)</option>
+              <option value="C1">C1 – Simple Video</option>
+              <option value="C2">C2 – Spatial Audio</option>
+              <option value="C3">C3 – Interactive</option>
+              <option value="C4">C4 – VR Immersive</option>
+            </select>
+          </div>
+
+          <div className="filter-group-right">
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Showing {filteredSessions.length} of {sessions.length} sessions
+            </span>
+          </div>
+        </div>
+
+        {/* Participant table with Story Badges */}
         <h3>All Sessions</h3>
-        {sessions.length === 0 ? (
-          <p className="empty-state">No sessions recorded yet. Run a participant session first.</p>
+        {filteredSessions.length === 0 ? (
+          <p className="empty-state">No matching sessions found. Try changing filters or click &quot;🧪 Generate Sample Data&quot;.</p>
         ) : (
           <div className="sessions-table-wrapper">
             <table className="sessions-table">
               <thead>
                 <tr>
+                  <th>Story</th>
                   <th>Participant ID</th>
                   <th>Name & Email</th>
                   <th>Condition</th>
                   <th>Status</th>
                   <th>Events</th>
                   <th>Assessment</th>
-                  <th>Start</th>
+                  <th>Start Time</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sessions.map(s => {
+                {filteredSessions.map(s => {
                   const sessEvents = events.filter(e => e.session_id === s.session_id);
                   const sessAssess = assessments.filter(a => a.session_id === s.session_id);
-                  const acc = sessAssess.length > 0
-                    ? Math.round((sessAssess.reduce((sum, a) => sum + a.accuracy, 0) / sessAssess.length) * 100)
+                  const gradedAssess = sessAssess.filter(a => a.accuracy !== null && a.accuracy !== undefined);
+                  const acc = gradedAssess.length > 0
+                    ? Math.round((gradedAssess.reduce((sum, a) => sum + (a.accuracy === 1 ? 1 : 0), 0) / gradedAssess.length) * 100)
                     : '-';
+                  const storyInfo = getStoryInfo(s);
 
                   return (
                     <tr key={s.session_id} className={selectedSession === s.session_id ? 'selected' : ''}>
+                      <td>
+                        <span className={`story-badge ${storyInfo.badgeClass}`}>
+                          {storyInfo.emoji} {storyInfo.title.length > 20 ? storyInfo.title.slice(0, 18) + '…' : storyInfo.title}
+                        </span>
+                      </td>
                       <td><code>{s.participant_id}</code></td>
                       <td>
                         <div className="participant-identity-cell">
@@ -171,12 +511,17 @@ function ResearcherDashboardContent() {
                         </span>
                       </td>
                       <td>{sessEvents.length}</td>
-                      <td>{acc}%</td>
+                      <td>{acc !== '-' ? `${acc}%` : '-'}</td>
                       <td>{s.start_time ? new Date(s.start_time).toLocaleString() : '-'}</td>
                       <td>
-                        <button className="table-btn" onClick={() => setSelectedSession(s.session_id)}>
-                          View
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="table-btn" onClick={() => setSelectedSession(s.session_id)}>
+                            View
+                          </button>
+                          <button className="delete-btn-sm" onClick={(e) => handleDeleteSession(s.session_id, e)} title="Delete session">
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -196,6 +541,7 @@ function ResearcherDashboardContent() {
     const sessEvents = events.filter(e => e.session_id === sessionId);
     const sessAssess = assessments.filter(a => a.session_id === sessionId);
     const session = sessions.find(s => s.session_id === sessionId);
+    const storyInfo = getStoryInfo(session);
 
     // Compute derived measures from raw events (§A of addendum)
     const measures = computeSessionMeasures(sessEvents, sessAssess);
@@ -203,13 +549,18 @@ function ResearcherDashboardContent() {
     const videoEvents = sessEvents.filter(e => e.event?.startsWith('VIDEO_'));
     const replays = sessEvents.filter(e => e.event === 'VIDEO_REPLAY').length;
     const pauses = sessEvents.filter(e => e.event === 'VIDEO_PAUSE').length;
-    const interactions = sessEvents.filter(e => e.event === 'OBJECT_INTERACT').length;
+    const interactions = sessEvents.filter(e => e.event === 'OBJECT_INTERACT' || e.event === 'CHECKPOINT_HIT').length;
     const gazeEvents = sessEvents.filter(e => e.event?.startsWith('GAZE_')).length;
 
     return (
       <div className="session-detail">
         <div className="detail-header">
-          <h3>Session Detail — {session?.participant_id} ({session?.condition})</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className={`story-badge ${storyInfo.badgeClass}`} style={{ fontSize: '0.9rem', padding: '4px 12px' }}>
+              {storyInfo.emoji} {storyInfo.title}
+            </span>
+            <h3 style={{ margin: 0 }}>Session Detail — {session?.participant_id} ({session?.condition})</h3>
+          </div>
           <button className="close-btn" onClick={() => setSelectedSession(null)}>✕</button>
         </div>
 
