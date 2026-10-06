@@ -113,6 +113,33 @@ const C3_CHECKPOINTS = [
   }
 ];
 
+/** Fisher-Yates array shuffler */
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function getRandomizedC3Checkpoints() {
+  return C3_CHECKPOINTS.map(cp => {
+    if (cp.options && cp.options.length > 1) {
+      const correctText = cp.options[cp.correct];
+      const shuffledOptions = shuffleArray(cp.options);
+      const newCorrectIdx = shuffledOptions.indexOf(correctText);
+      return {
+        ...cp,
+        options: shuffledOptions,
+        correct: newCorrectIdx >= 0 ? newCorrectIdx : 0,
+        correctText: correctText
+      };
+    }
+    return { ...cp };
+  });
+}
+
 export default function LanternGardenCanvas({
   condition = 'C1', // 'C1', 'C2', 'C3', 'C4'
   storyConfig,
@@ -133,7 +160,13 @@ export default function LanternGardenCanvas({
   const [currentHeading, setCurrentHeading] = useState(0);
   const [hoveredInteractive, setHoveredInteractive] = useState(null);
 
-  // C3 Interactive State
+  // C3 Interactive State (with randomized options)
+  const [c3CheckpointsList] = useState(() => getRandomizedC3Checkpoints());
+  const c3CheckpointsRef = useRef(c3CheckpointsList);
+  useEffect(() => {
+    c3CheckpointsRef.current = c3CheckpointsList;
+  }, [c3CheckpointsList]);
+
   const [c3Waiting, setC3Waiting] = useState(false);
   const [c3CheckpointIdx, setC3CheckpointIdx] = useState(0);
   const [c3TargetIdx, setC3TargetIdx] = useState(0);
@@ -564,7 +597,7 @@ export default function LanternGardenCanvas({
 
         // C3 Checkpoint Pause Check
         if (conditionRef.current === 'C3') {
-          const cp = C3_CHECKPOINTS[cpIdxRef.current];
+          const cp = c3CheckpointsRef.current[cpIdxRef.current];
           if (cp && currentTimeRef.current < cp.at && nextTime >= cp.at) {
             nextTime = cp.at;
             setC3Waiting(true);
@@ -621,7 +654,7 @@ export default function LanternGardenCanvas({
 
       // C3 Screen Projector for active Checkpoint
       if (conditionRef.current === 'C3' && waitingRef.current) {
-        updateC3CheckpointProjection(camera, mount, worldRefs, C3_CHECKPOINTS, cpIdxRef.current, tgIdxRef.current, setC3ButtonPos);
+        updateC3CheckpointProjection(camera, mount, worldRefs, c3CheckpointsRef.current, cpIdxRef.current, tgIdxRef.current, setC3ButtonPos);
       }
 
       // C4 Gaze tracking & 3D object hover detection
@@ -777,8 +810,8 @@ export default function LanternGardenCanvas({
 
     // Reset C3 checkpoint tracking if seeking
     if (conditionRef.current === 'C3') {
-      let cpIdx = C3_CHECKPOINTS.findIndex(c => c.at >= time);
-      setC3CheckpointIdx(cpIdx < 0 ? C3_CHECKPOINTS.length : cpIdx);
+      let cpIdx = c3CheckpointsRef.current.findIndex(c => c.at >= time);
+      setC3CheckpointIdx(cpIdx < 0 ? c3CheckpointsRef.current.length : cpIdx);
       setC3TargetIdx(0);
       setC3Waiting(false);
       waitingRef.current = false;
@@ -808,7 +841,7 @@ export default function LanternGardenCanvas({
   // ─── C3 Cognitive Option Selection Handler ────
   const handleC3OptionSelect = (optionIdx) => {
     if (!waitingRef.current) return;
-    const cp = C3_CHECKPOINTS[cpIdxRef.current];
+    const cp = c3CheckpointsRef.current[cpIdxRef.current];
     if (!cp) return;
 
     c3Attempts.current += 1;
@@ -868,7 +901,7 @@ export default function LanternGardenCanvas({
   const handleC3TargetClick = () => {
     if (!waitingRef.current) return;
     c3Attempts.current += 1;
-    const cp = C3_CHECKPOINTS[cpIdxRef.current];
+    const cp = c3CheckpointsRef.current[cpIdxRef.current];
     if (!cp) return;
     const durationMs = performance.now() - c3StartTime.current;
 
@@ -919,7 +952,7 @@ export default function LanternGardenCanvas({
 
     // If waiting for C3 checkpoint, allow clicking target directly in 3D
     if (conditionRef.current === 'C3' && waitingRef.current) {
-      const cp = C3_CHECKPOINTS[cpIdxRef.current];
+      const cp = c3CheckpointsRef.current[cpIdxRef.current];
       if (cp && cp.targets) {
         const curTarget = cp.targets[tgIdxRef.current];
         const targetPos = resolveTarget(curTarget, refs);
@@ -1062,7 +1095,7 @@ export default function LanternGardenCanvas({
 
             {/* C3 Interactive Checkpoint Overlay */}
             {condition === 'C3' && c3Waiting && (() => {
-              const activeCp = C3_CHECKPOINTS[c3CheckpointIdx];
+              const activeCp = c3CheckpointsList[c3CheckpointIdx];
               if (!activeCp) return null;
 
               if (activeCp.type === 'choice' || activeCp.type === 'direction' || activeCp.type === 'sequence') {
@@ -1071,7 +1104,7 @@ export default function LanternGardenCanvas({
                     <div className="c3-cognitive-modal">
                       <div className="c3-modal-header">
                         <span className="c3-badge">
-                          ✨ Checkpoint {c3CheckpointIdx + 1} of {C3_CHECKPOINTS.length}
+                          ✨ Checkpoint {c3CheckpointIdx + 1} of {c3CheckpointsList.length}
                         </span>
                         <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
                           {activeCp.type}

@@ -1,12 +1,35 @@
 // AssessmentEngine.jsx — 3-Level Evaluation Engine + Post-Assessment Experience Survey
 // Supports Recall/Understand (with perception measures preserved), Apply, Implement (drag ordering),
-// and Likert 1-5 Experience Survey.
+// and Likert 1-5 Experience Survey with full question counterbalancing and option randomization.
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { eventLogger } from '../../services/EventLogger';
 import { sessionClock } from '../../services/SessionClock';
 import { normalizeAssessment } from '../../services/StoryLoader';
 import './Assessment.css';
+
+/** Fisher-Yates random array shuffler */
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Guarantee that items are scrambled and not initially in solved order */
+function scrambleItems(array, referenceOrderIds) {
+  if (!array || array.length <= 1) return array || [];
+  let scrambled = shuffleArray(array);
+  if (referenceOrderIds && referenceOrderIds.length === scrambled.length) {
+    const isIdentical = scrambled.every((item, idx) => item.id === referenceOrderIds[idx]);
+    if (isIdentical) {
+      scrambled.reverse();
+    }
+  }
+  return scrambled;
+}
 
 export default function AssessmentEngine({
   assessment,
@@ -16,9 +39,43 @@ export default function AssessmentEngine({
   storyId,
   onComplete
 }) {
-  // Normalize assessment data
+  // Normalize and counterbalance/randomize assessment data
+  const [randomizedLevels] = useState(() => {
+    const normalized = normalizeAssessment(assessment);
+    const rawLevels = normalized.levels || [];
+
+    return rawLevels.map(level => {
+      // 1. Counterbalance: Shuffle question presentation order within the cognitive tier
+      const shuffledQuestions = shuffleArray(level.items || []).map(q => {
+        if (q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 1) {
+          // Identify the exact correct answer text
+          const correctText = q.correct_text || q.options[q.correct_answer] || '';
+
+          // 2. Randomize: Shuffle option choices (A, B, C, D)
+          const shuffledOptions = shuffleArray(q.options);
+
+          // 3. Dynamically re-map the correct answer index
+          const newCorrectIndex = shuffledOptions.indexOf(correctText);
+
+          return {
+            ...q,
+            options: shuffledOptions,
+            correct_answer: newCorrectIndex >= 0 ? newCorrectIndex : 0,
+            correct_text: correctText,
+            original_options: q.options
+          };
+        }
+        return q;
+      });
+
+      return {
+        ...level,
+        items: shuffledQuestions
+      };
+    });
+  });
+
   const normalized = normalizeAssessment(assessment);
-  const levels = normalized.levels || [];
   const experienceSurvey = normalized.experience_survey || [];
 
   const [currentLevel, setCurrentLevel] = useState(0);
@@ -39,11 +96,11 @@ export default function AssessmentEngine({
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const questionStartTime = useRef(null);
 
-  const currentLevelData = levels[currentLevel];
+  const currentLevelData = randomizedLevels[currentLevel];
   const items = currentLevelData?.items || [];
   const currentItemData = items[currentItem];
 
-  // Start timer for each question
+  // Start timer & scramble ordering items for each question
   useEffect(() => {
     questionStartTime.current = sessionClock.now();
     setAnswerChanges(0);
@@ -52,10 +109,12 @@ export default function AssessmentEngine({
     setSubmitted(false);
 
     if (currentItemData?.type === 'drag_order') {
-      const initial = [...(currentItemData.items_to_order || [])];
-      setDragOrder(initial);
+      const originalItems = currentItemData.items_to_order || [];
+      const correctOrder = currentItemData.correct_order || [];
+      const scrambled = scrambleItems(originalItems, correctOrder);
+      setDragOrder(scrambled);
     }
-  }, [currentLevel, currentItem]);
+  }, [currentLevel, currentItem, currentItemData]);
 
   const handleSelectAnswer = (index) => {
     if (submitted) return;
@@ -82,15 +141,20 @@ export default function AssessmentEngine({
     let isCorrect = false;
     let answerValue = null;
     let correctValue = null;
+    let answerText = null;
+    let correctText = currentItemData.correct_text || (currentItemData.options ? currentItemData.options[currentItemData.correct_answer] : null);
 
     if (currentItemData.type === 'multiple_choice') {
       answerValue = selectedAnswer;
       correctValue = currentItemData.correct_answer;
       isCorrect = selectedAnswer === correctValue;
+      answerText = currentItemData.options ? currentItemData.options[selectedAnswer] : null;
     } else if (currentItemData.type === 'drag_order') {
       answerValue = dragOrder.map(item => item.id);
       correctValue = currentItemData.correct_order;
       isCorrect = JSON.stringify(answerValue) === JSON.stringify(correctValue);
+      answerText = dragOrder.map(item => item.label || item.id).join(' → ');
+      correctText = Array.isArray(currentItemData.correct_order) ? currentItemData.correct_order.join(' → ') : currentItemData.correct_order;
     }
 
     const result = {
@@ -101,11 +165,14 @@ export default function AssessmentEngine({
       question_id: currentItemData.id,
       level: currentLevelData.level,
       question_type: currentItemData.type,
-      measure: currentItemData.measure || 'conceptual', // Preserves 'perception' tag!
+      measure: currentItemData.measure || 'conceptual',
       start_time: questionStartTime.current,
       end_time: sessionClock.now(),
       answer: answerValue,
+      answer_text: answerText,
+      selected_position: currentItemData.type === 'multiple_choice' && selectedAnswer !== null ? String.fromCharCode(65 + selectedAnswer) : null,
       correct_answer: correctValue,
+      correct_text: correctText,
       accuracy: isCorrect ? 1 : 0,
       response_time_ms: responseTime,
       answer_changes: answerChanges,
@@ -121,6 +188,8 @@ export default function AssessmentEngine({
       action: 'assessment_submit',
       response: JSON.stringify({
         answer: answerValue,
+        answer_text: answerText,
+        selected_position: result.selected_position,
         correct: isCorrect,
         time_ms: responseTime,
         changes: answerChanges,
@@ -135,7 +204,7 @@ export default function AssessmentEngine({
   const nextQuestion = useCallback(() => {
     if (currentItem < items.length - 1) {
       setCurrentItem(prev => prev + 1);
-    } else if (currentLevel < levels.length - 1) {
+    } else if (currentLevel < randomizedLevels.length - 1) {
       setCurrentLevel(prev => prev + 1);
       setCurrentItem(0);
     } else {
@@ -149,7 +218,7 @@ export default function AssessmentEngine({
         if (onComplete) onComplete(results);
       }
     }
-  }, [currentItem, currentLevel, items.length, levels.length, experienceSurvey.length, results, onComplete]);
+  }, [currentItem, currentLevel, items.length, randomizedLevels.length, experienceSurvey.length, results, onComplete]);
 
   // ─── Experience Survey Handlers ────
   const handleSurveySelect = (qId, rating) => {
@@ -286,7 +355,7 @@ export default function AssessmentEngine({
   }
 
   // ─── 3-Level Assessment View ────
-  const totalQuestions = levels.reduce((sum, l) => sum + (l.items?.length || 0), 0);
+  const totalQuestions = randomizedLevels.reduce((sum, l) => sum + (l.items?.length || 0), 0);
   const answeredQuestions = results.length;
 
   return (
@@ -303,11 +372,11 @@ export default function AssessmentEngine({
 
       {/* Progress bar */}
       <div className="assessment-progress-bar">
-        {levels.map((level, li) => (
+        {randomizedLevels.map((level, li) => (
           <div key={level.level} className="level-progress-segment"
             style={{ width: `${(level.items?.length / totalQuestions) * 100}%` }}>
             {level.items?.map((_, qi) => {
-              const globalIdx = levels.slice(0, li).reduce((s, l) => s + (l.items?.length || 0), 0) + qi;
+              const globalIdx = randomizedLevels.slice(0, li).reduce((s, l) => s + (l.items?.length || 0), 0) + qi;
               return (
                 <div key={qi} className={`progress-dot ${globalIdx < answeredQuestions ? 'done' : globalIdx === answeredQuestions ? 'active' : ''}`}
                   style={{ backgroundColor: globalIdx < answeredQuestions ? '#4CAF50' : globalIdx === answeredQuestions ? level.level === 'recall_understand' ? '#FFD93D' : level.level === 'apply' ? '#FF6B35' : '#4ECDC4' : 'rgba(255,255,255,0.15)' }}
