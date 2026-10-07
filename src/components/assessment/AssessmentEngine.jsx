@@ -2,7 +2,7 @@
 // Supports Recall/Understand (with perception measures preserved), Apply, Implement (drag ordering),
 // and Likert 1-5 Experience Survey with full question counterbalancing and option randomization.
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { eventLogger } from '../../services/EventLogger';
 import { sessionClock } from '../../services/SessionClock';
 import { normalizeAssessment } from '../../services/StoryLoader';
@@ -40,8 +40,9 @@ export default function AssessmentEngine({
   onComplete
 }) {
   // Normalize and counterbalance/randomize assessment data
-  const [randomizedLevels] = useState(() => {
-    const normalized = normalizeAssessment(assessment);
+  const normalized = useMemo(() => normalizeAssessment(assessment), [assessment]);
+
+  const randomizedLevels = useMemo(() => {
     const rawLevels = normalized.levels || [];
 
     return rawLevels.map(level => {
@@ -73,9 +74,8 @@ export default function AssessmentEngine({
         items: shuffledQuestions
       };
     });
-  });
+  }, [normalized]);
 
-  const normalized = normalizeAssessment(assessment);
   const experienceSurvey = normalized.experience_survey || [];
 
   const [currentLevel, setCurrentLevel] = useState(0);
@@ -268,13 +268,13 @@ export default function AssessmentEngine({
     }
   };
 
-  if (!assessment || levels.length === 0) {
+  if (!assessment || randomizedLevels.length === 0) {
     return <div className="assessment-container"><p>No assessment configured.</p></div>;
   }
 
   // ─── Results View ────
   if (assessmentComplete) {
-    return <AssessmentResults results={results} levels={levels} surveyResults={surveyResults} />;
+    return <AssessmentResults results={results} levels={randomizedLevels} surveyResults={surveyResults} />;
   }
 
   // ─── Experience Survey View ────
@@ -355,6 +355,14 @@ export default function AssessmentEngine({
   }
 
   // ─── 3-Level Assessment View ────
+  if (!currentLevelData || !currentItemData) {
+    return (
+      <div className="assessment-container">
+        <p>Loading assessment question…</p>
+      </div>
+    );
+  }
+
   const totalQuestions = randomizedLevels.reduce((sum, l) => sum + (l.items?.length || 0), 0);
   const answeredQuestions = results.length;
 
@@ -448,7 +456,7 @@ export default function AssessmentEngine({
           ) : (
             <button className="next-btn" onClick={nextQuestion}>
               {currentItem < items.length - 1 ? 'Next Question' :
-                currentLevel < levels.length - 1 ? `Next Level: ${levels[currentLevel + 1].label}` :
+                currentLevel < randomizedLevels.length - 1 ? `Next Level: ${randomizedLevels[currentLevel + 1]?.label || ''}` :
                   experienceSurvey.length > 0 ? 'Proceed to Experience Survey' : 'View Results'}
             </button>
           )}
