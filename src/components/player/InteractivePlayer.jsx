@@ -9,6 +9,7 @@ import { InteractionRenderer } from '../interactions/InteractionVerbs';
 import { audioSynth } from '../../services/AudioSynthesizer';
 import KiteStoryCanvas from './KiteStoryCanvas';
 import LanternGardenCanvas from './LanternGardenCanvas';
+import AyurvedaCanvas from './AyurvedaCanvas';
 import './PlayerCommon.css';
 
 export default function InteractivePlayer({ storyConfig, onComplete }) {
@@ -17,6 +18,9 @@ export default function InteractivePlayer({ storyConfig, onComplete }) {
   }
   if (storyConfig?.story_id === 'lantern_garden_v1' || storyConfig?.story_id === 'lantern-garden') {
     return <LanternGardenCanvas condition="C3" storyConfig={storyConfig} onComplete={onComplete} />;
+  }
+  if (storyConfig?.story_id === 'ayurveda_intro_v1') {
+    return <AyurvedaCanvas condition="C3" storyConfig={storyConfig} onComplete={onComplete} />;
   }
 
   const canvasRef = useRef(null);

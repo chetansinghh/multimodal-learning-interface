@@ -1,0 +1,536 @@
+{
+  "story_id": "ayurveda_intro_v1",
+  "title": "Ayurveda",
+  "subtitle": "Origins, Elements, and Mindful Living",
+  "version": "0.2-timed-to-supplied-video",
+  "duration_sec": 118,
+  "playback_end_sec": 110.2,
+  "source_media": {
+    "origin": "Supplied painted-illustration explainer video (WhatsApp_Video_2026-10-21_at_2_47_56_PM.mp4).",
+    "file_facts": "117.85 s, 1280x720 @ 60 fps, AAC stereo 48 kHz. Narration ends ~109.7 s; picture fades to black at 110.2 s; 110.2-117.8 s is silent black.",
+    "playback_end_note": "Use playback_end_sec (110.2) as the end of the experience in ALL conditions, so the 7.6 s of black silence is not counted as exposure.",
+    "intro_disclaimer_all_conditions": "This video describes a traditional knowledge system. It is not medical advice."
+  },
+  "media": {
+    "video_flat": "/videos/ayurveda_explainer.mp4",
+    "audio_stereo": "/videos/ayurveda_audio.mp3",
+    "thumbnail": "/thumbnails/ayurveda_thumb.jpg"
+  },
+  "content_rules": {
+    "same_transcript_all_conditions": true,
+    "interactions_may_add_facts": false,
+    "interactions_may_reveal_answers_or_clues": false,
+    "interaction_gate": "action-only (the participant must perform the action, never know the answer); never knowledge-gated",
+    "echo_labels_policy": "Any label shown on interaction may only repeat a word the narrator has already said at that moment; nothing new, no extra on-screen text beyond that",
+    "points_for_interaction": false,
+    "narration_in_vr": "head-locked / non-positional, same original audio track as C1-C3",
+    "health_claims": "No added health claims or advice anywhere in the interface; keep the video's own cautious framing",
+    "intro_disclaimer_all_conditions": "This video describes a traditional knowledge system. It is not medical advice."
+  },
+  "segments": [
+    {
+      "id": "seg1",
+      "label": "Tradition and Nature",
+      "start": "00:00",
+      "end": "00:26",
+      "color": "#8b5cf6",
+      "visual": "Sanskrit scroll titled Ayurveda; river valley with banyan; sages under the tree with an open book"
+    },
+    {
+      "id": "seg2",
+      "label": "The Five Elements",
+      "start": "00:27",
+      "end": "00:34",
+      "color": "#38bdf8",
+      "visual": "Open book with element icons dissolving into the diagram: Earth, Fire, Air, Water around a seated figure, cosmos circle on top"
+    },
+    {
+      "id": "seg3",
+      "label": "Plants and Preparations",
+      "start": "00:35",
+      "end": "00:52",
+      "color": "#10b981",
+      "visual": "Herb plants and a hand touching a leaf; hands grinding herbs in a stone mortar; cut to black at ~0:53"
+    },
+    {
+      "id": "seg4",
+      "label": "The Three Doshas",
+      "start": "00:53",
+      "end": "01:02",
+      "color": "#f59e0b",
+      "visual": "Three medallions: Vata (blue figure with wind/water), Pitta (red figure in flame), Kapha (green figure with leaves)"
+    },
+    {
+      "id": "seg5",
+      "label": "Daily Routines",
+      "start": "01:03",
+      "end": "01:10",
+      "color": "#ec4899",
+      "visual": "Figure meditating on a river bank at sunrise; light fades ~1:11"
+    },
+    {
+      "id": "seg6",
+      "label": "Therapies and Preparations",
+      "start": "01:11",
+      "end": "01:20",
+      "color": "#6366f1",
+      "visual": "Therapist working on a covered patient on a wooden table; small brass bowl on a stand"
+    },
+    {
+      "id": "seg7",
+      "label": "Texts, Teachers & Continuation",
+      "start": "01:21",
+      "end": "01:50",
+      "color": "#14b8a6",
+      "visual": "Elder teacher and student reading a manuscript, rolled scrolls and clay pots; river with a flowering plant; young woman standing at the river"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "int_01",
+      "segment_id": "seg1",
+      "verb": "hold_charge",
+      "active_window": [
+        "00:10",
+        "00:26"
+      ],
+      "object_id": "banyan_tree",
+      "prompt": "Press and hold the tree to let the morning light grow",
+      "completion": "held until the light animation finishes",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "00:26",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "x": 0.50,
+        "y": 0.42,
+        "radius": 0.18,
+        "hold_time_ms": 1500,
+        "label": "Banyan Tree"
+      }
+    },
+    {
+      "id": "int_02",
+      "segment_id": "seg2",
+      "verb": "select_hotspot",
+      "active_window": [
+        "00:27",
+        "00:34"
+      ],
+      "prompt": "Touch each glowing element",
+      "completion": "all five touched, any order",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "00:34",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "hotspots": [
+          { "id": "earth", "label": "Earth", "x": 0.32, "y": 0.65 },
+          { "id": "water", "label": "Water", "x": 0.42, "y": 0.68 },
+          { "id": "fire", "label": "Fire", "x": 0.50, "y": 0.52 },
+          { "id": "air", "label": "Air", "x": 0.58, "y": 0.40 },
+          { "id": "ether", "label": "Ether", "x": 0.50, "y": 0.22 }
+        ]
+      }
+    },
+    {
+      "id": "int_03",
+      "segment_id": "seg3",
+      "verb": "select_hotspot",
+      "active_window": [
+        "00:35",
+        "00:43"
+      ],
+      "prompt": "Touch the glowing leaf",
+      "completion": "leaf touched",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "00:43",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "hotspots": [
+          { "id": "herb_leaf", "label": "Herb Leaf", "x": 0.52, "y": 0.50 }
+        ]
+      }
+    },
+    {
+      "id": "int_04",
+      "segment_id": "seg3",
+      "verb": "trace_path",
+      "active_window": [
+        "00:44",
+        "00:52"
+      ],
+      "object_id": "mortar_pestle",
+      "prompt": "Move around the bowl to grind the herbs",
+      "completion": "circular path around the mortar",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "00:52",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "color": "#10b981",
+        "tolerance": 0.15,
+        "path_points": [
+          { "x": 0.50, "y": 0.42 },
+          { "x": 0.62, "y": 0.52 },
+          { "x": 0.50, "y": 0.62 },
+          { "x": 0.38, "y": 0.52 },
+          { "x": 0.50, "y": 0.42 }
+        ]
+      }
+    },
+    {
+      "id": "int_05",
+      "segment_id": "seg4",
+      "verb": "select_hotspot",
+      "active_window": [
+        "00:53",
+        "01:02"
+      ],
+      "prompt": "Touch each glowing figure",
+      "completion": "all three touched, any order",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "01:02.5",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "hotspots": [
+          { "id": "vata", "label": "Vata", "x": 0.28, "y": 0.50 },
+          { "id": "pitta", "label": "Pitta", "x": 0.50, "y": 0.48 },
+          { "id": "kapha", "label": "Kapha", "x": 0.72, "y": 0.50 }
+        ]
+      }
+    },
+    {
+      "id": "int_06",
+      "segment_id": "seg5",
+      "verb": "trace_path",
+      "active_window": [
+        "01:03",
+        "01:10"
+      ],
+      "object_id": "sun_over_river",
+      "prompt": "Drag the sun along its path over the river",
+      "completion": "sun dragged across the morning arc",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "01:10.5",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "color": "#f59e0b",
+        "tolerance": 0.18,
+        "path_points": [
+          { "x": 0.25, "y": 0.40 },
+          { "x": 0.50, "y": 0.24 },
+          { "x": 0.75, "y": 0.38 }
+        ]
+      }
+    },
+    {
+      "id": "int_07",
+      "segment_id": "seg6",
+      "verb": "select_hotspot",
+      "active_window": [
+        "01:11",
+        "01:20"
+      ],
+      "prompt": "Touch the glowing bowl",
+      "completion": "bowl touched",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "01:20.5",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "hotspots": [
+          { "id": "brass_bowl", "label": "Brass Bowl", "x": 0.42, "y": 0.62 }
+        ]
+      }
+    },
+    {
+      "id": "int_08",
+      "segment_id": "seg7",
+      "verb": "drag_sort",
+      "active_window": [
+        "01:21",
+        "01:30"
+      ],
+      "object_id": "rolled_scroll",
+      "prompt": "Pass the scroll to the student",
+      "completion": "scroll dropped on the student figure",
+      "gate": {
+        "type": "hold_at",
+        "hold_at": "01:30.5",
+        "max_wait_sec": 6
+      },
+      "config": {
+        "items": [
+          { "id": "scroll", "label": "📜 Sacred Scroll" }
+        ],
+        "zones": [
+          { "id": "student", "label": "Student Reader", "accepts": ["scroll"] }
+        ]
+      }
+    }
+  ],
+  "audio": {
+    "sounds": [
+      { "id": "birds", "type": "loop", "position": [0, 4, 3], "importance": 2 },
+      { "id": "breeze", "type": "loop", "position": [-8, 2, 0], "importance": 2 },
+      { "id": "water_trickle", "type": "loop", "position": [-1.2, 0.3, -2.7], "importance": 3 },
+      { "id": "fire_crackle", "type": "loop", "position": [0, 0.4, -3.0], "importance": 3 },
+      { "id": "air_swirl", "type": "oneshot", "position": [1.5, 1.6, -2.6], "importance": 3 },
+      { "id": "ether_shimmer", "type": "oneshot", "position": [0, 3.2, -1.0], "importance": 3 },
+      { "id": "mortar_grind", "type": "loop", "position": [0, 0.9, -1.0], "importance": 4 },
+      { "id": "soft_chime", "type": "oneshot", "position": [0, 1.5, -2], "importance": 3 },
+      { "id": "bowl_ring", "type": "oneshot", "position": [-1, 0.9, -1.5], "importance": 3 },
+      { "id": "page_rustle", "type": "oneshot", "position": [1, 1, -2], "importance": 3 },
+      { "id": "river_flow", "type": "loop", "position": [-6, 0.2, -4], "importance": 2 },
+      { "id": "leaf_rustle", "type": "oneshot", "position": [0, 1, -1.5], "importance": 2 }
+    ],
+    "cues": [
+      { "t_window": ["00:00", "00:26"], "start": ["birds", "breeze", "river_flow"] },
+      { "t_window": ["00:27", "00:34"], "start": ["water_trickle", "fire_crackle"], "stop": ["river_flow"] },
+      { "t_window": ["00:35", "00:43"], "start": ["breeze"], "stop": ["water_trickle", "fire_crackle"] },
+      { "t_window": ["00:44", "00:52"], "start": ["mortar_grind"] },
+      { "t_window": ["00:53", "01:02"], "start": ["soft_chime"], "stop": ["mortar_grind"] },
+      { "t_window": ["01:03", "01:10"], "start": ["river_flow", "birds"] },
+      { "t_window": ["01:11", "01:20"], "start": ["bowl_ring"] },
+      { "t_window": ["01:21", "01:30"], "start": ["page_rustle"] },
+      { "t_window": ["01:31", "01:50"], "start": ["river_flow", "birds"] }
+    ]
+  },
+  "pre_survey": [
+    {
+      "id": "P1",
+      "prompt": "Before today, how much did you already know about Ayurveda?",
+      "type": "likert_1_5",
+      "scale": "1 = nothing, 5 = a lot",
+      "note": "stored as prior_topic_familiarity"
+    }
+  ],
+  "assessment": {
+    "instructions": "Choose one answer for each question. Answer what the video said, not whether you agree. Choose 'Not sure' rather than guessing.",
+    "time_limit_per_question_sec": 60,
+    "shuffle_options": true,
+    "allow_not_sure": true,
+    "not_sure_scores": 0,
+    "levels": [
+      {
+        "level": "recall_understand",
+        "label": "Recall and Understand",
+        "description": "Items Q1-Q8 from the approved assessment document.",
+        "items": [
+          {
+            "id": "Q1",
+            "segment_id": "seg1",
+            "type": "multiple_choice",
+            "question": "According to the video, Ayurveda is a traditional way of understanding...",
+            "options": [
+              "Space travel and astronomy",
+              "Life, health, and our relationship with nature",
+              "Computer science",
+              "Modern transport"
+            ],
+            "correct_answer": 1,
+            "correct_text": "Life, health, and our relationship with nature"
+          },
+          {
+            "id": "Q2",
+            "segment_id": "seg1",
+            "type": "multiple_choice",
+            "question": "What did the video say traditions observed or reflected on?",
+            "options": [
+              "Only city traffic",
+              "Only weather forecasts",
+              "Only sports performance",
+              "Nature and everyday rhythms; connections among body, mind, and environment"
+            ],
+            "correct_answer": 3,
+            "correct_text": "Nature and everyday rhythms; connections among body, mind, and environment"
+          },
+          {
+            "id": "Q3",
+            "segment_id": "seg2",
+            "type": "multiple_choice",
+            "question": "Which five elements were named?",
+            "options": [
+              "Earth, metal, wood, ice, and smoke",
+              "Water, sand, light, sound, and stone",
+              "Earth, water, fire, air, and ether",
+              "Fire, rain, cloud, snow, and wind"
+            ],
+            "correct_answer": 2,
+            "correct_text": "Earth, water, fire, air, and ether"
+          },
+          {
+            "id": "Q4",
+            "segment_id": "seg3",
+            "type": "multiple_choice",
+            "question": "What did traditional practitioners do with plants and other natural substances?",
+            "options": [
+              "Studied only their colours",
+              "Studied them and recorded their uses",
+              "Used them only as decoration",
+              "Avoided recording information"
+            ],
+            "correct_answer": 1,
+            "correct_text": "Studied them and recorded their uses"
+          },
+          {
+            "id": "Q5",
+            "segment_id": "seg4",
+            "type": "multiple_choice",
+            "question": "Which three doshas were named?",
+            "options": [
+              "Vata, Pitta, and Kapha",
+              "Earth, water, and fire",
+              "Body, mind, and nature",
+              "Morning, afternoon, and evening"
+            ],
+            "correct_answer": 0,
+            "correct_text": "Vata, Pitta, and Kapha"
+          },
+          {
+            "id": "Q6",
+            "segment_id": "seg5",
+            "type": "multiple_choice",
+            "question": "Which practices did the video say are emphasized in many Ayurvedic traditions?",
+            "options": [
+              "Gaming and competitive sport",
+              "Skipping meals and night work",
+              "Shopping and travel",
+              "Daily routines, mindful eating, and seasonal practices"
+            ],
+            "correct_answer": 3,
+            "correct_text": "Daily routines, mindful eating, and seasonal practices"
+          },
+          {
+            "id": "Q7",
+            "segment_id": "seg6",
+            "type": "multiple_choice",
+            "question": "How did the video describe therapies and preparations?",
+            "options": [
+              "Guaranteed cures for every illness",
+              "Identical in every context",
+              "Intended to support well-being, with practices varying by context",
+              "Unrelated to well-being"
+            ],
+            "correct_answer": 2,
+            "correct_text": "Intended to support well-being, with practices varying by context"
+          },
+          {
+            "id": "Q8",
+            "segment_id": "seg7",
+            "type": "multiple_choice",
+            "question": "How was traditional knowledge described as being preserved and passed on?",
+            "options": [
+              "Only through advertisements",
+              "Through traditional texts and from teacher to student across generations",
+              "Only through video games",
+              "It was not preserved"
+            ],
+            "correct_answer": 1,
+            "correct_text": "Through traditional texts and from teacher to student across generations"
+          }
+        ]
+      },
+      {
+        "level": "apply",
+        "label": "Apply",
+        "description": "Proposed application tasks based on the video's concepts.",
+        "items": [
+          {
+            "id": "A1",
+            "segment_id": "seg6",
+            "type": "multiple_choice",
+            "question": "A friend says a traditional preparation will definitely cure any illness. Based on the video, which reply fits best?",
+            "options": [
+              "Agree: the video said preparations cure every illness",
+              "The video described such therapies as meant to support well-being, varying by context, not as guaranteed cures",
+              "The video said all preparations are identical everywhere",
+              "The video said preparations have nothing to do with well-being"
+            ],
+            "correct_answer": 1,
+            "correct_text": "The video described such therapies as meant to support well-being, varying by context, not as guaranteed cures"
+          },
+          {
+            "id": "A2",
+            "segment_id": "seg5",
+            "type": "multiple_choice",
+            "question": "Ravi wants to follow the kind of everyday practices the video described. Which choice fits best?",
+            "options": [
+              "Skip meals when he is busy",
+              "Stay up late every night",
+              "Eat mindfully, keep a regular daily routine, and adjust habits with the seasons",
+              "Eat as fast as possible"
+            ],
+            "correct_answer": 2,
+            "correct_text": "Eat mindfully, keep a regular daily routine, and adjust habits with the seasons"
+          }
+        ]
+      },
+      {
+        "level": "implement",
+        "label": "Implement",
+        "description": "Sequencing task using the video's presentation order.",
+        "items": [
+          {
+            "id": "I1",
+            "type": "drag_order",
+            "question": "Put these topics in the order the video presented them.",
+            "items_to_order": [
+              { "id": "elements", "label": "The five elements" },
+              { "id": "plants", "label": "Studying and recording plants" },
+              { "id": "doshas", "label": "The three doshas" },
+              { "id": "routines", "label": "Daily routines and mindful eating" },
+              { "id": "teaching", "label": "Passing knowledge from teacher to student" }
+            ],
+            "correct_order": [
+              "elements",
+              "plants",
+              "doshas",
+              "routines",
+              "teaching"
+            ]
+          }
+        ]
+      }
+    ],
+    "open_response": {
+      "id": "Q9",
+      "segment_id": "seg7",
+      "type": "short_text",
+      "question": "In one or two sentences, what was the main message of the video?",
+      "scoring": "manual rubric 0-2 by a rater blind to condition",
+      "rubric": {
+        "2": "Accurately says Ayurveda is a traditional knowledge system connected with nature/everyday life AND mentions at least one more idea from the closing lines (well-being, mindful routines, or knowledge continuing across generations)",
+        "1": "Partially captures this",
+        "0": "Incorrect, unrelated, or blank"
+      }
+    },
+    "experience_survey": [
+      { "id": "E1", "prompt": "I understood the main message.", "type": "likert_1_5" },
+      { "id": "E2", "prompt": "The presentation held my attention.", "type": "likert_1_5" },
+      { "id": "E3", "prompt": "The presentation was easy to follow.", "type": "likert_1_5" },
+      { "id": "E4", "prompt": "I can remember the important ideas.", "type": "likert_1_5" },
+      { "id": "E5", "prompt": "This way of watching the video helped me understand it.", "type": "likert_1_5" }
+    ],
+    "vr_safety": {
+      "only_for_condition": "C4",
+      "item": {
+        "id": "V1",
+        "prompt": "Did you feel dizzy, sick, or have eye strain or other discomfort?",
+        "type": "likert_1_5",
+        "scale": "1 = not at all, 5 = severe"
+      }
+    }
+  }
+}

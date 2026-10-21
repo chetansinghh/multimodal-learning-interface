@@ -20,5 +20,16 @@
     "segments_count": 11,
     "interactions_count": 6,
     "assessment_count": 8
+  },
+  {
+    "id": "ayurveda_intro_v1",
+    "path": "/stories/story_ayurveda_v1.json",
+    "title": "Ayurveda",
+    "subtitle": "Origins, Elements, and Mindful Living",
+    "emoji": "🌿",
+    "banner_class": "ayurveda-banner",
+    "segments_count": 7,
+    "interactions_count": 8,
+    "assessment_count": 8
   }
 ]

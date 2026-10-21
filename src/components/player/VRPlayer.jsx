@@ -13,6 +13,7 @@ import { getCurrentSegment, parseTime, formatTime } from '../../services/StoryLo
 import { audioSynth } from '../../services/AudioSynthesizer';
 import { spatialAudio } from '../../services/SpatialAudioEngine';
 import LanternGardenCanvas from './LanternGardenCanvas';
+import AyurvedaCanvas from './AyurvedaCanvas';
 import './PlayerCommon.css';
 
 const GAZE_DWELL_MS = 1500;
@@ -58,6 +59,9 @@ const NARR_SCRIPT = [
 export default function VRPlayer({ storyConfig, onComplete }) {
   if (storyConfig?.story_id === 'lantern_garden_v1' || storyConfig?.story_id === 'lantern-garden') {
     return <LanternGardenCanvas condition="C4" storyConfig={storyConfig} onComplete={onComplete} />;
+  }
+  if (storyConfig?.story_id === 'ayurveda_intro_v1') {
+    return <AyurvedaCanvas condition="C4" storyConfig={storyConfig} onComplete={onComplete} />;
   }
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
