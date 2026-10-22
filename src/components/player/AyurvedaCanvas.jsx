@@ -239,27 +239,148 @@ function buildAyurvedaWorld(scene, refs) {
   scene.add(firePts);
   refs.fire = firePts; refs.fPos = fPos; refs.fPhase = fPhase; refs.fGeom = fGeom;
 
-  // Medicinal Herb Table & Mortar
+  // ── Sacred Ayurvedic Dhonga (Mortar) Preparation Station ───────────────────
   const table = new THREE.Mesh(
     new THREE.BoxGeometry(2.5, 0.75, 1.2),
     new THREE.MeshLambertMaterial({ color: 0x78350f })
   );
   table.position.set(2.8, 0.38, -2.0);
   table.castShadow = true;
+  table.receiveShadow = true;
   scene.add(table);
+  refs.table = table;
 
-  const mortarMat = new THREE.MeshPhongMaterial({ color: 0x475569, shininess: 90 });
-  const mortar = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.4, 16), mortarMat);
-  mortar.position.set(2.8, 1.15, -2.0);
-  mortar.castShadow = true;
-  scene.add(mortar);
-  refs.mortar = mortar;
+  // Authentic Stone Dhonga Group (Mortar Bowl)
+  const dhongaMortar = new THREE.Group();
+  dhongaMortar.position.set(2.8, 0.75, -2.0);
 
-  const pestle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.13, 0.85, 8), mortarMat);
-  pestle.position.set(2.95, 1.55, -1.95);
-  pestle.rotation.z = 0.35;
-  scene.add(pestle);
-  refs.pestle = pestle;
+  const stoneMat = new THREE.MeshStandardMaterial({
+    color: 0x334155,
+    roughness: 0.85,
+    metalness: 0.15
+  });
+
+  // Outer tapered stone bowl body
+  const outerBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.30, 0.38, 24), stoneMat);
+  outerBowl.position.y = 0.19;
+  outerBowl.castShadow = true;
+  outerBowl.receiveShadow = true;
+  dhongaMortar.add(outerBowl);
+
+  // Deep inner cavity
+  const cavityMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.95 });
+  const innerCavity = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.18, 0.28, 24), cavityMat);
+  innerCavity.position.y = 0.26;
+  dhongaMortar.add(innerCavity);
+
+  // Sacred bronze/gold decorative rim band
+  const brassBandMat = new THREE.MeshStandardMaterial({
+    color: 0xd4a017,
+    roughness: 0.35,
+    metalness: 0.8
+  });
+  const rimBand = new THREE.Mesh(new THREE.TorusGeometry(0.41, 0.018, 12, 32), brassBandMat);
+  rimBand.rotation.x = Math.PI / 2;
+  rimBand.position.y = 0.375;
+  dhongaMortar.add(rimBand);
+
+  // Botanical Herbal Bed inside bowl (transitions from coarse to ground)
+  const herbBedMat = new THREE.MeshStandardMaterial({
+    color: 0x166534,
+    roughness: 0.85
+  });
+  const herbBed = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.18, 0.06, 20), herbBedMat);
+  herbBed.position.y = 0.22;
+  dhongaMortar.add(herbBed);
+  refs.herbBed = herbBed;
+  refs.herbBedMat = herbBedMat;
+
+  // Individual coarse herb leaf flakes scattered inside bowl
+  const leafGroup = new THREE.Group();
+  for (let i = 0; i < 18; i++) {
+    const leafGeom = new THREE.PlaneGeometry(0.045, 0.07);
+    const leafMat = new THREE.MeshLambertMaterial({
+      color: i % 2 === 0 ? 0x22c55e : 0x15803d,
+      side: THREE.DoubleSide
+    });
+    const leaf = new THREE.Mesh(leafGeom, leafMat);
+    const rad = Math.random() * 0.18;
+    const ang = Math.random() * Math.PI * 2;
+    leaf.position.set(Math.cos(ang) * rad, 0.25 + Math.random() * 0.02, Math.sin(ang) * rad);
+    leaf.rotation.set(Math.random() * 0.4, Math.random() * Math.PI, Math.random() * 0.4);
+    leafGroup.add(leaf);
+  }
+  dhongaMortar.add(leafGroup);
+  refs.leafFlakes = leafGroup;
+
+  // Contextual Grinding Zone Feedback Ring (pulses green/gold when implement is in valid zone)
+  const zoneRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.22, 0.35, 32),
+    new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.0, side: THREE.DoubleSide })
+  );
+  zoneRing.rotation.x = -Math.PI / 2;
+  zoneRing.position.y = 0.39;
+  dhongaMortar.add(zoneRing);
+  refs.grindZoneRing = zoneRing;
+
+  dhongaMortar.userData = {
+    type: 'dhonga_mortar',
+    id: 'dhonga_mortar',
+    label: 'Sacred Stone Dhonga'
+  };
+  scene.add(dhongaMortar);
+  refs.dhongaMortar = dhongaMortar;
+  refs.mortar = dhongaMortar;
+
+  // ── Grinding Implement (Pestle / Musal) ────────────────────────────────────
+  const pestleGroup = new THREE.Group();
+  // Resting position beside the mortar on the table
+  pestleGroup.position.set(2.95, 0.88, -1.82);
+  pestleGroup.rotation.set(0.15, 0.1, 0.45);
+
+  // Upper Handle Grip
+  const handleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.42, 16), stoneMat);
+  handleMesh.position.y = 0.28;
+  handleMesh.castShadow = true;
+  pestleGroup.add(handleMesh);
+
+  // Grip brass accent
+  const gripAccent = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.012, 8, 20), brassBandMat);
+  gripAccent.rotation.x = Math.PI / 2;
+  gripAccent.position.y = 0.20;
+  pestleGroup.add(gripAccent);
+
+  // Heavy Rounded Grinding Base
+  const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.085, 0.28, 16), stoneMat);
+  baseMesh.position.y = 0.06;
+  baseMesh.castShadow = true;
+  pestleGroup.add(baseMesh);
+
+  const roundedHead = new THREE.Mesh(
+    new THREE.SphereGeometry(0.085, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    stoneMat
+  );
+  roundedHead.rotation.x = Math.PI;
+  roundedHead.position.y = -0.08;
+  roundedHead.castShadow = true;
+  pestleGroup.add(roundedHead);
+
+  // Selection highlight indicator (subtle glow on focus)
+  const pestleHighlight = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.12, 0.65, 12),
+    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, wireframe: true })
+  );
+  pestleHighlight.position.y = 0.15;
+  pestleGroup.add(pestleHighlight);
+  refs.pestleHighlight = pestleHighlight;
+
+  pestleGroup.userData = {
+    type: 'dhonga_pestle',
+    id: 'dhonga_pestle',
+    label: 'Ayurvedic Grinding Pestle'
+  };
+  scene.add(pestleGroup);
+  refs.pestle = pestleGroup;
 
   // Herb Jars
   refs.herbJars = [];
@@ -534,10 +655,47 @@ function buildAyurvedaAudio() {
       });
     };
 
+    // Subtle stone-on-stone botanical grinding friction feedback
+    let lastGrindTime = 0;
+    const playGrindFrictionSound = () => {
+      if (!ctx || ctx.state === 'closed') return;
+      const now = ctx.currentTime;
+      if (now - lastGrindTime < 0.12) return; // Smooth rate limit
+      lastGrindTime = now;
+
+      try {
+        const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.18;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(320 + Math.random() * 80, now);
+        filter.Q.setValueAtTime(2.2, now);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(master);
+
+        noise.start(now);
+        noise.stop(now + 0.08);
+      } catch (_) {}
+    };
+
     return {
       ctx,
       master,
       playDiscoveryChime,
+      playGrindFrictionSound,
       setMuted: (muted) => {
         master.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 0.03);
       },
@@ -794,9 +952,58 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     });
   }, []);
 
-  // ── Concept Discovery Action (Laptop Click/E & VR Trigger/Gaze) ────────────
-  const handleDiscoverConcept = useCallback((concept) => {
+  // Modal & Concept Interaction State Machine Refs
+  const infoPanelRef = useRef(infoPanel);
+  infoPanelRef.current = infoPanel;
+  const dismissedConceptIdRef = useRef(null);
+  const popupStateRef = useRef('NONE'); // 'NONE' | 'FOCUSED' | 'OPEN' | 'DISMISSED'
+
+  // Dhonga & Pestle Grinding State
+  const [dhongaState, setDhongaState] = useState({
+    status: 'RESTING', // 'RESTING' | 'FOCUSED' | 'HELD' | 'GRINDING' | 'COMPLETED'
+    progress: 0,
+  });
+  const dhongaRef = useRef({
+    status: 'RESTING',
+    progress: 0,
+    accumulatedAngle: 0,
+    lastAngle: null,
+    completed: false,
+    holder: null, // 'mouse' | 'controller_0' | 'controller_1'
+    heldController: null,
+  });
+  const heldToolRef = useRef(null);
+
+  // ── Dismissal Guard & State Machine Transition ─────────────────────────────
+  const handleDismissPanel = useCallback((e) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    const cur = infoPanelRef.current;
+    if (cur && cur.id) {
+      dismissedConceptIdRef.current = cur.id;
+      popupStateRef.current = 'DISMISSED';
+      eventLogger.log('CONCEPT_PANEL_DISMISSED', {
+        conceptId: cur.id,
+        videoTimestamp: currentTimeRef.current
+      });
+    }
+    setInfoPanel(null);
+    setGazeInfo(null);
+    Object.keys(gazeTimes.current).forEach(k => { gazeTimes.current[k] = null; });
+  }, []);
+
+  // ── Concept Discovery Action (Deliberate Laptop Click/E & VR Trigger) ──────
+  const handleDiscoverConcept = useCallback((concept, isDeliberate = true) => {
     if (!concept || !concept.id) return;
+
+    // Reset dismissal guard on intentional activation
+    if (isDeliberate) {
+      dismissedConceptIdRef.current = null;
+    }
+
+    popupStateRef.current = 'OPEN';
 
     // Validate & Discover
     setDiscoveryStates(prev => ({ ...prev, [concept.id]: 'DISCOVERED' }));
@@ -816,7 +1023,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       conceptId: concept.id,
       type: concept.type,
       label: concept.label,
-      videoTimestamp: currentTimeRef.current
+      videoTimestamp: currentTimeRef.current,
+      deliberate: isDeliberate
     });
 
     // Open Lore Card
@@ -830,6 +1038,85 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     });
   }, []);
   handleDiscoverConceptRef.current = handleDiscoverConcept;
+
+  // ── Shared Dhonga (Mortar & Pestle) Gameplay Handlers ──────────────────────
+  const handleGrabPestle = useCallback((holder = 'mouse') => {
+    if (dhongaRef.current.status === 'HELD') return;
+    dhongaRef.current.status = 'HELD';
+    dhongaRef.current.holder = holder;
+    heldToolRef.current = 'pestle';
+
+    setDhongaState(prev => ({ ...prev, status: 'HELD' }));
+
+    if (audioRef.current?.playDiscoveryChime) {
+      audioRef.current.playDiscoveryChime(440);
+    }
+
+    eventLogger.log('OBJECT_GRABBED', {
+      objectId: 'dhonga_pestle',
+      holder,
+      videoTimestamp: currentTimeRef.current
+    });
+  }, []);
+
+  const handleReleasePestle = useCallback(() => {
+    if (dhongaRef.current.status !== 'HELD' && dhongaRef.current.status !== 'GRINDING') return;
+
+    const completed = dhongaRef.current.completed;
+    dhongaRef.current.status = completed ? 'COMPLETED' : 'RESTING';
+    dhongaRef.current.holder = null;
+    dhongaRef.current.heldController = null;
+    dhongaRef.current.lastAngle = null;
+    heldToolRef.current = null;
+
+    setDhongaState(prev => ({
+      ...prev,
+      status: completed ? 'COMPLETED' : 'RESTING'
+    }));
+
+    // Smoothly restore pestle to resting posture beside mortar
+    if (worldRefs.current.pestle) {
+      worldRefs.current.pestle.position.set(2.95, 0.88, -1.82);
+      worldRefs.current.pestle.rotation.set(0.15, 0.1, 0.45);
+    }
+    if (worldRefs.current.grindZoneRing) {
+      worldRefs.current.grindZoneRing.material.opacity = 0.0;
+    }
+
+    eventLogger.log('OBJECT_RELEASED', {
+      objectId: 'dhonga_pestle',
+      completed,
+      videoTimestamp: currentTimeRef.current
+    });
+  }, []);
+
+  const handleGrindComplete = useCallback(() => {
+    if (dhongaRef.current.completed) return;
+    dhongaRef.current.completed = true;
+    dhongaRef.current.status = 'COMPLETED';
+    dhongaRef.current.progress = 1.0;
+
+    setDhongaState({ status: 'COMPLETED', progress: 1.0 });
+
+    if (audioRef.current?.playDiscoveryChime) {
+      audioRef.current.playDiscoveryChime(792); // Radiant completion chord
+    }
+
+    eventLogger.log('DHONGA_GRIND_COMPLETE', {
+      videoTimestamp: currentTimeRef.current,
+      storySegment: 'seg3_plants_preparations'
+    });
+
+    // Connect to approved Vata learning content (Station 3 -> Vata Principle of Movement)
+    handleDiscoverConcept({
+      id: 'vata',
+      label: 'Vata Dosha (Air + Ether)',
+      desc: 'In traditional Ayurvedic preparation, the physical grinding and warming of herbs balances the dynamic, mobile, and dry qualities of Vata (Air and Space). Vata is the vital principle governing all movement, respiration, and nervous impulses.',
+      elements: 'Air + Ether',
+      type: 'dosha',
+      color: 0x38bdf8
+    }, true);
+  }, [handleDiscoverConcept]);
 
   // ── Video Controls ─────────────────────────────────────────────────────────
   const playVideo = useCallback(() => {
@@ -962,7 +1249,69 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     reticle.add(gArc);
     worldRefs.current.gazeArc = gArc;
 
-    // WebXR 6DOF Controllers with Laser Rays
+    // ── Shared Grinding Physics & Gesture Validation Function ──────────────
+    const performGrind = (pestlePos, dt, source = 'mouse') => {
+      const mortarCenter = new THREE.Vector3(2.8, 1.15, -2.0);
+      const dx = pestlePos.x - mortarCenter.x;
+      const dz = pestlePos.z - mortarCenter.z;
+      const dist2D = Math.hypot(dx, dz);
+      const inZone = dist2D <= 0.35 && pestlePos.y >= 0.85 && pestlePos.y <= 1.55;
+
+      if (worldRefs.current.grindZoneRing) {
+        worldRefs.current.grindZoneRing.material.opacity = inZone ? 0.75 : 0.0;
+      }
+
+      if (inZone) {
+        const curAngle = Math.atan2(dz, dx);
+        if (dhongaRef.current.lastAngle !== null) {
+          let dTheta = curAngle - dhongaRef.current.lastAngle;
+          if (dTheta > Math.PI) dTheta -= 2 * Math.PI;
+          if (dTheta < -Math.PI) dTheta += 2 * Math.PI;
+          const absD = Math.abs(dTheta);
+          // Require valid circular stroke movement inside mortar cavity
+          if (absD > 0.035 && absD < 1.2 && dist2D > 0.04) {
+            dhongaRef.current.accumulatedAngle += absD;
+            // 3.0 full circular rotations required (approx 18.8 radians)
+            const prog = Math.min(1.0, dhongaRef.current.accumulatedAngle / (Math.PI * 2 * 3.0));
+            dhongaRef.current.progress = prog;
+
+            setDhongaState({
+              status: prog >= 1.0 ? 'COMPLETED' : 'GRINDING',
+              progress: prog
+            });
+
+            // Swirl botanical herb leaves & crush into powder
+            if (worldRefs.current.leafFlakes) {
+              worldRefs.current.leafFlakes.rotation.y += dTheta * 0.9;
+              const s = Math.max(0.12, 1.0 - prog * 0.78);
+              worldRefs.current.leafFlakes.scale.set(s, Math.max(0.08, 1.0 - prog * 0.9), s);
+            }
+            if (worldRefs.current.herbBedMat) {
+              worldRefs.current.herbBedMat.color.setHex(prog > 0.5 ? 0x14532d : 0x166534);
+            }
+
+            // Audio: subtle stone-on-stone botanical friction
+            if (audioRef.current?.playGrindFrictionSound) {
+              audioRef.current.playGrindFrictionSound();
+            }
+
+            // VR Haptic pulse on gamepad if available
+            if (source && source.gamepad?.hapticActuators?.[0]) {
+              try { source.gamepad.hapticActuators[0].pulse(0.4, 25); } catch (_) {}
+            }
+
+            if (prog >= 1.0 && !dhongaRef.current.completed) {
+              handleGrindComplete();
+            }
+          }
+        }
+        dhongaRef.current.lastAngle = curAngle;
+      } else {
+        dhongaRef.current.lastAngle = null;
+      }
+    };
+
+    // ── WebXR 6DOF Controllers with Grab & Ray Interaction ──────────────────
     renderer.xr.addEventListener('sessionstart', () => {
       [0, 1].forEach(i => {
         const ctrl = renderer.xr.getController(i);
@@ -972,12 +1321,40 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         const laser = new THREE.Line(laserGeom, new THREE.LineBasicMaterial({ color: i === 0 ? 0xf59e0b : 0x38bdf8 }));
         ctrl.add(laser);
 
-        ctrl.addEventListener('selectstart', () => {
+        const handleXRTrigger = () => {
+          // Check proximity grab to pestle
+          if (worldRefs.current.pestle) {
+            const ctrlPos = new THREE.Vector3();
+            ctrl.getWorldPosition(ctrlPos);
+            const pestlePos = new THREE.Vector3();
+            worldRefs.current.pestle.getWorldPosition(pestlePos);
+
+            if (ctrlPos.distanceTo(pestlePos) < 0.45) {
+              // Attach pestle to controller
+              ctrl.attach(worldRefs.current.pestle);
+              dhongaRef.current.heldController = ctrl;
+              handleGrabPestle(`vr_controller_${i}`);
+              return;
+            }
+          }
+
+          // Raycast for altar interaction
           const ray = new THREE.Raycaster();
           const tm = new THREE.Matrix4();
           tm.identity().extractRotation(ctrl.matrixWorld);
           ray.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
           ray.ray.direction.set(0, 0, -1).applyMatrix4(tm);
+
+          // Check direct pestle ray hit
+          if (worldRefs.current.pestle) {
+            const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
+            if (pestleHits.length > 0) {
+              ctrl.attach(worldRefs.current.pestle);
+              dhongaRef.current.heldController = ctrl;
+              handleGrabPestle(`vr_controller_${i}`);
+              return;
+            }
+          }
 
           const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
           const hits = ray.intersectObjects(interactables, true);
@@ -985,11 +1362,23 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             let hitObj = hits[0].object;
             while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
             if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
-              handleDiscoverConceptRef.current(hitObj.userData);
+              handleDiscoverConceptRef.current(hitObj.userData, true);
               eventLogger.log('XR_SELECT', { objectId: hitObj.userData.id, type: hitObj.userData.type });
             }
           }
-        });
+        };
+
+        const handleXRRelease = () => {
+          if (dhongaRef.current.heldController === ctrl) {
+            scene.attach(worldRefs.current.pestle);
+            handleReleasePestle();
+          }
+        };
+
+        ctrl.addEventListener('selectstart', handleXRTrigger);
+        ctrl.addEventListener('squeezestart', handleXRTrigger);
+        ctrl.addEventListener('selectend', handleXRRelease);
+        ctrl.addEventListener('squeezeend', handleXRRelease);
       });
     });
 
@@ -1007,6 +1396,13 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         worldRefs.current.vidPlane.material.map.needsUpdate = true;
       }
 
+      // If pestle is held by VR controller, evaluate grinding gesture in real-time
+      if (dhongaRef.current.status === 'HELD' && dhongaRef.current.heldController && worldRefs.current.pestle) {
+        const pestleWorldPos = new THREE.Vector3();
+        worldRefs.current.pestle.getWorldPosition(pestleWorldPos);
+        performGrind(pestleWorldPos, dt, 'vr_controller');
+      }
+
       // Laptop First-Person Locomotion (WASD) — Smooth, Zero Snapping!
       if (!isPausedRef.current) {
         const speed = (keysDown.current['Shift'] ? 6.5 : 3.8) * dt;
@@ -1019,8 +1415,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         if (keysDown.current['d'] || keysDown.current['D']) moveDir.add(side);
         if (keysDown.current['a'] || keysDown.current['A']) moveDir.sub(side);
 
-        // Arrow keys & Q/E camera turning (guaranteed camera look for any keyboard / trackpad)
-        if (keysDown.current['ArrowLeft'] || keysDown.current['q'] || keysDown.current['Q']) {
+        // Arrow keys & Q/E camera turning
+        if (keysDown.current['ArrowLeft']) {
           yaw.current += 2.4 * dt;
           rig.rotation.set(0, yaw.current, 0);
         }
@@ -1078,6 +1474,18 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
       // Center Raycast & Proximity Detection
       const candidateList = [...(ELEMENTS || []), ...(DOSHAS || [])];
+
+      // Include Dhonga pestle candidate when player is near table
+      const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
+      if (distToTable <= 3.8 && dhongaRef.current.status !== 'COMPLETED') {
+        candidateList.push({
+          id: 'dhonga_pestle',
+          label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Dhonga)' : 'Sacred Dhonga & Pestle',
+          type: 'tool',
+          pos: [2.8, 1.0, -2.0]
+        });
+      }
+
       let nearestCandidate = null;
       let minDistance = 999;
 
@@ -1092,8 +1500,12 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
       setTargetedObject(nearestCandidate);
 
-      // Gaze Dwell for VR
-      if (nearestCandidate) {
+      // Check if nearestCandidate was explicitly dismissed by user
+      const isDismissed = nearestCandidate && (nearestCandidate.id === dismissedConceptIdRef.current);
+
+      // Gaze Dwell for VR (ONLY in active VR session, and NEVER for dismissed objects or desktop)
+      const sessionActive = !!renderer.xr.getSession();
+      if (sessionActive && nearestCandidate && !isDismissed && nearestCandidate.type !== 'tool') {
         const id = nearestCandidate.id;
         if (!gazeTimes.current[id]) gazeTimes.current[id] = now;
         const prog = clamp((now - gazeTimes.current[id]) / GAZE_DWELL_MS, 0, 1);
@@ -1104,13 +1516,20 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         }
         if (prog >= 1) {
           gazeTimes.current[id] = null;
-          if (handleDiscoverConceptRef.current) handleDiscoverConceptRef.current(nearestCandidate);
+          if (handleDiscoverConceptRef.current) {
+            handleDiscoverConceptRef.current(nearestCandidate, true);
+          }
           setGazeInfo(null);
         }
       } else {
         Object.keys(gazeTimes.current).forEach(k => { gazeTimes.current[k] = null; });
         setGazeInfo(null);
         if (worldRefs.current.gazeArc) worldRefs.current.gazeArc.scale.setScalar(0);
+      }
+
+      // If player walked away from dismissed target, reset dismissal guard
+      if (!nearestCandidate) {
+        dismissedConceptIdRef.current = null;
       }
 
       // Head Rotation Logging
@@ -1132,9 +1551,28 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       if (['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         setIsExploring(true);
       }
-      if ((e.key === 'e' || e.key === 'E') && targetedObjectRef.current && handleDiscoverConceptRef.current) {
-        handleDiscoverConceptRef.current(targetedObjectRef.current);
+
+      // Deliberate E Key: Pick up/put down pestle OR inspect focused concept
+      if (e.key === 'e' || e.key === 'E') {
+        if (targetedObjectRef.current?.id === 'dhonga_pestle') {
+          if (dhongaRef.current.status === 'HELD') {
+            handleReleasePestle();
+          } else {
+            handleGrabPestle('mouse');
+          }
+          return;
+        }
+
+        if (targetedObjectRef.current && handleDiscoverConceptRef.current) {
+          handleDiscoverConceptRef.current(targetedObjectRef.current, true);
+        }
       }
+
+      // Q Key: Put down held pestle
+      if ((e.key === 'q' || e.key === 'Q') && dhongaRef.current.status === 'HELD') {
+        handleReleasePestle();
+      }
+
       if (e.key === 'Escape') {
         setIsPaused(p => !p);
       }
@@ -1148,38 +1586,102 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     let prevPointer = { x: 0, y: 0 };
 
     const onPointerDown = (e) => {
-      // Ignore clicks on UI cards
-      if (e.target.closest && (e.target.closest('.c4-info-card') || e.target.closest('.c4-pause-card') || e.target.closest('.c4-interaction-prompt'))) {
+      // Prevent canvas from intercepting clicks on modal overlay / cards / close buttons
+      if (e.target.closest && (
+        e.target.closest('.c4-info-overlay') ||
+        e.target.closest('.c4-info-card') ||
+        e.target.closest('.c4-pause-modal-overlay') ||
+        e.target.closest('.c4-pause-card') ||
+        e.target.closest('.c4-vr-toolbar')
+      )) {
         return;
       }
-      isDragging = true;
-      prevPointer = { x: e.clientX, y: e.clientY };
-      mount.style.cursor = 'grabbing';
 
-      // Raycast for direct 3D altar click
+      // Right-click releases held pestle
+      if (e.button === 2 && dhongaRef.current.status === 'HELD') {
+        handleReleasePestle();
+        return;
+      }
+
+      // Raycast for direct 3D altar / tool click
       const rect = renderer.domElement.getBoundingClientRect();
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       const ray = new THREE.Raycaster();
       ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+
+      // Check pestle click
+      if (worldRefs.current.pestle) {
+        const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
+        if (pestleHits.length > 0) {
+          if (dhongaRef.current.status === 'HELD') {
+            handleReleasePestle();
+          } else {
+            handleGrabPestle('mouse');
+          }
+          return;
+        }
+      }
+
+      // If pestle is currently held, mouse clicks manipulate the tool, so do not drag camera
+      if (dhongaRef.current.status === 'HELD') {
+        return;
+      }
+
+      // Check altar orbs & crystals
       const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
       const hits = ray.intersectObjects(interactables, true);
       if (hits.length > 0) {
         let hitObj = hits[0].object;
         while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
         if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
-          handleDiscoverConceptRef.current(hitObj.userData);
+          handleDiscoverConceptRef.current(hitObj.userData, true);
           return;
         }
       }
 
-      // If clicked on targeted object
-      if (targetedObjectRef.current && handleDiscoverConceptRef.current) {
-        handleDiscoverConceptRef.current(targetedObjectRef.current);
-      }
+      // Normal camera drag initiation
+      isDragging = true;
+      prevPointer = { x: e.clientX, y: e.clientY };
+      mount.style.cursor = 'grabbing';
     };
 
     const onPointerMove = (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+
+      // If pestle is held on laptop, project ray onto mortar table plane to move implement
+      if (dhongaRef.current.status === 'HELD' && dhongaRef.current.holder === 'mouse' && worldRefs.current.pestle) {
+        // Table plane at mortar cavity height (y = 1.15)
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.15);
+        const hitPt = new THREE.Vector3();
+        ray.ray.intersectPlane(plane, hitPt);
+
+        if (hitPt) {
+          // Constrain movement to table work area
+          const cx = clamp(hitPt.x, 2.3, 3.3);
+          const cz = clamp(hitPt.z, -2.5, -1.5);
+          worldRefs.current.pestle.position.set(cx, 1.15, cz);
+
+          // Tilt pestle slightly towards mortar center (2.8, -2.0)
+          const dx = cx - 2.8, dz = cz - (-2.0);
+          worldRefs.current.pestle.rotation.set(dz * 0.4, 0, -dx * 0.4);
+
+          // Perform grinding logic
+          performGrind(worldRefs.current.pestle.position, 0.016, 'mouse');
+        }
+        return;
+      }
+
+      // Highlight pestle on hover
+      if (worldRefs.current.pestle && worldRefs.current.pestleHighlight) {
+        const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
+        worldRefs.current.pestleHighlight.material.opacity = pestleHits.length > 0 ? 0.5 : 0.0;
+      }
+
       const isLocked = !!(document.pointerLockElement && (document.pointerLockElement === mount || document.pointerLockElement === renderer.domElement));
 
       if (isLocked) {
@@ -1191,7 +1693,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         camera.rotation.set(pitch.current, 0, 0);
         rig.rotation.set(0, yaw.current, 0);
       } else if (isDragging) {
-        // Smooth drag-to-look (always works reliably on any browser/device!)
+        // Smooth drag-to-look
         const dx = e.clientX - prevPointer.x;
         const dy = e.clientY - prevPointer.y;
         yaw.current -= dx * 0.0035;
@@ -1205,6 +1707,14 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     const onPointerUp = () => {
       isDragging = false;
       mount.style.cursor = 'grab';
+    };
+
+    const onContextMenu = (e) => {
+      // Prevent context menu when right-clicking to release pestle
+      if (dhongaRef.current.status === 'HELD') {
+        e.preventDefault();
+        handleReleasePestle();
+      }
     };
 
     const onPointerLockChange = () => {
@@ -1221,6 +1731,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
+    mount.addEventListener('contextmenu', onContextMenu);
     mount.addEventListener('pointerdown', onPointerDown);
     mount.addEventListener('wheel', onWheel, { passive: true });
     document.addEventListener('pointerlockchange', onPointerLockChange);
@@ -1239,6 +1750,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      mount.removeEventListener('contextmenu', onContextMenu);
       mount.removeEventListener('pointerdown', onPointerDown);
       mount.removeEventListener('wheel', onWheel);
       document.removeEventListener('pointerlockchange', onPointerLockChange);
@@ -1349,13 +1861,48 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
           {/* Contextual Interaction Indicator (Clickable button!) */}
           {targetedObject && (
-            <div className="c4-interaction-prompt" onClick={() => handleDiscoverConcept(targetedObject)}>
+            <div
+              className="c4-interaction-prompt"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (targetedObject.id === 'dhonga_pestle') {
+                  if (dhongaState.status === 'HELD') handleReleasePestle();
+                  else handleGrabPestle('mouse');
+                } else {
+                  handleDiscoverConcept(targetedObject, true);
+                }
+              }}
+            >
               <span className="c4-prompt-key">E</span>
               <span className="c4-prompt-text">
-                {discoveryStates[targetedObject.id] === 'DISCOVERED'
-                  ? `Inspect ${targetedObject.label}`
-                  : `Discover ${targetedObject.label}`}
+                {targetedObject.id === 'dhonga_pestle'
+                  ? (dhongaState.status === 'HELD' ? 'Put Down Pestle (Q / Right-Click)' : 'Pick Up Pestle & Grind Herbs')
+                  : (discoveryStates[targetedObject.id] === 'DISCOVERED'
+                    ? `Inspect ${targetedObject.label}`
+                    : `Discover ${targetedObject.label}`)}
               </span>
+            </div>
+          )}
+
+          {/* Real Dhonga Grinding Gesture & Progress HUD */}
+          {(dhongaState.status === 'HELD' || dhongaState.status === 'GRINDING') && (
+            <div className="c4-grind-hud">
+              <div className="c4-grind-header">
+                <span className="c4-grind-icon">🌿</span>
+                <span className="c4-grind-title">Ayurvedic Herb Preparation</span>
+              </div>
+              <div className="c4-grind-desc">
+                Move pestle in a steady circular motion inside the Dhonga bowl to crush and grind medicinal leaves.
+              </div>
+              <div className="c4-grind-bar-wrapper">
+                <div className="c4-grind-bar-fill" style={{ width: `${Math.round(dhongaState.progress * 100)}%` }} />
+              </div>
+              <div className="c4-grind-meta">
+                <span>Grinding Progress: <strong>{Math.round(dhongaState.progress * 100)}%</strong></span>
+                <button className="c4-grind-release-btn" onClick={handleReleasePestle}>
+                  Put Down Pestle [Q]
+                </button>
+              </div>
             </div>
           )}
 
@@ -1383,7 +1930,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           <div className="c4-desktop-controls-hint">
             <span><span className="c4-key-badge">Drag Mouse</span> or <span className="c4-key-badge">←</span><span className="c4-key-badge">→</span> Look</span>
             <span><span className="c4-key-badge">W</span><span className="c4-key-badge">A</span><span className="c4-key-badge">S</span><span className="c4-key-badge">D</span> Walk</span>
-            <span><span className="c4-key-badge">Click</span> or <span className="c4-key-badge">E</span> Interact</span>
+            <span><span className="c4-key-badge">Click</span> or <span className="c4-key-badge">E</span> Pick Up / Interact</span>
             <span><span className="c4-key-badge">Esc</span> Pause</span>
           </div>
 
@@ -1413,11 +1960,26 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         </div>
       )}
 
-      {/* Lore Info Popup Modal */}
+      {/* Lore Info Popup Modal — Edge-Triggered & Dismissal Guarded */}
       {infoPanel && (
-        <div className="c4-info-overlay" onClick={() => setInfoPanel(null)}>
-          <div className="c4-info-card" onClick={e => e.stopPropagation()}>
-            <button className="c4-info-close" onClick={() => setInfoPanel(null)}>✕</button>
+        <div
+          className="c4-info-overlay"
+          onPointerDown={e => e.stopPropagation()}
+          onClick={handleDismissPanel}
+        >
+          <div
+            className="c4-info-card"
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="c4-info-close"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={handleDismissPanel}
+              aria-label="Close information panel"
+            >
+              ✕
+            </button>
             <div className="c4-info-icon">{infoPanel.type === 'dosha' ? '💎' : '🌐'}</div>
             <h3 className="c4-info-title">{infoPanel.label}</h3>
             {infoPanel.elements && (
@@ -1426,7 +1988,12 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
               </div>
             )}
             <p className="c4-info-desc">{infoPanel.desc}</p>
-            <button className="c4-info-btn" onClick={() => setInfoPanel(null)} style={{ marginTop: '16px', padding: '10px 24px', background: '#f59e0b', color: '#111', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
+            <button
+              className="c4-info-btn"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={handleDismissPanel}
+              style={{ marginTop: '16px', padding: '10px 24px', background: '#f59e0b', color: '#111', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}
+            >
               Got It
             </button>
           </div>
