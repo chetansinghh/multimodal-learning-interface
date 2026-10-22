@@ -1274,3 +1274,339 @@
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── C4 First-Person Exploration & Discovery Styles ────────────────────────── */
+.c4-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Crosshair Reticle for Laptop */
+.c4-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 25;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+.c4-crosshair::before, .c4-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+.c4-crosshair::before {
+  top: 4px;
+  left: -6px;
+  width: 22px;
+  height: 2px;
+}
+.c4-crosshair::after {
+  top: -6px;
+  left: 4px;
+  width: 2px;
+  height: 22px;
+}
+.c4-crosshair.active {
+  transform: translate(-50%, -50%) scale(1.6);
+}
+.c4-crosshair.active::before, .c4-crosshair.active::after {
+  background: #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
+}
+
+/* Contextual In-World / Screen Interaction Prompt */
+.c4-interaction-prompt {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  border-radius: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.3);
+  backdrop-filter: blur(12px);
+  z-index: 26;
+  pointer-events: none;
+  animation: promptPulse 1.8s ease-in-out infinite alternate;
+}
+@keyframes promptPulse {
+  0% { transform: translateX(-50%) translateY(0); box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 15px rgba(245,158,11,0.2); }
+  100% { transform: translateX(-50%) translateY(-3px); box-shadow: 0 14px 35px rgba(0,0,0,0.8), 0 0 28px rgba(245,158,11,0.5); }
+}
+.c4-prompt-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #111827;
+  font-weight: 800;
+  font-size: 0.88rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.c4-prompt-text {
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Discovery Banner Alert */
+.c4-discovery-banner {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(245, 158, 11, 0.8);
+  border-radius: 50px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.4);
+  backdrop-filter: blur(16px);
+  z-index: 35;
+  animation: bannerSlideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes bannerSlideDown {
+  from { opacity: 0; transform: translate(-50%, -24px) scale(0.92); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.c4-banner-icon {
+  font-size: 1.8rem;
+  animation: iconSpin 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes iconSpin {
+  from { transform: rotate(-180deg) scale(0.4); }
+  to { transform: rotate(0) scale(1); }
+}
+.c4-banner-content h4 {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.c4-banner-content h3 {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Controls Hint at Bottom */
+.c4-desktop-controls-hint {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(10, 15, 30, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.75);
+  z-index: 20;
+  pointer-events: none;
+}
+.c4-key-badge {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+/* Start Exploring Overlay */
+.c4-start-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85) 0%, rgba(5, 8, 20, 0.95) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  backdrop-filter: blur(8px);
+  text-align: center;
+  padding: 24px;
+}
+.c4-start-card {
+  max-width: 520px;
+  padding: 36px 40px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 24px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(245, 158, 11, 0.2);
+}
+.c4-start-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 10px;
+  background: linear-gradient(135deg, #fff 30%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.c4-start-subtitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+.c4-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+.c4-control-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+.c4-start-btn {
+  padding: 14px 38px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+  transition: all 0.2s ease;
+}
+.c4-start-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(245, 158, 11, 0.6);
+}
+
+/* Pause & Settings Modal */
+.c4-pause-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 20, 0.85);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.25s ease;
+}
+.c4-pause-card {
+  max-width: 560px;
+  width: 90%;
+  padding: 32px 36px;
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.9);
+  color: #fff;
+}
+.c4-pause-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.c4-pause-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.c4-pause-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.c4-pause-btn {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+.c4-pause-btn.primary {
+  background: #f59e0b;
+  color: #111;
+}
+.c4-pause-btn.primary:hover {
+  background: #d97706;
+}
+.c4-pause-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.c4-pause-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Ayurvedic Discovery Codex (Journal) */
+.c4-codex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.c4-codex-item {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.c4-codex-item.discovered {
+  border-color: var(--item-color, #f59e0b);
+  background: rgba(255, 255, 255, 0.08);
+}
+.c4-codex-item.hidden-item {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+.c4-codex-icon {
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+.c4-codex-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.c4-codex-status {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
