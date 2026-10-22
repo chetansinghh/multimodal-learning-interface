@@ -1014,10 +1014,28 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
         const moveDir = new THREE.Vector3();
 
-        if (keysDown.current['w'] || keysDown.current['W'] || keysDown.current['ArrowUp']) moveDir.add(forward);
-        if (keysDown.current['s'] || keysDown.current['S'] || keysDown.current['ArrowDown']) moveDir.sub(forward);
-        if (keysDown.current['d'] || keysDown.current['D'] || keysDown.current['ArrowRight']) moveDir.add(side);
-        if (keysDown.current['a'] || keysDown.current['A'] || keysDown.current['ArrowLeft']) moveDir.sub(side);
+        if (keysDown.current['w'] || keysDown.current['W']) moveDir.add(forward);
+        if (keysDown.current['s'] || keysDown.current['S']) moveDir.sub(forward);
+        if (keysDown.current['d'] || keysDown.current['D']) moveDir.add(side);
+        if (keysDown.current['a'] || keysDown.current['A']) moveDir.sub(side);
+
+        // Arrow keys & Q/E camera turning (guaranteed camera look for any keyboard / trackpad)
+        if (keysDown.current['ArrowLeft'] || keysDown.current['q'] || keysDown.current['Q']) {
+          yaw.current += 2.4 * dt;
+          rig.rotation.set(0, yaw.current, 0);
+        }
+        if (keysDown.current['ArrowRight']) {
+          yaw.current -= 2.4 * dt;
+          rig.rotation.set(0, yaw.current, 0);
+        }
+        if (keysDown.current['ArrowUp']) {
+          pitch.current = clamp(pitch.current + 1.8 * dt, -1.35, 1.35);
+          camera.rotation.set(pitch.current, 0, 0);
+        }
+        if (keysDown.current['ArrowDown']) {
+          pitch.current = clamp(pitch.current - 1.8 * dt, -1.35, 1.35);
+          camera.rotation.set(pitch.current, 0, 0);
+        }
 
         if (moveDir.lengthSq() > 0) {
           moveDir.normalize();
@@ -1126,20 +1144,19 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       keysDown.current[e.key] = false;
     };
 
-    const onMouseMove = (e) => {
-      if (!isPointerLocked.current) return;
-      yaw.current -= e.movementX * 0.0022;
-      pitch.current = clamp(pitch.current - e.movementY * 0.0022, -1.35, 1.35);
-      camera.rotation.set(pitch.current, 0, 0);
-      rig.rotation.set(0, yaw.current, 0);
-    };
+    let isDragging = false;
+    let prevPointer = { x: 0, y: 0 };
 
-    const onPointerLockChange = () => {
-      isPointerLocked.current = document.pointerLockElement === mount;
-    };
+    const onPointerDown = (e) => {
+      // Ignore clicks on UI cards
+      if (e.target.closest && (e.target.closest('.c4-info-card') || e.target.closest('.c4-pause-card') || e.target.closest('.c4-interaction-prompt'))) {
+        return;
+      }
+      isDragging = true;
+      prevPointer = { x: e.clientX, y: e.clientY };
+      mount.style.cursor = 'grabbing';
 
-    // Direct Mouse Click Raycasting on 3D Altars (Works with or without pointer lock!)
-    const onCanvasPointerDown = (e) => {
+      // Raycast for direct 3D altar click
       const rect = renderer.domElement.getBoundingClientRect();
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1155,17 +1172,58 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           return;
         }
       }
-      // If clicked on targeted object prompt or nearby
+
+      // If clicked on targeted object
       if (targetedObjectRef.current && handleDiscoverConceptRef.current) {
         handleDiscoverConceptRef.current(targetedObjectRef.current);
       }
     };
 
+    const onPointerMove = (e) => {
+      const isLocked = !!(document.pointerLockElement && (document.pointerLockElement === mount || document.pointerLockElement === renderer.domElement));
+
+      if (isLocked) {
+        // Continuous pointer lock look
+        const dx = e.movementX || 0;
+        const dy = e.movementY || 0;
+        yaw.current -= dx * 0.0024;
+        pitch.current = clamp(pitch.current - dy * 0.0024, -1.35, 1.35);
+        camera.rotation.set(pitch.current, 0, 0);
+        rig.rotation.set(0, yaw.current, 0);
+      } else if (isDragging) {
+        // Smooth drag-to-look (always works reliably on any browser/device!)
+        const dx = e.clientX - prevPointer.x;
+        const dy = e.clientY - prevPointer.y;
+        yaw.current -= dx * 0.0035;
+        pitch.current = clamp(pitch.current - dy * 0.0035, -1.35, 1.35);
+        camera.rotation.set(pitch.current, 0, 0);
+        rig.rotation.set(0, yaw.current, 0);
+        prevPointer = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const onPointerUp = () => {
+      isDragging = false;
+      mount.style.cursor = 'grab';
+    };
+
+    const onPointerLockChange = () => {
+      isPointerLocked.current = !!(document.pointerLockElement && (document.pointerLockElement === mount || document.pointerLockElement === renderer.domElement));
+    };
+
+    const onWheel = (e) => {
+      camera.fov = clamp(camera.fov + e.deltaY * 0.04, 45, 90);
+      camera.updateProjectionMatrix();
+    };
+
+    mount.style.cursor = 'grab';
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-    document.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    mount.addEventListener('pointerdown', onPointerDown);
+    mount.addEventListener('wheel', onWheel, { passive: true });
     document.addEventListener('pointerlockchange', onPointerLockChange);
-    mount.addEventListener('pointerdown', onCanvasPointerDown);
 
     const onResize = () => {
       const nw = mount.clientWidth, nh = mount.clientHeight;
@@ -1179,9 +1237,11 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       renderer.setAnimationLoop(null);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      document.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      mount.removeEventListener('pointerdown', onPointerDown);
+      mount.removeEventListener('wheel', onWheel);
       document.removeEventListener('pointerlockchange', onPointerLockChange);
-      mount.removeEventListener('pointerdown', onCanvasPointerDown);
       window.removeEventListener('resize', onResize);
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       renderer.dispose();
@@ -1321,9 +1381,9 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
           {/* Laptop Controls Hint (Top-Right, Never Overlaps Timeline!) */}
           <div className="c4-desktop-controls-hint">
+            <span><span className="c4-key-badge">Drag Mouse</span> or <span className="c4-key-badge">←</span><span className="c4-key-badge">→</span> Look</span>
             <span><span className="c4-key-badge">W</span><span className="c4-key-badge">A</span><span className="c4-key-badge">S</span><span className="c4-key-badge">D</span> Walk</span>
-            <span><span className="c4-key-badge">Mouse</span> Look</span>
-            <span><span className="c4-key-badge">E</span> or <span className="c4-key-badge">Click</span> Interact</span>
+            <span><span className="c4-key-badge">Click</span> or <span className="c4-key-badge">E</span> Interact</span>
             <span><span className="c4-key-badge">Esc</span> Pause</span>
           </div>
 
@@ -1336,6 +1396,12 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             )}
             <button className="c4-play-btn" onClick={playing ? pauseVideo : playVideo}>
               {playing ? '⏸ Pause' : '▶ Play'}
+            </button>
+            <button className="c4-play-btn" onClick={() => { yaw.current += Math.PI / 4; if (rigRef.current) rigRef.current.rotation.set(0, yaw.current, 0); }} title="Turn camera 45° Left">
+              ⟲ Turn Left
+            </button>
+            <button className="c4-play-btn" onClick={() => { yaw.current -= Math.PI / 4; if (rigRef.current) rigRef.current.rotation.set(0, yaw.current, 0); }} title="Turn camera 45° Right">
+              Turn Right ⟳
             </button>
             <button className="c4-play-btn" onClick={() => setShowCodex(true)}>
               📖 Codex ({discoveredCount}/8)
