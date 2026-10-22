@@ -1332,14 +1332,21 @@
   align-items: center;
   gap: 10px;
   padding: 10px 20px;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(245, 158, 11, 0.6);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(245, 158, 11, 0.8);
   border-radius: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 24px rgba(245, 158, 11, 0.4);
   backdrop-filter: blur(12px);
   z-index: 26;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
   animation: promptPulse 1.8s ease-in-out infinite alternate;
+}
+.c4-interaction-prompt:hover {
+  transform: translateX(-50%) scale(1.08) !important;
+  filter: brightness(1.25);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8), 0 0 35px rgba(245, 158, 11, 0.7);
 }
 @keyframes promptPulse {
   0% { transform: translateX(-50%) translateY(0); box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 15px rgba(245,158,11,0.2); }
@@ -1409,30 +1416,33 @@
   color: #fff;
 }
 
-/* Controls Hint at Bottom */
+/* Controls Hint at Top Right (Never overlaps bottom player controls) */
 .c4-desktop-controls-hint {
   position: absolute;
-  bottom: 24px;
-  left: 24px;
+  top: 68px;
+  right: 20px;
+  bottom: auto;
+  left: auto;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  background: rgba(10, 15, 30, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 15, 30, 0.82);
+  border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: 20px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.75);
-  z-index: 20;
-  pointer-events: none;
+  color: rgba(255, 255, 255, 0.9);
+  z-index: 22;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 .c4-key-badge {
   padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(245, 158, 11, 0.5);
   border-radius: 4px;
   font-weight: 700;
-  color: #fff;
+  color: #fbbf24;
   font-size: 0.75rem;
 }
 

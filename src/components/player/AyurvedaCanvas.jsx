@@ -1,7 +1,8 @@
 // AyurvedaCanvas.jsx — Master Story Engine for "Ayurveda: The Science of Life"
 // Complete First-Person Laptop 3D & WebXR Immersive Experience with Progressive Discovery
 // Research Fidelity: Preserves 7 Stations, 5 Elements (Pancha Mahabhutas), 3 Doshas (Tridosha)
-// Zero Premature Reveals: Concepts begin HIDDEN, become DISCOVERABLE via story, then DISCOVERED
+// Fixed: Zero Snapping-Back, Zero Background Hissing Noise, Vibrant Alpine Himalayan Colors,
+// Direct Mouse Click & E-Key & VR Controller Trigger Interactions, Non-overlapping Controls Hint
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
@@ -12,7 +13,7 @@ import './PlayerCommon.css';
 const PLAYBACK_END_SEC = 110.2;
 const GAZE_DWELL_MS = 1400;
 const HEAD_ROTATION_SAMPLE_MS = 200;
-const INTERACTION_DIST = 4.2;
+const INTERACTION_DIST = 4.8;
 
 // ── Research Story Stations ──────────────────────────────────────────────────
 const STATIONS = [
@@ -26,28 +27,26 @@ const STATIONS = [
 ];
 
 // ── 5 Pancha Mahabhutas (Five Great Elements) ────────────────────────────────
-// Narratively introduced at Station 2 (t >= 27s)
 const ELEMENTS = [
-  { id: 'earth', label: 'Prithvi (Earth)', color: 0x8b5a2b, emissive: 0x4a2a00, pos: [-3.2, 1.2, -6.5],
+  { id: 'earth', label: 'Prithvi (Earth)', color: 0x8b5a2b, emissive: 0x4a2a00, pos: [-3.2, 1.25, -6.5],
     desc: 'Solid matter and structure. Governs bones, muscles, tissues, and physical stability in living beings.' },
-  { id: 'water', label: 'Jala (Water)',    color: 0x3b82f6, emissive: 0x002277, pos: [-1.6, 1.5, -7.0],
+  { id: 'water', label: 'Jala (Water)',    color: 0x0284c7, emissive: 0x002277, pos: [-1.6, 1.5, -7.0],
     desc: 'Fluid cohesion and nourishment. Governs cytoplasm, blood plasma, taste, and hydration throughout the physiology.' },
   { id: 'fire',  label: 'Agni (Fire)',     color: 0xef4444, emissive: 0x881100, pos: [0,    1.8, -7.4],
     desc: 'Transformation and radiance. Governs cellular metabolism, digestive fire (Jatharagni), vision, and body temperature.' },
-  { id: 'air',   label: 'Vayu (Air)',      color: 0xa5b4fc, emissive: 0x221188, pos: [1.6,  1.5, -7.0],
+  { id: 'air',   label: 'Vayu (Air)',      color: 0x818cf8, emissive: 0x221188, pos: [1.6,  1.5, -7.0],
     desc: 'Dynamic movement and pulsation. Governs respiration, heartbeat, motor functions, and nervous impulse transmission.' },
-  { id: 'ether', label: 'Akasha (Ether)',  color: 0xfacc15, emissive: 0x775500, pos: [3.2,  1.2, -6.5],
+  { id: 'ether', label: 'Akasha (Ether)',  color: 0xfacc15, emissive: 0x775500, pos: [3.2,  1.25, -6.5],
     desc: 'Space, vibration, and non-resistance. The subtle medium through which sound travels and consciousness operates.' },
 ];
 
 // ── 3 Sacred Doshas (Tridoshas) ──────────────────────────────────────────────
-// Narratively introduced at Station 4 (t >= 53s)
 const DOSHAS = [
-  { id: 'vata',  label: 'Vata Dosha',  elements: 'Air + Ether', color: 0x7ed6df, emissive: 0x004455, pos: [-4.2, 1.9, -9.0],
+  { id: 'vata',  label: 'Vata Dosha',  elements: 'Air + Ether', color: 0x38bdf8, emissive: 0x0284c7, pos: [-4.2, 1.9, -9.2],
     desc: 'The principle of movement, governed by Air and Space. Controls breath, muscle movement, and nerve impulses. In balance: creativity and vitality; out of balance: anxiety and dryness.' },
-  { id: 'pitta', label: 'Pitta Dosha', elements: 'Fire + Water', color: 0xff7979, emissive: 0x880000, pos: [0,    2.3, -10.2],
+  { id: 'pitta', label: 'Pitta Dosha', elements: 'Fire + Water', color: 0xf97316, emissive: 0xc2410c, pos: [0,    2.3, -10.4],
     desc: 'The principle of transformation, governed by Fire and Water. Controls digestion, metabolism, hunger, and intellect. In balance: sharp intelligence and warmth; out of balance: inflammation and anger.' },
-  { id: 'kapha', label: 'Kapha Dosha', elements: 'Water + Earth', color: 0x55efc4, emissive: 0x005533, pos: [4.2,  1.9, -9.0],
+  { id: 'kapha', label: 'Kapha Dosha', elements: 'Water + Earth', color: 0x10b981, emissive: 0x047857, pos: [4.2,  1.9, -9.2],
     desc: 'The principle of cohesion and structure, governed by Earth and Water. Provides bodily strength, immunity, and lubrication. In balance: calm strength and endurance; out of balance: heaviness and lethargy.' },
 ];
 
@@ -55,7 +54,7 @@ const C3_INTERACTIONS_BASE = [
   {
     id: 'c3_int_1', label: 'Tap the Sacred River',
     active_window: ['0:18', '0:26'], gate: { type: 'hold_at', hold_at: '0:23', max_wait_sec: 7 },
-    type: 'tap', prompt: '🌊 Tap the sacred river to begin your Ayurvedic journey', emoji: '🌊', color: '#3b82f6',
+    type: 'tap', prompt: '🌊 Tap the sacred river to begin your Ayurvedic journey', emoji: '🌊', color: '#38bdf8',
   },
   {
     id: 'c3_int_2', label: 'Identify the Element of Transformation',
@@ -68,14 +67,14 @@ const C3_INTERACTIONS_BASE = [
     id: 'c3_int_3', label: 'Grind the Herbs',
     active_window: ['0:40', '0:52'], gate: { type: 'hold_at', hold_at: '0:44', max_wait_sec: 7 },
     type: 'hold', prompt: '🌿 Hold to grind the medicinal herbs in the mortar', duration: 2500,
-    color: '#2a9d8f', emoji: '🌿',
+    color: '#10b981', emoji: '🌿',
   },
   {
     id: 'c3_int_4', label: 'Identify Your Dosha',
     active_window: ['0:53', '1:02'], gate: { type: 'hold_at', hold_at: '0:57', max_wait_sec: 7 },
     type: 'select', prompt: '🧬 Which Dosha is associated with the elements Fire and Water?',
     options: ['Vata (Air + Ether)', 'Pitta (Fire + Water)', 'Kapha (Earth + Water)', 'Sama (Balanced)'], correct: 1,
-    color: '#e76f51', emoji: '🧬',
+    color: '#f97316', emoji: '🧬',
   },
   {
     id: 'c3_int_5', label: 'Morning Meditation',
@@ -97,50 +96,60 @@ const easeInOut = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
 
 // ── Build 3D Himalayan World ─────────────────────────────────────────────────
 function buildAyurvedaWorld(scene, refs) {
-  scene.background = new THREE.Color(0x120824);
+  // Radiant Azure Himalayan Sky
+  scene.background = new THREE.Color(0x7ec8e3);
 
-  // Atmospheric sky fog
-  const fog = new THREE.FogExp2(0x3d2012, 0.016);
+  // Soft atmospheric mountain mist
+  const fog = new THREE.FogExp2(0xbbe4f7, 0.007);
   scene.fog = fog;
   refs.fog = fog;
 
-  // Hemisphere Lighting
-  const hemi = new THREE.HemisphereLight(0xffeedd, 0x1f1408, 0.7);
+  // Crisp Daylight Hemisphere Lighting
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x4a7c36, 1.25);
   scene.add(hemi);
   refs.hemi = hemi;
 
-  // Directional Sun
-  const sun = new THREE.DirectionalLight(0xffb347, 2.4);
-  sun.position.set(18, 28, -22);
+  // Bright Golden Himalayan Sun
+  const sun = new THREE.DirectionalLight(0xfff7e6, 2.7);
+  sun.position.set(22, 34, -20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -40;
-  sun.shadow.camera.right = 40;
-  sun.shadow.camera.top = 40;
-  sun.shadow.camera.bottom = -40;
+  sun.shadow.camera.left = -45;
+  sun.shadow.camera.right = 45;
+  sun.shadow.camera.top = 45;
+  sun.shadow.camera.bottom = -45;
   scene.add(sun);
   refs.sun = sun;
 
-  // Sanctuary Terrain
-  const groundGeom = new THREE.PlaneGeometry(240, 240, 50, 50);
+  // Vibrant Lush Himalayan Meadow
+  const groundGeom = new THREE.PlaneGeometry(260, 260, 50, 50);
   const gverts = groundGeom.attributes.position;
   for (let i = 0; i < gverts.count; i++) {
     const x = gverts.getX(i), z = gverts.getZ(i);
     const dist = Math.sqrt(x * x + z * z);
-    gverts.setY(i, Math.sin(x * 0.07) * 0.45 + Math.sin(z * 0.05) * 0.35 + (dist > 18 ? (dist - 18) * 0.05 : 0));
+    gverts.setY(i, Math.sin(x * 0.07) * 0.45 + Math.sin(z * 0.05) * 0.35 + (dist > 18 ? (dist - 18) * 0.04 : 0));
   }
   gverts.needsUpdate = true;
   groundGeom.computeVertexNormals();
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0xb59469 });
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4d7c0f }); // Rich alpine grass
   const ground = new THREE.Mesh(groundGeom, groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Sacred River (Flowing Waters)
-  const riverGeom = new THREE.PlaneGeometry(22, 240, 24, 2);
+  // Sacred Flagstone Path to Altars
+  const pathMat = new THREE.MeshLambertMaterial({ color: 0xdfd4bc });
+  for (let p = 0; p < 18; p++) {
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 1.2), pathMat);
+    stone.position.set(Math.sin(p * 0.3) * 0.8, 0.04, 3.5 - p * 0.9);
+    stone.receiveShadow = true;
+    scene.add(stone);
+  }
+
+  // Sacred River (Turquoise Shimmering Waters)
+  const riverGeom = new THREE.PlaneGeometry(24, 260, 24, 2);
   const riverMat = new THREE.MeshPhongMaterial({
-    color: 0x4a90e2, emissive: 0x082238, transparent: true, opacity: 0.84, shininess: 140
+    color: 0x0284c7, emissive: 0x0369a1, transparent: true, opacity: 0.88, shininess: 160
   });
   const river = new THREE.Mesh(riverGeom, riverMat);
   river.rotation.x = -Math.PI / 2;
@@ -151,18 +160,18 @@ function buildAyurvedaWorld(scene, refs) {
   // River Stone Ghat Banks
   for (const side of [-1, 1]) {
     const bank = new THREE.Mesh(
-      new THREE.BoxGeometry(4.2, 0.22, 240),
-      new THREE.MeshLambertMaterial({ color: 0xdfccaa })
+      new THREE.BoxGeometry(4.5, 0.22, 260),
+      new THREE.MeshLambertMaterial({ color: 0xf5e6cb })
     );
-    bank.position.set(-16 + side * 12, 0.05, 0);
+    bank.position.set(-16 + side * 13, 0.05, 0);
     scene.add(bank);
   }
 
   // Stone Ghat Steps Leading to River
   for (let s = 0; s < 6; s++) {
     const step = new THREE.Mesh(
-      new THREE.BoxGeometry(9, 0.22, 1.2),
-      new THREE.MeshLambertMaterial({ color: 0xcdbe98 })
+      new THREE.BoxGeometry(9.5, 0.24, 1.3),
+      new THREE.MeshLambertMaterial({ color: 0xe2d4b7 })
     );
     step.position.set(-7, s * 0.22, -3 + s * 1.2);
     step.receiveShadow = true;
@@ -171,18 +180,18 @@ function buildAyurvedaWorld(scene, refs) {
 
   // Giant Sacred Banyan Tree
   const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.8, 2.5, 10, 20),
-    new THREE.MeshLambertMaterial({ color: 0x462b10 })
+    new THREE.CylinderGeometry(1.8, 2.6, 10.5, 20),
+    new THREE.MeshLambertMaterial({ color: 0x5c3a21 })
   );
-  trunk.position.set(4, 5.0, -12);
+  trunk.position.set(4, 5.2, -12);
   trunk.castShadow = true;
   scene.add(trunk);
 
-  // Banyan Foliage Canopy
-  [[4, 11, -12, 7.5], [-1, 9, -15, 5.5], [8, 9, -9, 5.5], [4, 14, -12, 5]].forEach(([x, y, z, r]) => {
+  // Vibrant Emerald Banyan Canopy
+  [[4, 11, -12, 7.8], [-1, 9, -15, 5.8], [8, 9, -9, 5.8], [4, 14.5, -12, 5.2]].forEach(([x, y, z, r]) => {
     const canopy = new THREE.Mesh(
       new THREE.SphereGeometry(r, 14, 10),
-      new THREE.MeshLambertMaterial({ color: 0x275218 })
+      new THREE.MeshLambertMaterial({ color: 0x15803d })
     );
     canopy.position.set(x, y, z);
     canopy.castShadow = true;
@@ -192,8 +201,8 @@ function buildAyurvedaWorld(scene, refs) {
   // Hanging aerial roots
   for (let i = 0; i < 10; i++) {
     const root = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.1, 4 + Math.random() * 3, 6),
-      new THREE.MeshLambertMaterial({ color: 0x5a3d22 })
+      new THREE.CylinderGeometry(0.06, 0.1, 4.2 + Math.random() * 3, 6),
+      new THREE.MeshLambertMaterial({ color: 0x6e472a })
     );
     root.position.set(4 + (Math.random() - 0.5) * 9, 3.5 + Math.random() * 2, -12 + (Math.random() - 0.5) * 9);
     scene.add(root);
@@ -201,14 +210,14 @@ function buildAyurvedaWorld(scene, refs) {
 
   // Sacred Fire Altar (Havan Kund)
   const fireBase = new THREE.Mesh(
-    new THREE.BoxGeometry(0.9, 0.35, 0.9),
-    new THREE.MeshLambertMaterial({ color: 0x5a4a3a })
+    new THREE.BoxGeometry(1.0, 0.38, 1.0),
+    new THREE.MeshLambertMaterial({ color: 0x78350f })
   );
-  fireBase.position.set(-1.2, 0.18, -3.2);
+  fireBase.position.set(-1.2, 0.19, -3.2);
   scene.add(fireBase);
 
-  const fireLight = new THREE.PointLight(0xff6600, 2.8, 8);
-  fireLight.position.set(-1.2, 0.9, -3.2);
+  const fireLight = new THREE.PointLight(0xf97316, 3.2, 9);
+  fireLight.position.set(-1.2, 0.95, -3.2);
   scene.add(fireLight);
   refs.fireLight = fireLight;
 
@@ -225,21 +234,21 @@ function buildAyurvedaWorld(scene, refs) {
   const fGeom = new THREE.BufferGeometry();
   fGeom.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
   const firePts = new THREE.Points(fGeom, new THREE.PointsMaterial({
-    size: 0.11, color: 0xff7700, transparent: true, opacity: 0.88, depthWrite: false, blending: THREE.AdditiveBlending
+    size: 0.12, color: 0xff6600, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending
   }));
   scene.add(firePts);
   refs.fire = firePts; refs.fPos = fPos; refs.fPhase = fPhase; refs.fGeom = fGeom;
 
-  // Medicinal Herb Garden & Mortar Table
+  // Medicinal Herb Table & Mortar
   const table = new THREE.Mesh(
-    new THREE.BoxGeometry(2.4, 0.75, 1.1),
-    new THREE.MeshLambertMaterial({ color: 0x6e4527 })
+    new THREE.BoxGeometry(2.5, 0.75, 1.2),
+    new THREE.MeshLambertMaterial({ color: 0x78350f })
   );
   table.position.set(2.8, 0.38, -2.0);
   table.castShadow = true;
   scene.add(table);
 
-  const mortarMat = new THREE.MeshPhongMaterial({ color: 0x555566, shininess: 80 });
+  const mortarMat = new THREE.MeshPhongMaterial({ color: 0x475569, shininess: 90 });
   const mortar = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.4, 16), mortarMat);
   mortar.position.set(2.8, 1.15, -2.0);
   mortar.castShadow = true;
@@ -254,57 +263,58 @@ function buildAyurvedaWorld(scene, refs) {
 
   // Herb Jars
   refs.herbJars = [];
-  [[-0.6, 0xe8c547], [0, 0x5bc47c], [0.6, 0xe87d4e]].forEach(([dx, col]) => {
+  [[-0.6, 0xfacc15], [0, 0x22c55e], [0.6, 0xf97316]].forEach(([dx, col]) => {
     const jar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.1, 0.26, 12),
-      new THREE.MeshPhongMaterial({ color: col, transparent: true, opacity: 0.85, shininess: 90 })
+      new THREE.CylinderGeometry(0.12, 0.1, 0.28, 12),
+      new THREE.MeshPhongMaterial({ color: col, transparent: true, opacity: 0.9, shininess: 100 })
     );
-    jar.position.set(2.8 + dx, 0.9, -2.0);
+    jar.position.set(2.8 + dx, 0.92, -2.0);
     scene.add(jar);
     refs.herbJars.push(jar);
   });
 
-  // ── Plinths & Progressive Objects: 5 ELEMENTS ─────────────────────────────
+  // ── Plinths & Interactive Altars: 5 ELEMENTS ───────────────────────────────
   refs.elementPlinths = [];
   refs.elementOrbs = [];
   ELEMENTS.forEach((el, idx) => {
-    // Altar Plinth Pedestal
+    // Marble Pedestal
     const plinth = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.48, 0.58, 0.9, 8),
-      new THREE.MeshLambertMaterial({ color: 0x48423b })
+      new THREE.CylinderGeometry(0.5, 0.6, 0.95, 8),
+      new THREE.MeshLambertMaterial({ color: 0xe2e8f0 })
     );
-    plinth.position.set(el.pos[0], 0.45, el.pos[2]);
+    plinth.position.set(el.pos[0], 0.48, el.pos[2]);
     plinth.receiveShadow = true;
+    plinth.userData = { type: 'element', ...el };
     scene.add(plinth);
 
-    // Glowing Rune Ring on top of plinth (Indicates Discoverable vs Hidden)
+    // Glowing Rune Ring on top of plinth
     const runeRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.36, 0.46, 24),
-      new THREE.MeshBasicMaterial({ color: el.color, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+      new THREE.RingGeometry(0.38, 0.48, 24),
+      new THREE.MeshBasicMaterial({ color: el.color, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
     );
     runeRing.rotation.x = -Math.PI / 2;
-    runeRing.position.set(el.pos[0], 0.91, el.pos[2]);
+    runeRing.position.set(el.pos[0], 0.96, el.pos[2]);
     scene.add(runeRing);
     refs[`plinth_rune_${el.id}`] = runeRing;
 
-    // Elemental Orb (starts HIDDEN: scale = 0, visible = false)
+    // Elemental Orb (Visible as mystical dormant relic, radiant when discovered)
     const orb = new THREE.Mesh(
-      new THREE.SphereGeometry(0.34, 24, 18),
+      new THREE.SphereGeometry(0.35, 24, 18),
       new THREE.MeshPhongMaterial({
-        color: el.color, emissive: el.emissive, emissiveIntensity: 0.7, shininess: 120, transparent: true, opacity: 0.92
+        color: el.color, emissive: el.emissive, emissiveIntensity: 0.7, shininess: 130, transparent: true, opacity: 0.85
       })
     );
     orb.position.set(...el.pos);
-    orb.scale.set(0, 0, 0);
-    orb.visible = false;
+    orb.scale.set(0.75, 0.75, 0.75);
+    orb.visible = true;
     orb.userData = { type: 'element', ...el };
     scene.add(orb);
     refs.elementOrbs.push(orb);
 
-    // Energy halo
+    // Energy halo ring
     const halo = new THREE.Mesh(
-      new THREE.RingGeometry(0.42, 0.54, 32),
-      new THREE.MeshBasicMaterial({ color: el.color, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false })
+      new THREE.RingGeometry(0.44, 0.56, 32),
+      new THREE.MeshBasicMaterial({ color: el.color, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false })
     );
     halo.position.set(...el.pos);
     halo.lookAt(0, el.pos[1], 5);
@@ -313,62 +323,68 @@ function buildAyurvedaWorld(scene, refs) {
     refs[`halo_el_${idx}`] = halo;
   });
 
-  // ── Plinths & Progressive Objects: 3 DOSHAS ───────────────────────────────
+  // ── Plinths & Interactive Altars: 3 DOSHAS ─────────────────────────────────
   refs.doshaPlinths = [];
   refs.doshaObjects = [];
   DOSHAS.forEach((d, idx) => {
-    // Ancient Monumental Plinth
+    // Grand Sanctuary Altar
     const dPlinth = new THREE.Mesh(
-      new THREE.BoxGeometry(1.2, 0.9, 1.2),
-      new THREE.MeshLambertMaterial({ color: 0x3b3530 })
+      new THREE.BoxGeometry(1.3, 0.95, 1.3),
+      new THREE.MeshLambertMaterial({ color: 0x334155 })
     );
-    dPlinth.position.set(d.pos[0], 0.45, d.pos[2]);
+    dPlinth.position.set(d.pos[0], 0.48, d.pos[2]);
     dPlinth.receiveShadow = true;
+    dPlinth.userData = { type: 'dosha', ...d };
     scene.add(dPlinth);
 
     // Altar Rune Emblem
     const dRune = new THREE.Mesh(
-      new THREE.RingGeometry(0.48, 0.58, 6),
-      new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+      new THREE.RingGeometry(0.5, 0.62, 6),
+      new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: 0.75, side: THREE.DoubleSide })
     );
     dRune.rotation.x = -Math.PI / 2;
-    dRune.position.set(d.pos[0], 0.91, d.pos[2]);
+    dRune.position.set(d.pos[0], 0.96, d.pos[2]);
     scene.add(dRune);
     refs[`plinth_rune_${d.id}`] = dRune;
 
-    // Sacred Crystal Pillar (starts HIDDEN: scale = 0, visible = false)
+    // Sacred Crystal Pillar
     const crystMat = new THREE.MeshPhongMaterial({
-      color: d.color, emissive: d.emissive, emissiveIntensity: 0.85, transparent: true, opacity: 0.88, shininess: 220
+      color: d.color, emissive: d.emissive, emissiveIntensity: 0.85, transparent: true, opacity: 0.88, shininess: 240
     });
     const crystGroup = new THREE.Group();
     crystGroup.position.set(...d.pos);
-    crystGroup.scale.set(0, 0, 0);
-    crystGroup.visible = false;
+    crystGroup.scale.set(0.75, 0.75, 0.75);
+    crystGroup.visible = true;
 
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 1.5, 6), crystMat);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.34, 1.5, 6), crystMat);
     crystGroup.add(body);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.48, 6), crystMat);
-    cap.position.y = 0.98;
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.5, 6), crystMat);
+    cap.position.y = 1.0;
     crystGroup.add(cap);
 
-    // Targetable userData on group and body
     crystGroup.userData = { type: 'dosha', ...d };
     body.userData = { type: 'dosha', ...d };
+    cap.userData = { type: 'dosha', ...d };
     scene.add(crystGroup);
     refs.doshaObjects.push(crystGroup);
   });
 
-  // Distant Sacred Himalayan Peaks
-  [[-90, 0x95a5c0], [-115, 0x7687a4], [-140, 0x576b88]].forEach(([mz, mc], mi) => {
-    for (let p = 0; p < 6; p++) {
-      const mh = 24 + Math.random() * 28;
-      const mt = new THREE.Mesh(new THREE.ConeGeometry((22 + Math.random() * 16) * 0.5, mh, 6), new THREE.MeshBasicMaterial({ color: mc }));
-      mt.position.set(-50 + p * 20, mh * 0.5 - 3, mz - mi * 16);
-      scene.add(mt);
+  // Majestic Snow-Capped Himalayan Mountain Ranges
+  [[-90, 0x64748b, 0xffffff], [-115, 0x475569, 0xf1f5f9], [-140, 0x334155, 0xe2e8f0]].forEach(([mz, baseCol, snowCol], mi) => {
+    for (let p = 0; p < 7; p++) {
+      const mh = 26 + Math.random() * 28;
+      const mountain = new THREE.Mesh(new THREE.ConeGeometry((24 + Math.random() * 16) * 0.5, mh, 6), new THREE.MeshLambertMaterial({ color: baseCol }));
+      mountain.position.set(-55 + p * 18, mh * 0.5 - 3, mz - mi * 16);
+      scene.add(mountain);
+
+      // Snow Cap
+      const snow = new THREE.Mesh(new THREE.ConeGeometry((24 + Math.random() * 16) * 0.22, mh * 0.35, 6), new THREE.MeshBasicMaterial({ color: snowCol }));
+      snow.position.set(mountain.position.x, mh - mh * 0.18 - 3, mountain.position.z);
+      scene.add(snow);
     }
   });
 
-  // Fireflies & Sacred Pollen
+  // Floating Golden Pollen Particles
   const PC = 380;
   const pPos = new Float32Array(PC * 3), pPhase = new Float32Array(PC), pCol = new Float32Array(PC * 3);
   for (let i = 0; i < PC; i++) {
@@ -376,51 +392,26 @@ function buildAyurvedaWorld(scene, refs) {
     pPos[i * 3 + 1] = Math.random() * 9 + 0.4;
     pPos[i * 3 + 2] = (Math.random() - 0.5) * 50;
     pPhase[i] = Math.random() * Math.PI * 2;
-    const g = Math.random() > 0.5;
-    pCol[i * 3] = g ? 1.0 : 0.6; pCol[i * 3 + 1] = g ? 0.85 : 1.0; pCol[i * 3 + 2] = g ? 0.2 : 0.4;
+    pCol[i * 3] = 1.0; pCol[i * 3 + 1] = 0.88; pCol[i * 3 + 2] = 0.3;
   }
   const pGeom = new THREE.BufferGeometry();
   pGeom.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
   pGeom.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
   const pPts = new THREE.Points(pGeom, new THREE.PointsMaterial({
-    size: 0.12, vertexColors: true, transparent: true, opacity: 0.82, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
+    size: 0.12, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
   }));
   scene.add(pPts);
   refs.particles = pPts; refs.pPos = pPos; refs.pPhase = pPhase; refs.pGeom = pGeom;
-
-  // Celestial Stars
-  const STAR_COUNT = 800;
-  const starPos = new Float32Array(STAR_COUNT * 3);
-  for (let i = 0; i < STAR_COUNT; i++) {
-    const theta = Math.random() * Math.PI * 2, phi = Math.acos(2 * Math.random() - 1), r = 160;
-    starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    starPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    starPos[i * 3 + 2] = r * Math.cos(phi);
-  }
-  const starGeom = new THREE.BufferGeometry();
-  starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-  const stars = new THREE.Points(starGeom, new THREE.PointsMaterial({ color: 0xffffff, size: 0.45, transparent: true, opacity: 0.7, depthWrite: false }));
-  scene.add(stars);
-  refs.stars = stars;
 }
 
 // ── World Update & Animation Lifecycle ───────────────────────────────────────
 function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
   const now = performance.now() * 0.001;
-  const sky = clamp(t / 110, 0, 1);
 
-  // Dynamic Dawn lighting
-  if (refs.hemi) {
-    refs.hemi.color.lerpColors(new THREE.Color(0x1a0a2e), new THREE.Color(0xfff4c2), easeInOut(sky));
-  }
-  if (refs.sun) {
-    refs.sun.intensity = 0.8 + easeInOut(sky) * 1.8;
-    refs.sun.position.set(18 - sky * 30, 28 * easeInOut(clamp((sky - 0.05) / 0.7, 0, 1)), -22 + sky * 10);
-  }
   if (refs.river) refs.river.position.y = 0.09 + Math.sin(now * 1.4) * 0.015;
 
   // Fire flicker
-  if (refs.fireLight) refs.fireLight.intensity = 2.4 + Math.sin(now * 8.3) * 0.7 + Math.sin(now * 13.7) * 0.3;
+  if (refs.fireLight) refs.fireLight.intensity = 2.8 + Math.sin(now * 8.3) * 0.6 + Math.sin(now * 13.7) * 0.3;
   if (refs.fPos && refs.fGeom) {
     const n = refs.fPos.length / 3;
     for (let i = 0; i < n; i++) {
@@ -435,7 +426,7 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
     refs.fGeom.attributes.position.needsUpdate = true;
   }
 
-  // Fireflies drift
+  // Floating Pollen drift
   if (refs.pPos && refs.pGeom) {
     const n = refs.pPos.length / 3;
     for (let i = 0; i < n; i++) {
@@ -448,88 +439,79 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
     refs.pGeom.attributes.position.needsUpdate = true;
   }
 
-  // Pestle & Herb jars gentle movement
   if (refs.pestle) refs.pestle.rotation.z = 0.35 + Math.sin(now * 2.2) * 0.12;
   if (refs.herbJars) refs.herbJars.forEach((j, i) => { j.rotation.y = Math.sin(now * 0.5 + i) * 0.1; });
 
-  // ── Progressive Elements Updates ──────────────────────────────────────────
+  // ── Elements Altar Breathing & Animation ──────────────────────────────────
   if (refs.elementOrbs) {
     refs.elementOrbs.forEach((o, i) => {
       const el = ELEMENTS[i];
-      const state = discoveryStates[el.id] || 'HIDDEN';
+      const state = (discoveryStates && discoveryStates[el.id]) || 'HIDDEN';
       const rune = refs[`plinth_rune_${el.id}`];
       const halo = refs[`halo_el_${i}`];
 
-      if (state === 'HIDDEN') {
-        o.visible = false;
-        o.scale.set(0, 0, 0);
-        if (rune) rune.material.opacity = 0.15;
+      o.position.y = el.pos[1] + Math.sin(now * 0.9 + i * 1.26) * 0.14;
+      o.rotation.y += delta * 0.85;
+
+      if (state === 'DISCOVERED' || state === 'UNDERSTOOD') {
+        o.scale.lerp(new THREE.Vector3(1.0, 1.0, 1.0), 0.1);
+        o.material.opacity = 0.95;
+        o.material.emissiveIntensity = 0.9 + Math.sin(now * 2.0 + i) * 0.25;
+        if (rune) rune.material.opacity = 0.95;
+        if (halo) { halo.visible = true; halo.rotation.z += delta * 0.4; }
+      } else {
+        // Dormant ancient relic: gentle mystical glow
+        o.scale.lerp(new THREE.Vector3(0.72, 0.72, 0.72), 0.1);
+        o.material.opacity = 0.6;
+        o.material.emissiveIntensity = 0.4 + Math.sin(now * 2.5 + i) * 0.2;
+        if (rune) rune.material.opacity = 0.55 + Math.sin(now * 3.0 + i) * 0.3;
         if (halo) halo.visible = false;
-      } else if (state === 'DISCOVERABLE') {
-        // Altar pulses with elemental energy waiting for learner discovery
-        o.visible = false;
-        o.scale.set(0, 0, 0);
-        if (rune) rune.material.opacity = 0.4 + Math.sin(now * 3.5 + i) * 0.3;
-        if (halo) halo.visible = false;
-      } else if (state === 'DISCOVERED' || state === 'UNDERSTOOD') {
-        // Fully manifested in world
-        o.visible = true;
-        if (o.scale.x < 0.99) {
-          const sc = Math.min(1, o.scale.x + delta * 2.5);
-          o.scale.set(sc, sc, sc);
-        }
-        o.position.y = el.pos[1] + Math.sin(now * 0.8 + i * 1.26) * 0.16;
-        o.rotation.y += delta * 0.85;
-        o.material.emissiveIntensity = 0.6 + Math.sin(now * 2.2 + i * 1.2) * 0.3;
-        if (rune) rune.material.opacity = 0.85;
-        if (halo) {
-          halo.visible = true;
-          halo.rotation.z += delta * 0.4;
-        }
       }
     });
   }
 
-  // ── Progressive Doshas Updates ────────────────────────────────────────────
+  // ── Dosha Crystals Breathing & Animation ──────────────────────────────────
   if (refs.doshaObjects) {
     refs.doshaObjects.forEach((c, i) => {
       const d = DOSHAS[i];
-      const state = discoveryStates[d.id] || 'HIDDEN';
+      const state = (discoveryStates && discoveryStates[d.id]) || 'HIDDEN';
       const rune = refs[`plinth_rune_${d.id}`];
 
-      if (state === 'HIDDEN') {
-        c.visible = false;
-        c.scale.set(0, 0, 0);
-        if (rune) rune.material.opacity = 0.15;
-      } else if (state === 'DISCOVERABLE') {
-        // Plinth pulses with sacred ancient energy
-        c.visible = false;
-        c.scale.set(0, 0, 0);
-        if (rune) rune.material.opacity = 0.45 + Math.sin(now * 4.0 + i) * 0.35;
-      } else if (state === 'DISCOVERED' || state === 'UNDERSTOOD') {
-        // Crystalline manifestation
-        c.visible = true;
-        if (c.scale.x < 0.99) {
-          const sc = Math.min(1, c.scale.x + delta * 2.2);
-          c.scale.set(sc, sc, sc);
-        }
-        c.rotation.y += delta * (0.45 + i * 0.15);
-        if (rune) rune.material.opacity = 0.9;
+      c.position.y = d.pos[1] + Math.sin(now * 0.7 + i * 1.8) * 0.12;
+      c.rotation.y += delta * (0.5 + i * 0.15);
+
+      if (state === 'DISCOVERED' || state === 'UNDERSTOOD') {
+        c.scale.lerp(new THREE.Vector3(1.0, 1.0, 1.0), 0.1);
+        c.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.opacity = 0.95;
+            child.material.emissiveIntensity = 0.95;
+          }
+        });
+        if (rune) rune.material.opacity = 0.95;
+      } else {
+        // Dormant crystal vessel: gentle pulse
+        c.scale.lerp(new THREE.Vector3(0.75, 0.75, 0.75), 0.1);
+        c.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.opacity = 0.6;
+            child.material.emissiveIntensity = 0.45;
+          }
+        });
+        if (rune) rune.material.opacity = 0.6 + Math.sin(now * 3.5 + i) * 0.3;
       }
     });
   }
-
-  if (refs.stars) refs.stars.material.opacity = clamp(0.7 - sky * 1.5, 0, 0.7);
 }
 
-// ── Pure Audio Synthesizer (Zero Unwanted Voices, Only Sacred Tones) ─────────
+// ── Pure Audio Synthesizer (NO Hissing Noise Buffer, Only Sacred Chime) ───────
 function buildAyurvedaAudio() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
     const ctx = new AudioCtx();
     const master = ctx.createGain();
-    master.gain.value = 0.45;
+    master.gain.value = 0.5;
     master.connect(ctx.destination);
 
     // Sacred Singing Bowl / Discovery Chime (528 Hz harmonic resonance)
@@ -552,30 +534,12 @@ function buildAyurvedaAudio() {
       });
     };
 
-    // Soft Ambient River (Gentle pink noise bandpass, non-intrusive)
-    const nb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
-    const d = nb.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const rs = ctx.createBufferSource();
-    rs.buffer = nb;
-    rs.loop = true;
-    const rf = ctx.createBiquadFilter();
-    rf.type = 'bandpass';
-    rf.frequency.value = 750;
-    rf.Q.value = 0.5;
-    const rg = ctx.createGain();
-    rg.gain.value = 0.08;
-    rs.connect(rf);
-    rf.connect(rg);
-    rg.connect(master);
-    rs.start();
-
     return {
       ctx,
       master,
       playDiscoveryChime,
       setMuted: (muted) => {
-        master.gain.setTargetAtTime(muted ? 0 : 0.45, ctx.currentTime, 0.03);
+        master.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 0.03);
       },
       close: () => {
         try { ctx.close(); } catch (_) {}
@@ -705,7 +669,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   const [infoPanel, setInfoPanel] = useState(null);
   const [discoveryAlert, setDiscoveryAlert] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
-  const [isExploring, setIsExploring] = useState(false);
+  const [isExploring, setIsExploring] = useState(true); // Default true so WASD works immediately
   const [showCodex, setShowCodex] = useState(false);
   const [vrSupported, setVrSupported] = useState(false);
   const [inVR, setInVR] = useState(false);
@@ -731,6 +695,21 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   const playingRef = useRef(false);
   const conditionRef = useRef(condition);
   conditionRef.current = condition;
+
+  // Stable Mutable Refs for Three.js Animation Loop (Prevents Snapping-Back!)
+  const discoveryStatesRef = useRef(discoveryStates);
+  discoveryStatesRef.current = discoveryStates;
+
+  const isExploringRef = useRef(isExploring);
+  isExploringRef.current = isExploring;
+
+  const isPausedRef = useRef(isPaused);
+  isPausedRef.current = isPaused;
+
+  const targetedObjectRef = useRef(targetedObject);
+  targetedObjectRef.current = targetedObject;
+
+  const handleDiscoverConceptRef = useRef(null);
 
   // First-person laptop movement state
   const keysDown = useRef({});
@@ -800,7 +779,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         });
       }
 
-      // Station 4 (t >= 53s): Doshas become DISCOVERABLE (NOT AT START!)
+      // Station 4 (t >= 53s): Doshas become DISCOVERABLE
       if (t >= 53) {
         DOSHAS.forEach(d => {
           if (next[d.id] === 'HIDDEN') {
@@ -818,35 +797,27 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   // ── Concept Discovery Action (Laptop Click/E & VR Trigger/Gaze) ────────────
   const handleDiscoverConcept = useCallback((concept) => {
     if (!concept || !concept.id) return;
-    const currentState = discoveryStates[concept.id];
 
-    // Reject invalid transition: if still HIDDEN and prerequisites not met, reject
-    if (currentState === 'HIDDEN') {
-      return;
+    // Validate & Discover
+    setDiscoveryStates(prev => ({ ...prev, [concept.id]: 'DISCOVERED' }));
+
+    // Sound feedback: Harmonic singing bowl ping
+    if (audioRef.current?.playDiscoveryChime) {
+      const freq = concept.type === 'dosha' ? 660 : 528;
+      audioRef.current.playDiscoveryChime(freq);
     }
 
-    if (currentState === 'DISCOVERABLE') {
-      // Validate & Discover
-      setDiscoveryStates(prev => ({ ...prev, [concept.id]: 'DISCOVERED' }));
+    // Banner celebration
+    setDiscoveryAlert({ label: concept.label, type: concept.type });
+    setTimeout(() => setDiscoveryAlert(null), 3600);
 
-      // Sound feedback: Harmonic singing bowl ping
-      if (audioRef.current?.playDiscoveryChime) {
-        const freq = concept.type === 'dosha' ? 660 : 528;
-        audioRef.current.playDiscoveryChime(freq);
-      }
-
-      // Banner celebration
-      setDiscoveryAlert({ label: concept.label, type: concept.type });
-      setTimeout(() => setDiscoveryAlert(null), 3600);
-
-      // Event logging
-      eventLogger.log('CONCEPT_DISCOVERED', {
-        conceptId: concept.id,
-        type: concept.type,
-        label: concept.label,
-        videoTimestamp: currentTimeRef.current
-      });
-    }
+    // Event logging
+    eventLogger.log('CONCEPT_DISCOVERED', {
+      conceptId: concept.id,
+      type: concept.type,
+      label: concept.label,
+      videoTimestamp: currentTimeRef.current
+    });
 
     // Open Lore Card
     setInfoPanel({
@@ -857,7 +828,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       type: concept.type,
       color: concept.color
     });
-  }, [discoveryStates]);
+  }, []);
+  handleDiscoverConceptRef.current = handleDiscoverConcept;
 
   // ── Video Controls ─────────────────────────────────────────────────────────
   const playVideo = useCallback(() => {
@@ -888,14 +860,13 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
   const handleRestart = useCallback(() => {
     seekVideo(0);
-    // Reset discoveries for fresh educational run
     const resetStates = {};
     ELEMENTS.forEach(el => { resetStates[el.id] = 'HIDDEN'; });
     DOSHAS.forEach(d => { resetStates[d.id] = 'HIDDEN'; });
     setDiscoveryStates(resetStates);
     setIsPaused(false);
     setInfoPanel(null);
-    if (rigRef.current) rigRef.current.position.set(0, 1.65, 4);
+    if (rigRef.current) rigRef.current.position.set(0, 1.65, 4.0);
     playVideo();
     eventLogger.log('EXPERIENCE_RESTART', { storyId: 'ayurveda_intro_v1' });
   }, [seekVideo, playVideo]);
@@ -919,7 +890,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     }
   };
 
-  // ── First-Person Laptop 3D Engine (C4) ─────────────────────────────────────
+  // ── First-Person Laptop 3D Engine (C4) — Stable Lifecycle (Mounts Once!) ──
   useEffect(() => {
     if (condition !== 'C4') return;
     const mount = mountRef.current;
@@ -934,7 +905,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     cameraRef.current = camera;
 
     const rig = new THREE.Group();
-    rig.position.set(0, 1.65, 4.0); // Human eye height
+    rig.position.set(0, 1.65, 4.0);
     rig.add(camera);
     scene.add(rig);
     rigRef.current = rig;
@@ -968,7 +939,6 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       scene.add(vp);
       worldRefs.current.vidPlane = vp;
 
-      // Decorative temple frame
       const fg = new THREE.EdgesGeometry(new THREE.BoxGeometry(4.55, 2.62, 0.04));
       const fl = new THREE.LineSegments(fg, new THREE.LineBasicMaterial({ color: 0xd4a017 }));
       fl.position.set(0, 2.7, -5.8);
@@ -1014,8 +984,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           if (hits.length > 0) {
             let hitObj = hits[0].object;
             while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
-            if (hitObj?.userData?.id) {
-              handleDiscoverConcept(hitObj.userData);
+            if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
+              handleDiscoverConceptRef.current(hitObj.userData);
               eventLogger.log('XR_SELECT', { objectId: hitObj.userData.id, type: hitObj.userData.type });
             }
           }
@@ -1032,14 +1002,14 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       const t = currentTimeRef.current;
 
       // Update 3D world meshes & discovery states
-      updateAyurvedaWorld(t, dt, worldRefs.current, discoveryStates);
+      updateAyurvedaWorld(t, dt, worldRefs.current, discoveryStatesRef.current);
       if (worldRefs.current.vidPlane && videoRef.current) {
         worldRefs.current.vidPlane.material.map.needsUpdate = true;
       }
 
-      // Laptop First-Person Locomotion (WASD)
-      if (isExploring && !isPaused) {
-        const speed = (keysDown.current['Shift'] ? 6.2 : 3.8) * dt;
+      // Laptop First-Person Locomotion (WASD) — Smooth, Zero Snapping!
+      if (!isPausedRef.current) {
+        const speed = (keysDown.current['Shift'] ? 6.5 : 3.8) * dt;
         const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
         const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
         const moveDir = new THREE.Vector3();
@@ -1054,11 +1024,11 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           rig.position.x += moveDir.x * speed;
           rig.position.z += moveDir.z * speed;
 
-          // Boundary collision (keep within sanctuary grounds)
+          // Boundary collision (radius 32m)
           const distFromCenter = Math.hypot(rig.position.x, rig.position.z);
-          if (distFromCenter > 26) {
-            rig.position.x = (rig.position.x / distFromCenter) * 26;
-            rig.position.z = (rig.position.z / distFromCenter) * 26;
+          if (distFromCenter > 32) {
+            rig.position.x = (rig.position.x / distFromCenter) * 32;
+            rig.position.z = (rig.position.z / distFromCenter) * 32;
           }
         }
       }
@@ -1070,7 +1040,6 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           if (source.gamepad && source.gamepad.axes.length >= 4) {
             const axes = source.gamepad.axes;
             if (source.handedness === 'left') {
-              // Left stick: smooth move
               const xrMove = new THREE.Vector3(axes[2], 0, axes[3]);
               if (xrMove.lengthSq() > 0.05) {
                 const headRot = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
@@ -1079,7 +1048,6 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
                 rig.position.z += xrMove.z * 3.5 * dt;
               }
             } else if (source.handedness === 'right') {
-              // Right stick: snap turn
               if (Math.abs(axes[2]) > 0.7 && !source.__snapDebounce) {
                 source.__snapDebounce = true;
                 rig.rotation.y -= Math.sign(axes[2]) * (Math.PI / 6);
@@ -1091,23 +1059,16 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       }
 
       // Center Raycast & Proximity Detection
-      const ray = new THREE.Raycaster();
-      ray.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-      // Check all elements & doshas for targeting
       const candidateList = [...(ELEMENTS || []), ...(DOSHAS || [])];
       let nearestCandidate = null;
       let minDistance = 999;
 
       candidateList.forEach(cand => {
-        const state = discoveryStates[cand.id] || 'HIDDEN';
-        if (state !== 'HIDDEN') {
-          const candPos = new THREE.Vector3(...cand.pos);
-          const dist = rig.position.distanceTo(candPos);
-          if (dist < minDistance && dist <= INTERACTION_DIST) {
-            minDistance = dist;
-            nearestCandidate = cand;
-          }
+        const candPos = new THREE.Vector3(...cand.pos);
+        const dist = rig.position.distanceTo(candPos);
+        if (dist < minDistance && dist <= INTERACTION_DIST) {
+          minDistance = dist;
+          nearestCandidate = cand;
         }
       });
 
@@ -1125,7 +1086,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         }
         if (prog >= 1) {
           gazeTimes.current[id] = null;
-          handleDiscoverConcept(nearestCandidate);
+          if (handleDiscoverConceptRef.current) handleDiscoverConceptRef.current(nearestCandidate);
           setGazeInfo(null);
         }
       } else {
@@ -1150,13 +1111,12 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     // ── Input Listeners for Desktop First-Person ─────────────────────────────
     const onKeyDown = (e) => {
       keysDown.current[e.key] = true;
-
-      // E Key triggers interaction on nearby object
-      if ((e.key === 'e' || e.key === 'E') && targetedObject) {
-        handleDiscoverConcept(targetedObject);
+      if (['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        setIsExploring(true);
       }
-
-      // Escape toggles pause menu
+      if ((e.key === 'e' || e.key === 'E') && targetedObjectRef.current && handleDiscoverConceptRef.current) {
+        handleDiscoverConceptRef.current(targetedObjectRef.current);
+      }
       if (e.key === 'Escape') {
         setIsPaused(p => !p);
       }
@@ -1176,19 +1136,28 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
     const onPointerLockChange = () => {
       isPointerLocked.current = document.pointerLockElement === mount;
-      if (!isPointerLocked.current) {
-        // Released pointer lock
-        setIsExploring(false);
-      } else {
-        setIsExploring(true);
-      }
     };
 
-    const onCanvasClick = () => {
-      if (!isPointerLocked.current) {
-        try { mount.requestPointerLock(); } catch (_) {}
-      } else if (targetedObject) {
-        handleDiscoverConcept(targetedObject);
+    // Direct Mouse Click Raycasting on 3D Altars (Works with or without pointer lock!)
+    const onCanvasPointerDown = (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+      const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
+      const hits = ray.intersectObjects(interactables, true);
+      if (hits.length > 0) {
+        let hitObj = hits[0].object;
+        while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
+        if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
+          handleDiscoverConceptRef.current(hitObj.userData);
+          return;
+        }
+      }
+      // If clicked on targeted object prompt or nearby
+      if (targetedObjectRef.current && handleDiscoverConceptRef.current) {
+        handleDiscoverConceptRef.current(targetedObjectRef.current);
       }
     };
 
@@ -1196,7 +1165,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     window.addEventListener('keyup', onKeyUp);
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('pointerlockchange', onPointerLockChange);
-    mount.addEventListener('click', onCanvasClick);
+    mount.addEventListener('pointerdown', onCanvasPointerDown);
 
     const onResize = () => {
       const nw = mount.clientWidth, nh = mount.clientHeight;
@@ -1212,12 +1181,12 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       window.removeEventListener('keyup', onKeyUp);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('pointerlockchange', onPointerLockChange);
-      mount.removeEventListener('click', onCanvasClick);
+      mount.removeEventListener('pointerdown', onCanvasPointerDown);
       window.removeEventListener('resize', onResize);
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       renderer.dispose();
     };
-  }, [condition, discoveryStates, handleDiscoverConcept, isExploring, isPaused, targetedObject]);
+  }, [condition]); // Stable mount: only runs once on condition mount!
 
   // ── WebXR Session Entry ───────────────────────────────────────────────────
   const handleEnterVR = async () => {
@@ -1318,14 +1287,14 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           {/* First-person crosshair */}
           <div className={`c4-crosshair${targetedObject ? ' active' : ''}`} />
 
-          {/* Contextual Interaction Indicator */}
+          {/* Contextual Interaction Indicator (Clickable button!) */}
           {targetedObject && (
-            <div className="c4-interaction-prompt">
+            <div className="c4-interaction-prompt" onClick={() => handleDiscoverConcept(targetedObject)}>
               <span className="c4-prompt-key">E</span>
               <span className="c4-prompt-text">
-                {discoveryStates[targetedObject.id] === 'DISCOVERABLE'
-                  ? `Discover ${targetedObject.label}`
-                  : `Inspect ${targetedObject.label}`}
+                {discoveryStates[targetedObject.id] === 'DISCOVERED'
+                  ? `Inspect ${targetedObject.label}`
+                  : `Discover ${targetedObject.label}`}
               </span>
             </div>
           )}
@@ -1350,12 +1319,11 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             </div>
           )}
 
-          {/* Laptop Controls Hint */}
+          {/* Laptop Controls Hint (Top-Right, Never Overlaps Timeline!) */}
           <div className="c4-desktop-controls-hint">
             <span><span className="c4-key-badge">W</span><span className="c4-key-badge">A</span><span className="c4-key-badge">S</span><span className="c4-key-badge">D</span> Walk</span>
             <span><span className="c4-key-badge">Mouse</span> Look</span>
             <span><span className="c4-key-badge">E</span> or <span className="c4-key-badge">Click</span> Interact</span>
-            <span><span className="c4-key-badge">Shift</span> Sprint</span>
             <span><span className="c4-key-badge">Esc</span> Pause</span>
           </div>
 
@@ -1379,27 +1347,6 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         </div>
       )}
 
-      {/* Start Exploring Opening Overlay (Laptop Mode) */}
-      {condition === 'C4' && !isExploring && !isPaused && (
-        <div className="c4-start-overlay">
-          <div className="c4-start-card">
-            <h1 className="c4-start-title">Himalayan Ayurvedic Sanctuary</h1>
-            <p className="c4-start-subtitle">
-              Step into an explorable 3D world. Journey through dawn, uncover the Five Sacred Elements, and progressively awaken the Three Doshas through personal discovery.
-            </p>
-            <div className="c4-controls-grid">
-              <div className="c4-control-item">🎮 <strong>WASD / Arrows</strong>: Traversal</div>
-              <div className="c4-control-item">🖱️ <strong>Mouse</strong>: Look around (Pointer Lock)</div>
-              <div className="c4-control-item">✨ <strong>[E] Key / Click</strong>: Discover Altars</div>
-              <div className="c4-control-item">🥽 <strong>WebXR</strong>: Native VR Headsets Supported</div>
-            </div>
-            <button className="c4-start-btn" onClick={startExploring}>
-              🧭 Start Exploring World
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Lore Info Popup Modal */}
       {infoPanel && (
         <div className="c4-info-overlay" onClick={() => setInfoPanel(null)}>
@@ -1408,7 +1355,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             <div className="c4-info-icon">{infoPanel.type === 'dosha' ? '💎' : '🌐'}</div>
             <h3 className="c4-info-title">{infoPanel.label}</h3>
             {infoPanel.elements && (
-              <div style={{ color: '#f59e0b', fontSize: '0.85rem', fontWeight: '700', marginBottom: '8px' }}>
+              <div style={{ color: '#f59e0b', fontSize: '0.88rem', fontWeight: '700', marginBottom: '8px' }}>
                 Constituent Elements: {infoPanel.elements}
               </div>
             )}
@@ -1486,10 +1433,10 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
               </button>
             </div>
             <div className="c4-pause-actions">
-              <button className="c4-pause-btn primary" onClick={() => { setIsPaused(false); startExploring(); }}>
+              <button className="c4-pause-btn primary" onClick={() => setIsPaused(false)}>
                 Resume Exploration
               </button>
-              <button className="c4-pause-btn secondary" onClick={() => { setShowCodex(true); }}>
+              <button className="c4-pause-btn secondary" onClick={() => setShowCodex(true)}>
                 View Codex
               </button>
               <button className="c4-pause-btn secondary" onClick={handleRestart}>
