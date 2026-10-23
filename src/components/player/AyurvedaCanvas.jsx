@@ -284,6 +284,26 @@ function buildAyurvedaWorld(scene, refs) {
   rimBand.position.y = 0.375;
   dhongaMortar.add(rimBand);
 
+  // Twin Traditional Brass Hoop Handles on Patila (Side Patila Handles)
+  [-1, 1].forEach(side => {
+    const handleGroup = new THREE.Group();
+    handleGroup.position.set(side * 0.40, 0.28, 0);
+    const hoop = new THREE.Mesh(
+      new THREE.TorusGeometry(0.075, 0.016, 12, 24, Math.PI),
+      brassBandMat
+    );
+    hoop.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+    hoop.rotation.z = Math.PI / 2;
+    handleGroup.add(hoop);
+    [-0.055, 0.055].forEach(offsetZ => {
+      const rivet = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.04, 8), brassBandMat);
+      rivet.rotation.x = Math.PI / 2;
+      rivet.position.set(0, 0, offsetZ);
+      handleGroup.add(rivet);
+    });
+    dhongaMortar.add(handleGroup);
+  });
+
   // Botanical Herbal Bed inside bowl (transitions from coarse to ground)
   const herbBedMat = new THREE.MeshStandardMaterial({
     color: 0x166534,
@@ -323,10 +343,38 @@ function buildAyurvedaWorld(scene, refs) {
   dhongaMortar.add(zoneRing);
   refs.grindZoneRing = zoneRing;
 
+  // Rising herbal aroma essence particles from Patila
+  const aromaGeom = new THREE.BufferGeometry();
+  const aromaCount = 20;
+  const aromaPos = new Float32Array(aromaCount * 3);
+  const aromaPhase = new Float32Array(aromaCount);
+  for (let i = 0; i < aromaCount; i++) {
+    aromaPos[i * 3] = (Math.random() - 0.5) * 0.22;
+    aromaPos[i * 3 + 1] = 0.24 + Math.random() * 0.35;
+    aromaPos[i * 3 + 2] = (Math.random() - 0.5) * 0.22;
+    aromaPhase[i] = Math.random() * Math.PI * 2;
+  }
+  aromaGeom.setAttribute('position', new THREE.BufferAttribute(aromaPos, 3));
+  const aromaMat = new THREE.PointsMaterial({
+    size: 0.05,
+    color: 0x86efac,
+    transparent: true,
+    opacity: 0.0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  const aromaPts = new THREE.Points(aromaGeom, aromaMat);
+  dhongaMortar.add(aromaPts);
+  refs.aromaPts = aromaPts;
+  refs.aromaPos = aromaPos;
+  refs.aromaPhase = aromaPhase;
+  refs.aromaGeom = aromaGeom;
+  refs.aromaMat = aromaMat;
+
   dhongaMortar.userData = {
     type: 'dhonga_mortar',
     id: 'dhonga_mortar',
-    label: 'Sacred Stone Dhonga'
+    label: 'Sacred Ayurvedic Patila (Dhonga)'
   };
   scene.add(dhongaMortar);
   refs.dhongaMortar = dhongaMortar;
@@ -526,7 +574,7 @@ function buildAyurvedaWorld(scene, refs) {
 }
 
 // ── World Update & Animation Lifecycle ───────────────────────────────────────
-function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
+function updateAyurvedaWorld(t, delta, refs, discoveryStates, dhongaState) {
   const now = performance.now() * 0.001;
 
   if (refs.river) refs.river.position.y = 0.09 + Math.sin(now * 1.4) * 0.015;
@@ -560,11 +608,36 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
     refs.pGeom.attributes.position.needsUpdate = true;
   }
 
-  if (refs.pestle) refs.pestle.rotation.z = 0.35 + Math.sin(now * 2.2) * 0.12;
+  // Rest-only pestle idle oscillation (never overwrites active player manipulation)
+  if (refs.pestle && (!dhongaState || dhongaState.status === 'RESTING')) {
+    refs.pestle.rotation.z = 0.35 + Math.sin(now * 2.2) * 0.12;
+  }
   if (refs.herbJars) refs.herbJars.forEach((j, i) => { j.rotation.y = Math.sin(now * 0.5 + i) * 0.1; });
 
-  // ── Elements Altar Breathing & Animation ──────────────────────────────────
+  // Update rising herbal aroma from Patila (awakens in Station 3 or when grinding)
+  if (refs.aromaPos && refs.aromaGeom && refs.aromaMat) {
+    const isStation3OrLater = t >= 32 || (dhongaState && dhongaState.progress > 0);
+    const targetOpacity = isStation3OrLater ? (0.35 + (dhongaState?.progress || 0) * 0.45) : 0.0;
+    refs.aromaMat.opacity = THREE.MathUtils.lerp(refs.aromaMat.opacity, targetOpacity, 0.05);
+    if (refs.aromaMat.opacity > 0.02) {
+      const n = refs.aromaPos.length / 3;
+      for (let i = 0; i < n; i++) {
+        refs.aromaPos[i * 3 + 1] += delta * 0.18;
+        refs.aromaPos[i * 3] += Math.sin(now * 1.5 + refs.aromaPhase[i]) * delta * 0.04;
+        refs.aromaPos[i * 3 + 2] += Math.cos(now * 1.5 + refs.aromaPhase[i]) * delta * 0.04;
+        if (refs.aromaPos[i * 3 + 1] > 0.85) {
+          refs.aromaPos[i * 3] = (Math.random() - 0.5) * 0.22;
+          refs.aromaPos[i * 3 + 1] = 0.24;
+          refs.aromaPos[i * 3 + 2] = (Math.random() - 0.5) * 0.22;
+        }
+      }
+      refs.aromaGeom.attributes.position.needsUpdate = true;
+    }
+  }
+
+  // ── Elements Altar Breathing & Animation (Strict Progressive Bloom) ───────
   if (refs.elementOrbs) {
+    const elementsAwakened = t >= 27;
     refs.elementOrbs.forEach((o, i) => {
       const el = ELEMENTS[i];
       const state = (discoveryStates && discoveryStates[el.id]) || 'HIDDEN';
@@ -580,12 +653,19 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
         o.material.emissiveIntensity = 0.9 + Math.sin(now * 2.0 + i) * 0.25;
         if (rune) rune.material.opacity = 0.95;
         if (halo) { halo.visible = true; halo.rotation.z += delta * 0.4; }
+      } else if (elementsAwakened) {
+        // Station 2 awakened: vibrant glowing invitation to interact
+        o.scale.lerp(new THREE.Vector3(0.88, 0.88, 0.88), 0.1);
+        o.material.opacity = 0.85;
+        o.material.emissiveIntensity = 0.65 + Math.sin(now * 3.0 + i) * 0.25;
+        if (rune) rune.material.opacity = 0.8;
+        if (halo) halo.visible = false;
       } else {
-        // Dormant ancient relic: gentle mystical glow
-        o.scale.lerp(new THREE.Vector3(0.72, 0.72, 0.72), 0.1);
-        o.material.opacity = 0.6;
-        o.material.emissiveIntensity = 0.4 + Math.sin(now * 2.5 + i) * 0.2;
-        if (rune) rune.material.opacity = 0.55 + Math.sin(now * 3.0 + i) * 0.3;
+        // Dormant ancient relic before Station 2: gentle mystical slumber
+        o.scale.lerp(new THREE.Vector3(0.55, 0.55, 0.55), 0.1);
+        o.material.opacity = 0.35;
+        o.material.emissiveIntensity = 0.2 + Math.sin(now * 1.5 + i) * 0.1;
+        if (rune) rune.material.opacity = 0.25;
         if (halo) halo.visible = false;
       }
     });
@@ -593,6 +673,7 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
 
   // ── Dosha Crystals Breathing & Animation ──────────────────────────────────
   if (refs.doshaObjects) {
+    const doshasAwakened = t >= 53 || (dhongaState && dhongaState.completed);
     refs.doshaObjects.forEach((c, i) => {
       const d = DOSHAS[i];
       const state = (discoveryStates && discoveryStates[d.id]) || 'HIDDEN';
@@ -610,16 +691,25 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates) {
           }
         });
         if (rune) rune.material.opacity = 0.95;
-      } else {
-        // Dormant crystal vessel: gentle pulse
-        c.scale.lerp(new THREE.Vector3(0.75, 0.75, 0.75), 0.1);
+      } else if (doshasAwakened) {
+        c.scale.lerp(new THREE.Vector3(0.85, 0.85, 0.85), 0.1);
         c.traverse(child => {
           if (child.isMesh && child.material) {
-            child.material.opacity = 0.6;
-            child.material.emissiveIntensity = 0.45;
+            child.material.opacity = 0.8;
+            child.material.emissiveIntensity = 0.65 + Math.sin(now * 2.8 + i) * 0.2;
           }
         });
-        if (rune) rune.material.opacity = 0.6 + Math.sin(now * 3.5 + i) * 0.3;
+        if (rune) rune.material.opacity = 0.75;
+      } else {
+        // Dormant crystal sanctuary before Station 4
+        c.scale.lerp(new THREE.Vector3(0.55, 0.55, 0.55), 0.1);
+        c.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.opacity = 0.35;
+            child.material.emissiveIntensity = 0.2;
+          }
+        });
+        if (rune) rune.material.opacity = 0.2;
       }
     });
   }
@@ -1362,8 +1452,27 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             let hitObj = hits[0].object;
             while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
             if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
-              handleDiscoverConceptRef.current(hitObj.userData, true);
-              eventLogger.log('XR_SELECT', { objectId: hitObj.userData.id, type: hitObj.userData.type });
+              const uData = hitObj.userData;
+              const curT = currentTimeRef.current;
+              // Progressive story gating in VR
+              if (uData.type === 'element' && curT < 27) {
+                setDiscoveryAlert({
+                  label: `${uData.label} is currently Dormant — Awakens in Station 2 (The Five Elements Ring)`,
+                  type: 'dormant'
+                });
+                setTimeout(() => setDiscoveryAlert(null), 3600);
+                return;
+              }
+              if (uData.type === 'dosha' && curT < 53 && !dhongaRef.current.completed) {
+                setDiscoveryAlert({
+                  label: `${uData.label} Sanctuary is Dormant — Awakens in Station 4 (or unlock by grinding herbs)`,
+                  type: 'dormant'
+                });
+                setTimeout(() => setDiscoveryAlert(null), 3600);
+                return;
+              }
+              handleDiscoverConceptRef.current(uData, true);
+              eventLogger.log('XR_SELECT', { objectId: uData.id, type: uData.type });
             }
           }
         };
@@ -1391,7 +1500,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       const t = currentTimeRef.current;
 
       // Update 3D world meshes & discovery states
-      updateAyurvedaWorld(t, dt, worldRefs.current, discoveryStatesRef.current);
+      updateAyurvedaWorld(t, dt, worldRefs.current, discoveryStatesRef.current, dhongaRef.current);
       if (worldRefs.current.vidPlane && videoRef.current) {
         worldRefs.current.vidPlane.material.map.needsUpdate = true;
       }
@@ -1472,18 +1581,34 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         }
       }
 
-      // Center Raycast & Proximity Detection
-      const candidateList = [...(ELEMENTS || []), ...(DOSHAS || [])];
+      // Center Raycast & Proximity Detection (STRICT Progressive Narrative Gating)
+      const candidateList = [];
 
-      // Include Dhonga pestle candidate when player is near table
+      // Elements awaken only when Station 2 arrives (t >= 27) OR already discovered
+      const hasDiscoveredElements = Object.keys(discoveryStatesRef.current).some(
+        k => ['earth', 'water', 'fire', 'air', 'ether'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
+      );
+      if (t >= 27 || hasDiscoveredElements) {
+        candidateList.push(...(ELEMENTS || []));
+      }
+
+      // Sacred Patila & Pestle awakens in Station 3 (t >= 32) OR when near table
       const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
-      if (distToTable <= 3.8 && dhongaRef.current.status !== 'COMPLETED') {
+      if ((t >= 32 || distToTable <= 3.8) && dhongaRef.current.status !== 'COMPLETED') {
         candidateList.push({
           id: 'dhonga_pestle',
-          label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Dhonga)' : 'Sacred Dhonga & Pestle',
+          label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Patila)' : 'Sacred Patila & Pestle',
           type: 'tool',
           pos: [2.8, 1.0, -2.0]
         });
+      }
+
+      // Doshas awaken in Station 4 (t >= 53) OR if unlocked by completing herb grinding
+      const hasDiscoveredDoshas = Object.keys(discoveryStatesRef.current).some(
+        k => ['vata', 'pitta', 'kapha'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
+      );
+      if (t >= 53 || dhongaRef.current.status === 'COMPLETED' || hasDiscoveredDoshas) {
+        candidateList.push(...(DOSHAS || []));
       }
 
       let nearestCandidate = null;
@@ -1527,9 +1652,18 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         if (worldRefs.current.gazeArc) worldRefs.current.gazeArc.scale.setScalar(0);
       }
 
-      // If player walked away from dismissed target, reset dismissal guard
-      if (!nearestCandidate) {
-        dismissedConceptIdRef.current = null;
+      // If player physically walked away from dismissed target (> 3.6m), reset dismissal guard
+      if (dismissedConceptIdRef.current) {
+        const allItems = [...ELEMENTS, ...DOSHAS, { id: 'dhonga_pestle', pos: [2.8, 1.0, -2.0] }];
+        const dismissedItem = allItems.find(item => item.id === dismissedConceptIdRef.current);
+        if (dismissedItem) {
+          const distToDismissed = rig.position.distanceTo(new THREE.Vector3(...dismissedItem.pos));
+          if (distToDismissed > INTERACTION_DIST + 1.6) {
+            dismissedConceptIdRef.current = null;
+          }
+        } else {
+          dismissedConceptIdRef.current = null;
+        }
       }
 
       // Head Rotation Logging
@@ -1584,6 +1718,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
     let isDragging = false;
     let prevPointer = { x: 0, y: 0 };
+    let pointerDownPos = { x: 0, y: 0, time: 0 };
 
     const onPointerDown = (e) => {
       // Prevent canvas from intercepting clicks on modal overlay / cards / close buttons
@@ -1603,41 +1738,11 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         return;
       }
 
-      // Raycast for direct 3D altar / tool click
-      const rect = renderer.domElement.getBoundingClientRect();
-      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      const ray = new THREE.Raycaster();
-      ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+      pointerDownPos = { x: e.clientX, y: e.clientY, time: performance.now() };
 
-      // Check pestle click
-      if (worldRefs.current.pestle) {
-        const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
-        if (pestleHits.length > 0) {
-          if (dhongaRef.current.status === 'HELD') {
-            handleReleasePestle();
-          } else {
-            handleGrabPestle('mouse');
-          }
-          return;
-        }
-      }
-
-      // If pestle is currently held, mouse clicks manipulate the tool, so do not drag camera
+      // If pestle is currently held, mouse clicks manipulate the tool inside Patila, so do not drag camera
       if (dhongaRef.current.status === 'HELD') {
         return;
-      }
-
-      // Check altar orbs & crystals
-      const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
-      const hits = ray.intersectObjects(interactables, true);
-      if (hits.length > 0) {
-        let hitObj = hits[0].object;
-        while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
-        if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
-          handleDiscoverConceptRef.current(hitObj.userData, true);
-          return;
-        }
       }
 
       // Normal camera drag initiation
@@ -1704,9 +1809,75 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       }
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (e) => {
       isDragging = false;
       mount.style.cursor = 'grab';
+
+      // Discriminate deliberate click from camera rotation drag
+      const dx = Math.abs(e.clientX - pointerDownPos.x);
+      const dy = Math.abs(e.clientY - pointerDownPos.y);
+      const elapsed = performance.now() - pointerDownPos.time;
+      const isDeliberateClick = dx < 6 && dy < 6 && elapsed < 450;
+
+      if (!isDeliberateClick) return;
+
+      // Raycast for deliberate 3D click on pestle or altar
+      const rect = renderer.domElement.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+
+      // Check pestle click (pick up / put down)
+      if (worldRefs.current.pestle) {
+        const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
+        if (pestleHits.length > 0) {
+          if (dhongaRef.current.status === 'HELD') {
+            handleReleasePestle();
+          } else {
+            handleGrabPestle('mouse');
+          }
+          return;
+        }
+      }
+
+      // If pestle is held, clicks don't activate distant altars
+      if (dhongaRef.current.status === 'HELD') {
+        return;
+      }
+
+      // Check altar orbs & crystals
+      const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
+      const hits = ray.intersectObjects(interactables, true);
+      if (hits.length > 0) {
+        let hitObj = hits[0].object;
+        while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
+        if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
+          const uData = hitObj.userData;
+          const curT = currentTimeRef.current;
+
+          // Progressive Story Gating
+          if (uData.type === 'element' && curT < 27) {
+            setDiscoveryAlert({
+              label: `${uData.label} is currently Dormant — Awakens in Station 2 (The Five Elements Ring)`,
+              type: 'dormant'
+            });
+            setTimeout(() => setDiscoveryAlert(null), 3600);
+            return;
+          }
+
+          if (uData.type === 'dosha' && curT < 53 && !dhongaRef.current.completed) {
+            setDiscoveryAlert({
+              label: `${uData.label} Sanctuary is Dormant — Awakens in Station 4 (or unlock by grinding herbs)`,
+              type: 'dormant'
+            });
+            setTimeout(() => setDiscoveryAlert(null), 3600);
+            return;
+          }
+
+          handleDiscoverConceptRef.current(uData, true);
+        }
+      }
     };
 
     const onContextMenu = (e) => {
@@ -1906,12 +2077,14 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             </div>
           )}
 
-          {/* Discovery Celebration Alert */}
+          {/* Discovery Celebration / Progressive Dormant Alert */}
           {discoveryAlert && (
-            <div className="c4-discovery-banner">
-              <div className="c4-banner-icon">{discoveryAlert.type === 'dosha' ? '💎' : '✨'}</div>
+            <div className={`c4-discovery-banner ${discoveryAlert.type === 'dormant' ? 'c4-dormant-banner' : ''}`}>
+              <div className="c4-banner-icon">
+                {discoveryAlert.type === 'dormant' ? '⏳' : (discoveryAlert.type === 'dosha' ? '💎' : '✨')}
+              </div>
               <div className="c4-banner-content">
-                <h4>Sacred Discovery Unlocked</h4>
+                <h4>{discoveryAlert.type === 'dormant' ? 'Story Progression Gated' : 'Sacred Discovery Unlocked'}</h4>
                 <h3>{discoveryAlert.label}</h3>
               </div>
             </div>

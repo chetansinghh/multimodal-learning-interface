@@ -1416,6 +1416,16 @@
   color: #fff;
 }
 
+.c4-discovery-banner.c4-dormant-banner {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.7);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.25);
+}
+.c4-discovery-banner.c4-dormant-banner .c4-banner-content h4 {
+  color: #38bdf8;
+}
+
+
 /* Controls Hint at Top Right (Never overlaps bottom player controls) */
 .c4-desktop-controls-hint {
   position: absolute;
