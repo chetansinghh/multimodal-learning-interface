@@ -35,6 +35,26 @@ function openDB() {
   });
 }
 
+function generateEventId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'ev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+// Map events to research categories
+export function getEventCategory(eventType = '') {
+  const ev = String(eventType).toUpperCase();
+  if (ev.includes('ERROR') || ev.includes('FAIL') || ev.includes('WARN')) return 'technical';
+  if (ev.startsWith('ASSESSMENT_')) return 'assessment';
+  if (ev.startsWith('VR_') || ev.startsWith('XR_') || ev.startsWith('GAZE_') || ev.startsWith('HEAD_')) return 'vr';
+  if (ev.startsWith('AUDIO_') || ev.includes('CHIME') || ev.includes('CUE') || ev.includes('SOUND')) return 'audio';
+  if (ev.startsWith('VIDEO_') || ev.startsWith('MEDIA_') || ev.startsWith('SEGMENT_')) return 'media';
+  if (ev.startsWith('SESSION_') || ev.includes('START') || ev.includes('EXIT') || ev.includes('RESTART')) return 'lifecycle';
+  if (ev.startsWith('OBJECT_') || ev.startsWith('TARGET_') || ev.startsWith('DHONGA_') || ev.includes('INTERACT') || ev.includes('PANEL')) return 'interaction';
+  return 'general';
+}
+
 class EventLogger {
   constructor() {
     this.db = null;
@@ -61,43 +81,111 @@ class EventLogger {
     this.condition = condition;
     this.storyId = storyId;
     this.storyTitle = storyTitle;
-    if (this.flushInterval) clearInterval(this.flushInterval);
     // Autosave flush every 2 seconds
     this.flushInterval = setInterval(() => this.flush(), 2000);
   }
 
-  /** Log a single raw event — minimum fields per the spec */
-  log(event, {
-    videoTimestamp = 0,
-    objectId = null,
-    action = null,
-    response = null,
-    duration = null,
-    storyId = null,
-    extra = {}
-  } = {}) {
+  /** Log a single raw event — compliant with Research Event Schema v2.0 */
+  log(event, params = {}) {
+    const now = sessionClock.now();
+    const utcIso = new Date().toISOString();
+    const eventType = params.event_type || params.event || event;
+
+    // Determine modality automatically if not explicitly provided
+    let modality = params.modality;
+    if (!modality) {
+      if (this.condition === 'C4') modality = 'vr';
+      else if (this.condition === 'C3') modality = 'interactive';
+      else if (this.condition === 'C2') modality = 'spatial_audio';
+      else modality = 'video';
+    }
+
+    // Determine event source
+    let source = params.source || 'user';
+    if (eventType.startsWith('VIDEO_') || eventType.startsWith('MEDIA_')) source = 'player';
+    else if (eventType.startsWith('AUDIO_')) source = 'audio_system';
+    else if (eventType.startsWith('VR_') || eventType.startsWith('XR_')) source = 'vr_system';
+    else if (eventType.startsWith('ASSESSMENT_')) source = 'assessment_engine';
+    else if (eventType.includes('ERROR') || eventType.includes('FAIL')) source = 'system';
+
+    const objectId = params.objectId || params.object_id || null;
+    const targetId = params.target_id || params.targetId || params.target || objectId || null;
+    const action = params.action || (
+      eventType.includes('GRAB') ? 'grab' :
+      eventType.includes('RELEASE') ? 'release' :
+      eventType.includes('PLACE') ? 'place' :
+      eventType.includes('GRIND') ? 'grind' :
+      eventType.includes('SELECT') ? 'select' :
+      eventType.includes('FOCUSED') ? 'focus' :
+      eventType.includes('BLURRED') ? 'blur' : null
+    );
+
+    const result = params.result || (
+      eventType.includes('COMPLETE') ? 'completed' :
+      eventType.includes('FAIL') || eventType.includes('ERROR') ? 'failed' :
+      eventType.includes('START') ? 'started' :
+      eventType.includes('CANCEL') ? 'cancelled' : 'completed'
+    );
+
+    const payload = params.payload || {
+      ...(params.extra || {}),
+      response: params.response ?? null,
+      holder: params.holder ?? null,
+      progress: params.progress ?? null,
+      conceptId: params.conceptId ?? null
+    };
+
     const entry = {
-      participant_id: this.participantId,
-      session_id: this.sessionId,
-      condition: this.condition,
-      story_id: storyId || this.storyId || null,
-      timestamp: sessionClock.now(),
+      event_id: params.event_id || generateEventId(),
+      session_id: params.session_id || this.sessionId,
+      participant_id: params.participant_id || this.participantId,
+      condition: params.condition || this.condition,
+      story_id: params.storyId || params.story_id || this.storyId || null,
+      story_segment_id: params.story_segment_id || params.storySegment || null,
+      event: eventType,
+      event_type: eventType,
+      category: getEventCategory(eventType),
+      timestamp: now,
+      elapsed_ms: now,
       wall_clock: sessionClock.wallClock(),
-      video_timestamp: videoTimestamp,
-      event,
+      timestamp_utc: utcIso,
+      video_timestamp: params.videoTimestamp ?? params.video_timestamp ?? 0,
+      modality,
+      source,
+      target_id: targetId,
       object_id: objectId,
       action,
-      response,
-      duration,
-      ...extra
+      result,
+      duration: params.duration || null,
+      error_code: params.error_code || params.errorCode || null,
+      error_details: params.error_details || params.errorDetails || null,
+      payload,
+      response: params.response || null,
+      schema_version: '2.0',
+      ...(params.extra || {})
     };
+
     this.eventBuffer.push(entry);
 
-    // Immediate flush for critical events
-    const critical = ['VIDEO_START', 'VIDEO_COMPLETE', 'VIDEO_EXIT', 'VR_ENTER', 'VR_EXIT'];
-    if (critical.includes(event)) {
+    // Immediate flush for critical research milestones and errors
+    const critical = ['VIDEO_START', 'VIDEO_COMPLETE', 'VIDEO_EXIT', 'VR_ENTER', 'VR_EXIT', 'DHONGA_GRIND_COMPLETE', 'ERROR'];
+    if (critical.some(k => eventType.includes(k))) {
       this.flush();
     }
+
+    return entry;
+  }
+
+  /** Specific helper for logging technical or system failures */
+  logError(errorCode, errorDetails, context = {}) {
+    return this.log('SYSTEM_ERROR', {
+      error_code: errorCode,
+      error_details: typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails),
+      result: 'failed',
+      source: 'system',
+      payload: context,
+      extra: context
+    });
   }
 
   /** Flush buffered events to IndexedDB & sync to central backend server */

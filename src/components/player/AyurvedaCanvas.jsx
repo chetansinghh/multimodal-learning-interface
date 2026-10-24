@@ -1597,13 +1597,78 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   handleDiscoverConceptRef.current = handleDiscoverConcept;
 
   // ── Universal Grab Object (Pestle, Ingredients, Elemental Relics) ──────────
+// ── Ergonomic Grip Registry (Natural Holding for Desktop & 6DoF WebXR) ─────
+const GRIP_REGISTRY = {
+  dhonga_pestle: {
+    desktop: {
+      position: [0.0, -0.20, 0.0],
+      rotation: [0.38, 0.22, -0.12],
+      scale: [1, 1, 1]
+    },
+    vr: {
+      position: [0.0, -0.10, -0.05],
+      rotation: [-0.55, 0, 0],
+      scale: [1, 1, 1]
+    }
+  },
+  herb_ashwagandha: {
+    desktop: {
+      position: [0.0, -0.06, 0.0],
+      rotation: [0.18, -0.22, 0.0],
+      scale: [0.85, 0.85, 0.85]
+    },
+    vr: {
+      position: [0.0, 0.02, -0.06],
+      rotation: [0.1, 0, 0],
+      scale: [0.85, 0.85, 0.85]
+    }
+  },
+  herb_tulsi: {
+    desktop: {
+      position: [0.0, -0.05, 0.0],
+      rotation: [0.15, -0.18, 0.0],
+      scale: [0.85, 0.85, 0.85]
+    },
+    vr: {
+      position: [0.0, 0.02, -0.06],
+      rotation: [0.1, 0, 0],
+      scale: [0.85, 0.85, 0.85]
+    }
+  },
+  herb_brahmi: {
+    desktop: {
+      position: [0.0, -0.06, 0.0],
+      rotation: [0.12, -0.12, 0.0],
+      scale: [0.85, 0.85, 0.85]
+    },
+    vr: {
+      position: [0.0, 0.02, -0.06],
+      rotation: [0.1, 0, 0],
+      scale: [0.85, 0.85, 0.85]
+    }
+  },
+  relic_default: {
+    desktop: {
+      position: [0.0, 0.0, 0.0],
+      rotation: [0.0, 0.0, 0.0],
+      scale: [0.82, 0.82, 0.82]
+    },
+    vr: {
+      position: [0.0, 0.03, -0.06],
+      rotation: [0.0, 0.0, 0.0],
+      scale: [0.82, 0.82, 0.82]
+    }
+  }
+};
+
   const handleGrabItem = useCallback((item, holder = 'mouse') => {
     if (!item || !item.id) return;
     if (heldObjectRef.current) {
       handleReleaseItem();
     }
 
-    const anchor = worldRefs.current.handAnchor;
+    const isVR = holder && holder.startsWith('vr');
+    const anchor = isVR && dhongaRef.current.heldController ? dhongaRef.current.heldController : worldRefs.current.handAnchor;
     let targetMesh = null;
 
     if (item.id === 'dhonga_pestle') {
@@ -1624,13 +1689,12 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     }
 
     if (targetMesh && anchor) {
-      anchor.attach(targetMesh);
-      targetMesh.position.set(0, 0, 0);
-      if (item.id === 'dhonga_pestle') {
-        targetMesh.rotation.set(0.2, 0.4, 0.1);
-      } else {
-        targetMesh.rotation.set(0, 0, 0);
-      }
+      anchor.add(targetMesh);
+      const grip = GRIP_REGISTRY[item.id] || GRIP_REGISTRY.relic_default;
+      const cfg = isVR ? grip.vr : grip.desktop;
+      targetMesh.position.set(...cfg.position);
+      targetMesh.rotation.set(...cfg.rotation);
+      targetMesh.scale.set(...cfg.scale);
     }
 
     setHeldObject(item);
@@ -1948,9 +2012,9 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     reticle.add(gArc);
     worldRefs.current.gazeArc = gArc;
 
-    // First-person Hand Carry Anchor (moves naturally with player camera & rig)
+    // First-person Hand Carry Anchor (comfortable ergonomic distance in lower-right FOV)
     const handAnchor = new THREE.Group();
-    handAnchor.position.set(0.32, -0.25, -0.65);
+    handAnchor.position.set(0.20, -0.18, -0.36);
     camera.add(handAnchor);
     worldRefs.current.handAnchor = handAnchor;
 
@@ -2047,16 +2111,14 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
             const pestlePos = new THREE.Vector3();
             worldRefs.current.pestle.getWorldPosition(pestlePos);
 
-            if (ctrlPos.distanceTo(pestlePos) < 0.45) {
-              // Attach pestle to controller
-              ctrl.attach(worldRefs.current.pestle);
+            if (ctrlPos.distanceTo(pestlePos) < 0.5) {
               dhongaRef.current.heldController = ctrl;
               handleGrabPestle(`vr_controller_${i}`);
               return;
             }
           }
 
-          // Raycast for altar interaction
+          // Raycast for altar interaction & spatial grabbing
           const ray = new THREE.Raycaster();
           const tm = new THREE.Matrix4();
           tm.identity().extractRotation(ctrl.matrixWorld);
@@ -2067,20 +2129,29 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
           if (worldRefs.current.pestle) {
             const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
             if (pestleHits.length > 0) {
-              ctrl.attach(worldRefs.current.pestle);
               dhongaRef.current.heldController = ctrl;
               handleGrabPestle(`vr_controller_${i}`);
               return;
             }
           }
 
-          const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
+          const interactables = [
+            ...(worldRefs.current.interactableItems || []),
+            ...(worldRefs.current.elementOrbs || []),
+            ...(worldRefs.current.doshaObjects || [])
+          ];
           const hits = ray.intersectObjects(interactables, true);
           if (hits.length > 0) {
             let hitObj = hits[0].object;
             while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
-            if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
+            if (hitObj?.userData?.id) {
               const uData = hitObj.userData;
+              // If grabbable ingredient or relic in VR: Grab to hand controller
+              if (uData.type === 'ingredient' || uData.type === 'relic') {
+                dhongaRef.current.heldController = ctrl;
+                handleGrabItem(uData, `vr_controller_${i}`);
+                return;
+              }
               const curT = currentTimeRef.current;
               // Progressive story gating in VR
               if (uData.type === 'element' && curT < 27) {

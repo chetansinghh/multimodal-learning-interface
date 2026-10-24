@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { eventLogger } from '../../services/EventLogger';
+import { eventLogger, getEventCategory } from '../../services/EventLogger';
 import { AVAILABLE_STORIES, CONDITIONS, loadStoryConfig, loadAvailableStories, validateStoryConfig, formatTime } from '../../services/StoryLoader';
 import { computeSessionMeasures } from '../../services/SessionMeasures';
 import authService from '../../services/AuthService';
@@ -50,6 +50,14 @@ function ResearcherDashboardContent() {
   const [storyFilter, setStoryFilter] = useState('all');
   const [conditionFilter, setConditionFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Event Timeline Inspection & Filtering State
+  const [timelineCategory, setTimelineCategory] = useState('all');
+  const [timelineSearch, setTimelineSearch] = useState('');
+  const [timelineResult, setTimelineResult] = useState('all');
+  const [timelinePage, setTimelinePage] = useState(1);
+  const [timelinePerPage, setTimelinePerPage] = useState(50);
+  const [inspectEvent, setInspectEvent] = useState(null);
 
   const fileInputRef = useRef(null);
   const importInputRef = useRef(null);
@@ -546,11 +554,50 @@ function ResearcherDashboardContent() {
     // Compute derived measures from raw events (§A of addendum)
     const measures = computeSessionMeasures(sessEvents, sessAssess);
 
-    const videoEvents = sessEvents.filter(e => e.event?.startsWith('VIDEO_'));
-    const replays = sessEvents.filter(e => e.event === 'VIDEO_REPLAY').length;
-    const pauses = sessEvents.filter(e => e.event === 'VIDEO_PAUSE').length;
-    const interactions = sessEvents.filter(e => e.event === 'OBJECT_INTERACT' || e.event === 'CHECKPOINT_HIT').length;
-    const gazeEvents = sessEvents.filter(e => e.event?.startsWith('GAZE_')).length;
+    const videoEvents = sessEvents.filter(e => (e.event_type || e.event)?.startsWith('VIDEO_'));
+    const replays = sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_REPLAY').length;
+    const pauses = sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_PAUSE').length;
+    const interactions = sessEvents.filter(e => ['OBJECT_INTERACT', 'OBJECT_GRABBED', 'OBJECT_PLACED', 'DHONGA_GRIND_COMPLETE', 'CHECKPOINT_HIT'].includes(e.event_type || e.event)).length;
+    const technicalErrors = sessEvents.filter(e => (e.event_type || e.event)?.includes('ERROR') || e.category === 'technical' || e.result === 'failed').length;
+    const vrEvents = sessEvents.filter(e => (e.event_type || e.event)?.startsWith('VR_') || (e.event_type || e.event)?.startsWith('XR_') || (e.event_type || e.event)?.startsWith('GAZE_')).length;
+
+    // Filter timeline events
+    let filteredEvents = [...sessEvents];
+    if (timelineCategory !== 'all') {
+      filteredEvents = filteredEvents.filter(e => {
+        const cat = e.category || getEventCategory(e.event_type || e.event);
+        return cat === timelineCategory;
+      });
+    }
+    if (timelineResult !== 'all') {
+      filteredEvents = filteredEvents.filter(e => (e.result || 'completed').toLowerCase() === timelineResult.toLowerCase());
+    }
+    if (timelineSearch.trim()) {
+      const q = timelineSearch.toLowerCase();
+      filteredEvents = filteredEvents.filter(e => {
+        const ev = String(e.event_type || e.event || '').toLowerCase();
+        const obj = String(e.object_id || e.target_id || '').toLowerCase();
+        const act = String(e.action || '').toLowerCase();
+        const res = String(e.result || '').toLowerCase();
+        const pay = JSON.stringify(e.payload || e.response || '').toLowerCase();
+        return ev.includes(q) || obj.includes(q) || act.includes(q) || res.includes(q) || pay.includes(q);
+      });
+    }
+
+    // Pagination
+    const totalEvents = filteredEvents.length;
+    const perPage = timelinePerPage === 'all' ? totalEvents : Number(timelinePerPage);
+    const totalPages = Math.max(1, Math.ceil(totalEvents / (perPage || 50)));
+    const currentPage = Math.min(timelinePage, totalPages);
+    const startIndex = (currentPage - 1) * perPage;
+    const paginatedEvents = timelinePerPage === 'all' ? filteredEvents : filteredEvents.slice(startIndex, startIndex + perPage);
+
+    // Session Reconstruction Milestones
+    const hasStarted = sessEvents.some(e => ['VIDEO_START', 'SESSION_START', 'EXPERIENCE_START'].includes(e.event_type || e.event));
+    const hasHerbs = sessEvents.some(e => (e.event_type || e.event) === 'OBJECT_PLACED' && (e.target_id === 'dhonga_mortar' || e.object_id?.includes('herb')));
+    const hasGrindCompleted = sessEvents.some(e => (e.event_type || e.event) === 'DHONGA_GRIND_COMPLETE');
+    const hasDoshas = sessEvents.some(e => ['vata', 'pitta', 'kapha'].includes(e.object_id || e.target_id) || (e.event_type || e.event) === 'CONCEPT_DISCOVERED');
+    const hasAssessments = sessAssess.length > 0;
 
     return (
       <div className="session-detail">
@@ -578,7 +625,36 @@ function ResearcherDashboardContent() {
           <div className="mini-stat"><span>{replays}</span>Replays</div>
           <div className="mini-stat"><span>{pauses}</span>Pauses</div>
           <div className="mini-stat"><span>{interactions}</span>Interactions</div>
-          <div className="mini-stat"><span>{gazeEvents}</span>Gaze Events</div>
+          <div className="mini-stat"><span>{vrEvents}</span>VR Telemetry</div>
+          <div className="mini-stat" style={{ color: technicalErrors > 0 ? '#ef4444' : undefined }}>
+            <span style={{ color: technicalErrors > 0 ? '#ef4444' : undefined }}>{technicalErrors}</span>Technical Issues
+          </div>
+        </div>
+
+        {/* Chronological Session Reconstruction Journey */}
+        <div className="reconstruction-box">
+          <h4>🗺 Session Chronological Reconstruction</h4>
+          <div className="reconstruction-flow">
+            <span className={`flow-step ${hasStarted ? 'passed' : ''}`}>
+              {hasStarted ? '✓' : '○'} 1. Session Start
+            </span>
+            <span className="flow-arrow">→</span>
+            <span className={`flow-step ${hasHerbs ? 'passed' : ''}`}>
+              {hasHerbs ? '✓' : '○'} 2. Raw Botanical Prep
+            </span>
+            <span className="flow-arrow">→</span>
+            <span className={`flow-step ${hasGrindCompleted ? 'passed' : ''}`}>
+              {hasGrindCompleted ? '✓' : '○'} 3. Dhonga Grinding Completed
+            </span>
+            <span className="flow-arrow">→</span>
+            <span className={`flow-step ${hasDoshas ? 'passed' : ''}`}>
+              {hasDoshas ? '✓' : '○'} 4. Sacred Doshas Revealed
+            </span>
+            <span className="flow-arrow">→</span>
+            <span className={`flow-step ${hasAssessments ? 'passed' : ''}`}>
+              {hasAssessments ? '✓' : '○'} 5. Assessment Completed
+            </span>
+          </div>
         </div>
 
         {session?.version_snapshot && (
@@ -591,43 +667,150 @@ function ResearcherDashboardContent() {
           </div>
         )}
 
-        <h4>Event Log (latest 50)</h4>
-        <div className="event-log-scroll">
+        {/* Full Chronological Event Timeline Controls */}
+        <div className="timeline-controls-bar">
+          <div className="timeline-filters">
+            <input
+              type="text"
+              placeholder="Search event history..."
+              className="timeline-search-input"
+              value={timelineSearch}
+              onChange={e => { setTimelineSearch(e.target.value); setTimelinePage(1); }}
+            />
+            <select
+              className="timeline-select"
+              value={timelineCategory}
+              onChange={e => { setTimelineCategory(e.target.value); setTimelinePage(1); }}
+            >
+              <option value="all">All Categories ({sessEvents.length})</option>
+              <option value="lifecycle">Lifecycle</option>
+              <option value="media">Video & Media</option>
+              <option value="audio">Audio Cues</option>
+              <option value="interaction">Interaction & Tools</option>
+              <option value="vr">VR & Spatial</option>
+              <option value="assessment">Assessment</option>
+              <option value="technical">Technical Errors</option>
+            </select>
+            <select
+              className="timeline-select"
+              value={timelineResult}
+              onChange={e => { setTimelineResult(e.target.value); setTimelinePage(1); }}
+            >
+              <option value="all">All Results</option>
+              <option value="completed">Completed</option>
+              <option value="started">Started</option>
+              <option value="failed">Failed / Error</option>
+            </select>
+          </div>
+
+          <div className="timeline-pagination">
+            <span>Showing {startIndex + 1}–{Math.min(startIndex + perPage, totalEvents)} of {totalEvents}</span>
+            <select
+              className="timeline-select"
+              value={timelinePerPage}
+              onChange={e => { setTimelinePerPage(e.target.value); setTimelinePage(1); }}
+            >
+              <option value="25">25 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+              <option value="all">All</option>
+            </select>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  className="table-btn"
+                  disabled={currentPage <= 1}
+                  onClick={() => setTimelinePage(p => Math.max(1, p - 1))}
+                >‹</button>
+                <span style={{ padding: '4px 6px' }}>{currentPage}/{totalPages}</span>
+                <button
+                  className="table-btn"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setTimelinePage(p => Math.min(totalPages, p + 1))}
+                >›</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Complete Event Timeline Table */}
+        <div className="event-log-scroll" style={{ maxHeight: '420px' }}>
           <table className="event-log-table">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Event</th>
-                <th>Object</th>
-                <th>Action</th>
-                <th>Response</th>
+                <th style={{ width: '45px' }}>#</th>
+                <th style={{ width: '130px' }}>Elapsed / UTC</th>
+                <th style={{ width: '100px' }}>Category</th>
+                <th>Event Type</th>
+                <th>Target / Object</th>
+                <th style={{ width: '90px' }}>Result</th>
+                <th style={{ width: '100px' }}>Inspection</th>
               </tr>
             </thead>
             <tbody>
-              {sessEvents.slice(-50).map((e, i) => (
-                <tr key={i}>
-                  <td>{typeof e.timestamp === 'number' ? formatTime(e.timestamp / 1000) : '-'}</td>
-                  <td><code className="event-type">{e.event}</code></td>
-                  <td>{e.object_id || '-'}</td>
-                  <td>{e.action || '-'}</td>
-                  <td className="response-cell">{e.response ? String(e.response).slice(0, 60) : '-'}</td>
+              {paginatedEvents.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="empty-state">No events match the current timeline filters.</td>
                 </tr>
-              ))}
+              ) : (
+                paginatedEvents.map((e, i) => {
+                  const evType = e.event_type || e.event || 'UNKNOWN';
+                  const cat = e.category || getEventCategory(evType);
+                  const res = (e.result || (evType.includes('FAIL') || evType.includes('ERROR') ? 'failed' : 'completed')).toLowerCase();
+                  const globalIdx = startIndex + i + 1;
+                  const elapsedSec = (e.elapsed_ms || e.timestamp || 0) / 1000;
+
+                  return (
+                    <tr key={e.event_id || i}>
+                      <td>{globalIdx}</td>
+                      <td>
+                        <strong>{formatTime(elapsedSec)}</strong>
+                        <div style={{ fontSize: '0.62rem', opacity: 0.6 }}>
+                          {e.timestamp_utc ? e.timestamp_utc.slice(11, 19) : (e.wall_clock ? e.wall_clock.slice(11, 19) : '-')}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`category-badge cat-${cat}`}>{cat}</span>
+                      </td>
+                      <td>
+                        <code className="event-type">{evType}</code>
+                      </td>
+                      <td>
+                        {e.target_id || e.object_id || '-'}
+                        {e.action && <span style={{ opacity: 0.6, fontSize: '0.65rem', marginLeft: '6px' }}>({e.action})</span>}
+                      </td>
+                      <td>
+                        <span className={`result-badge res-${res}`}>{res}</span>
+                      </td>
+                      <td>
+                        <button
+                          className="timeline-inspect-btn"
+                          onClick={() => setInspectEvent(e)}
+                          title="Inspect raw JSON payload"
+                        >
+                          🔍 Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
+        {/* Assessment Responses Table */}
         {sessAssess.length > 0 && (
           <>
-            <h4>Assessment Responses</h4>
+            <h4 style={{ marginTop: '1.5rem' }}>Assessment Responses & Metrics</h4>
             <table className="event-log-table">
               <thead>
                 <tr>
                   <th>Q ID</th>
                   <th>Level</th>
                   <th>Correct</th>
-                  <th>Time (ms)</th>
-                  <th>Changes</th>
+                  <th>Response Time</th>
+                  <th>Answer Changes</th>
                 </tr>
               </thead>
               <tbody>
@@ -636,15 +819,43 @@ function ResearcherDashboardContent() {
                     <td>{a.question_id}</td>
                     <td>{a.level}</td>
                     <td className={a.accuracy === 1 ? 'correct-cell' : 'incorrect-cell'}>
-                      {a.accuracy === 1 ? '✓' : '✗'}
+                      {a.accuracy === 1 ? '✓ Correct' : '✗ Incorrect'}
                     </td>
-                    <td>{Math.round(a.response_time_ms)}</td>
-                    <td>{a.answer_changes}</td>
+                    <td>{Math.round(a.response_time_ms)} ms</td>
+                    <td>{a.answer_changes || 0}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </>
+        )}
+
+        {/* JSON Payload Inspector Modal */}
+        {inspectEvent && (
+          <div className="json-inspect-modal-overlay" onClick={() => setInspectEvent(null)}>
+            <div className="json-inspect-modal" onClick={e => e.stopPropagation()}>
+              <div className="json-modal-header">
+                <h4>🔬 Event Payload Inspector — <code>{inspectEvent.event_type || inspectEvent.event}</code></h4>
+                <button className="close-btn" onClick={() => setInspectEvent(null)}>✕</button>
+              </div>
+              <div className="json-modal-meta">
+                <div><strong>Event ID:</strong> <code>{inspectEvent.event_id || '-'}</code></div>
+                <div><strong>UTC Timestamp:</strong> {inspectEvent.timestamp_utc || inspectEvent.wall_clock}</div>
+                <div><strong>Elapsed Time:</strong> {inspectEvent.elapsed_ms || inspectEvent.timestamp} ms ({formatTime((inspectEvent.elapsed_ms || inspectEvent.timestamp) / 1000)})</div>
+                <div><strong>Modality / Source:</strong> {inspectEvent.modality || '-'} / {inspectEvent.source || '-'}</div>
+              </div>
+              <pre className="json-modal-code">
+                {JSON.stringify(inspectEvent, null, 2)}
+              </pre>
+              <div className="json-modal-footer">
+                <button className="table-btn" onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(inspectEvent, null, 2));
+                  alert('Event JSON copied to clipboard!');
+                }}>📋 Copy Full JSON</button>
+                <button className="table-btn" onClick={() => setInspectEvent(null)}>Close</button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );
@@ -722,38 +933,108 @@ function ResearcherDashboardContent() {
   const renderExport = () => {
     const exportRawEvents = () => {
       const headers = [
-        'participant_id',
+        'event_id',
         'session_id',
+        'participant_id',
         'condition',
         'story_id',
-        'timestamp_ms',
-        'wall_clock_iso',
-        'video_timestamp_sec',
+        'story_segment_id',
         'event_type',
+        'category',
+        'timestamp_utc',
+        'elapsed_ms',
+        'wall_clock',
+        'video_timestamp_sec',
+        'modality',
+        'source',
+        'target_id',
         'object_id',
         'action',
+        'result',
+        'error_code',
+        'error_details',
         'payload_json'
       ];
       const csv = [headers.join(',')];
       events.forEach(e => {
-        const wallIso = e.wall_clock ? new Date(e.wall_clock).toISOString() : (e.timestamp ? new Date(e.timestamp).toISOString() : '');
-        const payload = e.response != null ? JSON.stringify(e.response) : (e.payload != null ? JSON.stringify(e.payload) : '');
+        const evType = e.event_type || e.event || '';
+        const cat = e.category || getEventCategory(evType);
+        const wallIso = e.timestamp_utc || (e.wall_clock ? new Date(e.wall_clock).toISOString() : (e.timestamp ? new Date(e.timestamp).toISOString() : ''));
+        const payloadStr = JSON.stringify(e.payload || e.response || {});
         const row = [
-          e.participant_id || '',
+          e.event_id || '',
           e.session_id || '',
+          e.participant_id || '',
           e.condition || '',
           e.story_id || '',
-          e.timestamp || 0,
+          e.story_segment_id || '',
+          evType,
+          cat,
           wallIso,
+          e.elapsed_ms ?? e.timestamp ?? 0,
+          e.wall_clock ? `"${String(e.wall_clock).replace(/"/g, '""')}"` : '',
           e.video_timestamp != null ? e.video_timestamp : '',
-          e.event || '',
+          e.modality || '',
+          e.source || '',
+          e.target_id || '',
           e.object_id || '',
           e.action || '',
-          payload ? `"${payload.replace(/"/g, '""')}"` : ''
+          e.result || 'completed',
+          e.error_code || '',
+          e.error_details ? `"${String(e.error_details).replace(/"/g, '""')}"` : '',
+          payloadStr ? `"${payloadStr.replace(/"/g, '""')}"` : ''
         ];
         csv.push(row.join(','));
       });
       downloadFile('raw_event_log.csv', csv.join('\n'), 'text/csv');
+    };
+
+    const exportTechnicalIssues = () => {
+      const techEvents = events.filter(e =>
+        (e.category === 'technical') ||
+        (e.event_type || e.event || '').includes('ERROR') ||
+        (e.event_type || e.event || '').includes('FAIL') ||
+        e.result === 'failed' ||
+        e.error_code != null
+      );
+      const headers = [
+        'event_id',
+        'session_id',
+        'participant_id',
+        'condition',
+        'story_id',
+        'timestamp_utc',
+        'elapsed_ms',
+        'modality',
+        'source',
+        'event_type',
+        'error_code',
+        'error_details',
+        'target_id',
+        'payload_json'
+      ];
+      const csv = [headers.join(',')];
+      techEvents.forEach(e => {
+        const payloadStr = JSON.stringify(e.payload || e.response || {});
+        const row = [
+          e.event_id || '',
+          e.session_id || '',
+          e.participant_id || '',
+          e.condition || '',
+          e.story_id || '',
+          e.timestamp_utc || '',
+          e.elapsed_ms ?? e.timestamp ?? '',
+          e.modality || '',
+          e.source || '',
+          e.event_type || e.event || '',
+          e.error_code || '',
+          e.error_details ? `"${String(e.error_details).replace(/"/g, '""')}"` : '',
+          e.target_id || e.object_id || '',
+          payloadStr ? `"${payloadStr.replace(/"/g, '""')}"` : ''
+        ];
+        csv.push(row.join(','));
+      });
+      downloadFile('technical_issues_log.csv', csv.join('\n'), 'text/csv');
     };
 
     const exportAssessments = () => {
@@ -842,8 +1123,8 @@ function ResearcherDashboardContent() {
 
         const calcAcc = (arr) => arr.length > 0 ? (arr.reduce((acc, a) => acc + (a.accuracy === 1 ? 1 : 0), 0) / arr.length).toFixed(2) : '';
 
-        const actionCount = sessEvents.filter(e => ['OBJECT_INTERACT', 'SELECT', 'DESELECT', 'HOTSPOT_OPEN', 'VR_INTERACTION'].includes(e.event)).length;
-        const actionErrors = sessEvents.filter(e => e.action === 'action_error' || String(e.response).includes('error') || (e.action === 'assessment_submit' && sessAssess.some(a => a.question_id === e.object_id && a.accuracy === 0))).length;
+        const actionCount = sessEvents.filter(e => ['OBJECT_INTERACT', 'OBJECT_GRABBED', 'OBJECT_PLACED', 'SELECT', 'DESELECT', 'HOTSPOT_OPEN', 'VR_INTERACTION'].includes(e.event_type || e.event)).length;
+        const actionErrors = sessEvents.filter(e => (e.event_type || e.event)?.includes('ERROR') || e.action === 'action_error' || String(e.response).includes('error') || (e.action === 'assessment_submit' && sessAssess.some(a => a.question_id === e.object_id && a.accuracy === 0))).length;
 
         const row = [
           s.session_id || '',
@@ -858,12 +1139,12 @@ function ResearcherDashboardContent() {
           (measures.active_viewing_duration_sec || (measures.active_viewing_duration_ms / 1000)).toFixed(2),
           (measures.pause_duration_ms / 1000).toFixed(2),
           (measures.interaction_duration_ms / 1000).toFixed(2),
-          sessEvents.filter(e => e.event === 'VIDEO_REPLAY').length,
-          sessEvents.filter(e => e.event === 'VIDEO_PAUSE').length,
-          sessEvents.filter(e => e.event === 'OBJECT_INTERACT').length,
+          sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_REPLAY').length,
+          sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_PAUSE').length,
+          sessEvents.filter(e => (e.event_type || e.event) === 'OBJECT_INTERACT' || (e.event_type || e.event) === 'OBJECT_PLACED').length,
           actionCount,
           actionErrors,
-          sessEvents.filter(e => e.event?.startsWith('GAZE_')).length,
+          sessEvents.filter(e => (e.event_type || e.event)?.startsWith('GAZE_')).length,
           calcAcc(recallAssess),
           calcAcc(applyAssess),
           calcAcc(implementAssess),
@@ -876,43 +1157,62 @@ function ResearcherDashboardContent() {
     };
 
     const exportJSON = (type) => {
-      const data = type === 'events' ? events : type === 'assessments' ? assessments : sessions;
+      let data = sessions;
+      if (type === 'events') data = events;
+      else if (type === 'assessments') data = assessments;
+      else if (type === 'technical') {
+        data = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed');
+      }
       downloadFile(`${type}.json`, JSON.stringify(data, null, 2), 'application/json');
     };
 
+    const technicalCount = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed').length;
+
     return (
       <div className="dashboard-content">
-        <h2>Data Export</h2>
-        <p className="export-desc">Export study data in CSV or JSON format. All exports are derived from the raw event log.</p>
+        <h2>Research Telemetry Exports</h2>
+        <p className="export-desc">
+          Four standardized research data streams derived directly from the immutable raw telemetry log. Compliant with Research Protocol v2.0.
+        </p>
 
         <div className="export-grid">
           <div className="export-card">
-            <h3>📊 Raw Event Log</h3>
-            <p>Every timestamped event across all sessions — the source of truth.</p>
-            <p className="export-count">{events.length} events</p>
+            <h3>📊 1. Raw Event Log</h3>
+            <p>Complete timestamped event sequence with structured JSON payloads, millisecond clocks, and modality metadata.</p>
+            <p className="export-count">{events.length} telemetry records</p>
             <div className="export-btns">
-              <button className="export-btn" onClick={exportRawEvents}>CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('events')}>JSON</button>
+              <button className="export-btn" onClick={exportRawEvents}>Export CSV</button>
+              <button className="export-btn" onClick={() => exportJSON('events')}>Export JSON</button>
             </div>
           </div>
 
           <div className="export-card">
-            <h3>📝 Assessment Data</h3>
-            <p>Per-question responses with accuracy, timing, and revision counts.</p>
+            <h3>📝 2. Assessment Data</h3>
+            <p>Per-question responses across cognitive levels with response times, correctness, and revision counts.</p>
             <p className="export-count">{assessments.length} responses</p>
             <div className="export-btns">
-              <button className="export-btn" onClick={exportAssessments}>CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('assessments')}>JSON</button>
+              <button className="export-btn" onClick={exportAssessments}>Export CSV</button>
+              <button className="export-btn" onClick={() => exportJSON('assessments')}>Export JSON</button>
             </div>
           </div>
 
           <div className="export-card">
-            <h3>📋 Session Summary</h3>
-            <p>Per-participant aggregate: duration, replays, interactions, scores.</p>
+            <h3>📋 3. Session Summary</h3>
+            <p>Derived participant metrics: total duration, active viewing, pauses, replays, interactions, and cognitive accuracy.</p>
             <p className="export-count">{sessions.length} sessions</p>
             <div className="export-btns">
-              <button className="export-btn" onClick={exportSessionSummary}>CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('sessions')}>JSON</button>
+              <button className="export-btn" onClick={exportSessionSummary}>Export CSV</button>
+              <button className="export-btn" onClick={() => exportJSON('sessions')}>Export JSON</button>
+            </div>
+          </div>
+
+          <div className="export-card">
+            <h3>🛠 4. Technical Issues & Errors</h3>
+            <p>Isolated log of all WebXR connection drops, media failures, tracking interruptions, and application errors.</p>
+            <p className="export-count" style={{ color: technicalCount > 0 ? '#ef4444' : undefined }}>{technicalCount} technical issues</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={exportTechnicalIssues}>Export CSV</button>
+              <button className="export-btn" onClick={() => exportJSON('technical')}>Export JSON</button>
             </div>
           </div>
         </div>
