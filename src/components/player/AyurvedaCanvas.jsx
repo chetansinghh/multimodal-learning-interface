@@ -137,14 +137,270 @@ function buildAyurvedaWorld(scene, refs) {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Sacred Flagstone Path to Altars
-  const pathMat = new THREE.MeshLambertMaterial({ color: 0xdfd4bc });
-  for (let p = 0; p < 18; p++) {
-    const stone = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 1.2), pathMat);
-    stone.position.set(Math.sin(p * 0.3) * 0.8, 0.04, 3.5 - p * 0.9);
+  // ── Sacred Interconnected Flagstone Pathway Network ─────────────────────────
+  const pathMat = new THREE.MeshLambertMaterial({ color: 0xdfd4bc, roughness: 0.85 });
+  const pathDarkMat = new THREE.MeshLambertMaterial({ color: 0xc8bc9e, roughness: 0.9 });
+
+  // 1. River Ghat Entrance Path (connecting ghat steps to central court)
+  for (let p = 0; p < 9; p++) {
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 1.1), p % 2 === 0 ? pathMat : pathDarkMat);
+    stone.position.set(-6.2 + p * 0.72, 0.04, -0.6 + Math.sin(p * 0.4) * 0.4);
+    stone.rotation.y = (Math.random() - 0.5) * 0.12;
     stone.receiveShadow = true;
     scene.add(stone);
   }
+
+  // 2. Central Sanctuary Spine Path (from entrance toward banyan and altars)
+  for (let p = 0; p < 18; p++) {
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 1.2), p % 2 === 0 ? pathMat : pathDarkMat);
+    stone.position.set(Math.sin(p * 0.28) * 0.65, 0.04, 3.8 - p * 0.82);
+    stone.receiveShadow = true;
+    scene.add(stone);
+  }
+
+  // 3. Herb Workstation Branch Path (branching to table at X=2.8, Z=-2.0)
+  for (let p = 0; p < 7; p++) {
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.06, 1.1), pathMat);
+    stone.position.set(0.3 + p * 0.42, 0.04, -1.8 + Math.sin(p * 0.5) * 0.2);
+    stone.receiveShadow = true;
+    scene.add(stone);
+  }
+
+  // 4. Five Elements Elliptical Flagstone Ring (connecting the 5 altars)
+  for (let p = 0; p < 14; p++) {
+    const angle = (p / 14) * Math.PI + 0.1;
+    const rx = Math.cos(angle) * 3.8;
+    const rz = -6.8 - Math.sin(angle) * 1.5;
+    const stone = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 1.0), pathDarkMat);
+    stone.position.set(rx, 0.04, rz);
+    stone.rotation.y = -angle + Math.PI / 2;
+    stone.receiveShadow = true;
+    scene.add(stone);
+  }
+
+  // 5. Dosha Sanctuary Raised Threshold Steps (leading into crystal sanctuary)
+  const marbleStepMat = new THREE.MeshLambertMaterial({ color: 0xf1f5f9 });
+  for (let s = 0; s < 3; s++) {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(11.5 - s * 1.2, 0.14, 1.4), marbleStepMat);
+    step.position.set(0, 0.07 + s * 0.12, -8.2 - s * 0.8);
+    step.receiveShadow = true;
+    scene.add(step);
+  }
+
+  // ── Deepastambha Carved Stone Lantern Shrines (With Flickering Diya Lamps) ──
+  refs.lanternLights = [];
+  const lanternMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
+  const diyaGoldMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.8 });
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
+
+  const lanternCoords = [
+    [-4.8, 1.0],   // River Ghat Approach
+    [-0.5, -1.6],  // Havan Fire Junction
+    [1.6, -3.8],   // Herb Workstation Entry
+    [3.6, -8.2]    // Dosha Sanctuary Gateway
+  ];
+
+  lanternCoords.forEach(([lx, lz], idx) => {
+    const lantern = new THREE.Group();
+    lantern.position.set(lx, 0, lz);
+
+    // Stepped square plinth
+    const lBase = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.35, 0.52), lanternMat);
+    lBase.position.y = 0.18;
+    lantern.add(lBase);
+
+    // Carved octagonal pillar shaft
+    const lShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.85, 8), lanternMat);
+    lShaft.position.y = 0.72;
+    lantern.add(lShaft);
+
+    // Open pagoda chamber with 4 pillars
+    const lChamberFloor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.08, 0.48), lanternMat);
+    lChamberFloor.position.y = 1.18;
+    lantern.add(lChamberFloor);
+
+    // 4 mini corner columns
+    [-0.18, 0.18].forEach(cx => {
+      [-0.18, 0.18].forEach(cz => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.38, 6), lanternMat);
+        col.position.set(cx, 1.38, cz);
+        lantern.add(col);
+      });
+    });
+
+    // Pyramidal stone roof
+    const lRoof = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.35, 4), lanternMat);
+    lRoof.position.y = 1.72;
+    lRoof.rotation.y = Math.PI / 4;
+    lantern.add(lRoof);
+
+    // Brass Diya lamp inside chamber
+    const diya = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.05, 0.06, 12), diyaGoldMat);
+    diya.position.y = 1.24;
+    lantern.add(diya);
+
+    // Glowing flame teardrop
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.10, 8), flameMat);
+    flame.position.y = 1.31;
+    lantern.add(flame);
+
+    // Warm soft lantern point light
+    const lLight = new THREE.PointLight(0xf59e0b, 2.2, 7.5);
+    lLight.position.set(lx, 1.35, lz);
+    scene.add(lLight);
+    refs.lanternLights.push(lLight);
+
+    scene.add(lantern);
+  });
+
+  // ── Living Medicinal Botanical Garden Sanctuary ─────────────────────────────
+  refs.plants = [];
+  refs.windObjects = [];
+
+  // Raised garden soil bed directly beside preparation table
+  const gardenSoil = new THREE.Mesh(
+    new THREE.BoxGeometry(2.8, 0.22, 3.8),
+    new THREE.MeshLambertMaterial({ color: 0x3d2817 }) // Rich dark fertile loam
+  );
+  gardenSoil.position.set(5.2, 0.11, -2.6);
+  gardenSoil.receiveShadow = true;
+  scene.add(gardenSoil);
+
+  // Terracotta border kerb around garden bed
+  const kerbMat = new THREE.MeshLambertMaterial({ color: 0x9a3412 });
+  const kerb = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.26, 4.0), kerbMat);
+  kerb.position.set(5.2, 0.08, -2.6);
+  scene.add(kerb);
+
+  // Tulsi (Holy Basil) Bushes (6 aromatic sacred plants)
+  const tulsiStemMat = new THREE.MeshLambertMaterial({ color: 0x4d3822 });
+  const tulsiLeafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
+  const tulsiFlowerMat = new THREE.MeshStandardMaterial({ color: 0x7e22ce, roughness: 0.7 });
+
+  for (let i = 0; i < 6; i++) {
+    const px = 4.4 + (i % 2) * 1.3 + (Math.random() - 0.5) * 0.3;
+    const pz = -1.4 - Math.floor(i / 2) * 1.1 + (Math.random() - 0.5) * 0.3;
+    const plant = new THREE.Group();
+    plant.position.set(px, 0.22, pz);
+
+    // Central woody stem
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.55, 6), tulsiStemMat);
+    stem.position.y = 0.27;
+    plant.add(stem);
+
+    // Clustered aromatic leaf crowns
+    [[0, 0.42, 0, 0.24], [0.12, 0.32, 0.08, 0.18], [-0.1, 0.34, -0.06, 0.17], [0.06, 0.52, -0.05, 0.16]].forEach(([lx, ly, lz, lr]) => {
+      const leafCluster = new THREE.Mesh(new THREE.SphereGeometry(lr, 8, 6), tulsiLeafMat);
+      leafCluster.position.set(lx, ly, lz);
+      plant.add(leafCluster);
+    });
+
+    // Violet flowering spires
+    const spire = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.16, 6), tulsiFlowerMat);
+    spire.position.set(0, 0.62, 0);
+    plant.add(spire);
+
+    scene.add(plant);
+    refs.plants.push(plant);
+  }
+
+  // Ashwagandha Shrubs (4 medicinal plants with small red-orange berries)
+  const ashwaStemMat = new THREE.MeshLambertMaterial({ color: 0x785338 });
+  const ashwaLeafMat = new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.85 });
+  const berryMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.4 });
+
+  for (let i = 0; i < 4; i++) {
+    const ax = 5.8 + (i % 2) * 0.6;
+    const az = -1.8 - Math.floor(i / 2) * 1.4;
+    const ashwa = new THREE.Group();
+    ashwa.position.set(ax, 0.22, az);
+
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 0.65, 6), ashwaStemMat);
+    stem.position.y = 0.32;
+    ashwa.add(stem);
+
+    // Branching leaves
+    for (let b = 0; b < 5; b++) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.16, 7, 6), ashwaLeafMat);
+      const ang = (b / 5) * Math.PI * 2;
+      leaf.position.set(Math.cos(ang) * 0.14, 0.35 + (b % 2) * 0.14, Math.sin(ang) * 0.14);
+      ashwa.add(leaf);
+    }
+
+    // Small red medicinal berries
+    for (let br = 0; br < 4; br++) {
+      const berry = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), berryMat);
+      const ang = (br / 4) * Math.PI * 2 + 0.4;
+      berry.position.set(Math.cos(ang) * 0.16, 0.42, Math.sin(ang) * 0.16);
+      ashwa.add(berry);
+    }
+
+    scene.add(ashwa);
+    refs.plants.push(ashwa);
+  }
+
+  // Traditional Bamboo A-Frame Herb Drying Rack
+  const rackMat = new THREE.MeshLambertMaterial({ color: 0x854d0e });
+  const rack = new THREE.Group();
+  rack.position.set(4.0, 0, -3.8);
+
+  // A-frame poles
+  [-0.6, 0.6].forEach(rx => {
+    const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.6, 6), rackMat);
+    legL.position.set(rx, 0.78, -0.25);
+    legL.rotation.x = 0.22;
+    rack.add(legL);
+
+    const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.6, 6), rackMat);
+    legR.position.set(rx, 0.78, 0.25);
+    legR.rotation.x = -0.22;
+    rack.add(legR);
+  });
+
+  // Crossbar beam
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 8), rackMat);
+  beam.rotation.z = Math.PI / 2;
+  beam.position.set(0, 1.5, 0);
+  rack.add(beam);
+
+  // 4 Hanging dried herb bundles suspended from crossbar
+  refs.hangingHerbs = [];
+  const driedHerbMat = new THREE.MeshStandardMaterial({ color: 0x713f12, roughness: 0.9 });
+  for (let h = 0; h < 4; h++) {
+    const bundle = new THREE.Group();
+    bundle.position.set(-0.45 + h * 0.3, 1.35, 0);
+
+    // Hanging string
+    const string = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.24, 4), pathDarkMat);
+    string.position.y = 0.04;
+    bundle.add(string);
+
+    // Inverted dried botanical sprig
+    const sprig = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 6), driedHerbMat);
+    sprig.rotation.x = Math.PI;
+    sprig.position.y = -0.16;
+    bundle.add(sprig);
+
+    rack.add(bundle);
+    refs.hangingHerbs.push(bundle);
+  }
+  scene.add(rack);
+
+  // Woven Wicker Harvest Herb Basket on ground
+  const basket = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.22, 0.22, 16),
+    new THREE.MeshLambertMaterial({ color: 0xb45309 })
+  );
+  basket.position.set(3.8, 0.11, -1.3);
+  scene.add(basket);
+
+  // Harvested leaves inside basket
+  const basketLeaves = new THREE.Mesh(
+    new THREE.SphereGeometry(0.25, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshLambertMaterial({ color: 0x166534 })
+  );
+  basketLeaves.position.set(3.8, 0.18, -1.3);
+  scene.add(basketLeaves);
 
   // Sacred River (Turquoise Shimmering Waters)
   const riverGeom = new THREE.PlaneGeometry(24, 260, 24, 2);
@@ -423,24 +679,90 @@ function buildAyurvedaWorld(scene, refs) {
   refs.pestleHighlight = pestleHighlight;
 
   pestleGroup.userData = {
-    type: 'dhonga_pestle',
+    type: 'tool',
     id: 'dhonga_pestle',
-    label: 'Ayurvedic Grinding Pestle'
+    label: 'Sacred Grinding Pestle (Musal)',
+    icon: '🥣',
+    restingPos: [2.95, 0.88, -1.82],
+    restingRot: [0.15, 0.1, 0.45]
   };
   scene.add(pestleGroup);
   refs.pestle = pestleGroup;
 
-  // Herb Jars
-  refs.herbJars = [];
-  [[-0.6, 0xfacc15], [0, 0x22c55e], [0.6, 0xf97316]].forEach(([dx, col]) => {
-    const jar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.1, 0.28, 12),
-      new THREE.MeshPhongMaterial({ color: col, transparent: true, opacity: 0.9, shininess: 100 })
-    );
-    jar.position.set(2.8 + dx, 0.92, -2.0);
-    scene.add(jar);
-    refs.herbJars.push(jar);
-  });
+  // ── Authentic Botanical Ingredients on Workstation ────────────────────────
+  refs.interactableItems = [pestleGroup, dhongaMortar];
+
+  // 1. Ashwagandha Roots & Botanical Sprigs Dish
+  const ashwaGroup = new THREE.Group();
+  ashwaGroup.position.set(2.1, 0.77, -1.9);
+  const dishMat = new THREE.MeshLambertMaterial({ color: 0x9a3412 });
+  const ashwaDish = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.05, 16), dishMat);
+  ashwaGroup.add(ashwaDish);
+  const rootMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.9 });
+  for (let r = 0; r < 7; r++) {
+    const root = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.22, 6), rootMat);
+    root.rotation.set((Math.random() - 0.5) * 0.4, (r / 7) * Math.PI, Math.PI / 2 + (Math.random() - 0.5) * 0.3);
+    root.position.set((Math.random() - 0.5) * 0.08, 0.04 + (r % 3) * 0.02, (Math.random() - 0.5) * 0.08);
+    ashwaGroup.add(root);
+  }
+  ashwaGroup.userData = {
+    type: 'ingredient',
+    id: 'herb_ashwagandha',
+    label: 'Ashwagandha Roots & Leaves',
+    icon: '🌿',
+    restingPos: [2.1, 0.77, -1.9],
+    restingRot: [0, 0, 0]
+  };
+  scene.add(ashwaGroup);
+  refs.herbAshwagandha = ashwaGroup;
+  refs.interactableItems.push(ashwaGroup);
+
+  // 2. Fresh Tulsi (Holy Basil) Leaves Terracotta Saucer
+  const tulsiSaucerGroup = new THREE.Group();
+  tulsiSaucerGroup.position.set(3.4, 0.77, -2.1);
+  const tSaucer = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.05, 16), dishMat);
+  tulsiSaucerGroup.add(tSaucer);
+  for (let l = 0; l < 8; l++) {
+    const leafM = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.09), new THREE.MeshLambertMaterial({ color: 0x16a34a, side: THREE.DoubleSide }));
+    leafM.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.5, (l / 8) * Math.PI * 2, 0);
+    leafM.position.set((Math.random() - 0.5) * 0.1, 0.04 + l * 0.008, (Math.random() - 0.5) * 0.1);
+    tulsiSaucerGroup.add(leafM);
+  }
+  tulsiSaucerGroup.userData = {
+    type: 'ingredient',
+    id: 'herb_tulsi',
+    label: 'Fresh Tulsi Leaves',
+    icon: '🍃',
+    restingPos: [3.4, 0.77, -2.1],
+    restingRot: [0, 0, 0]
+  };
+  scene.add(tulsiSaucerGroup);
+  refs.herbTulsi = tulsiSaucerGroup;
+  refs.interactableItems.push(tulsiSaucerGroup);
+
+  // 3. Brahmi Medhya Apothecary Glass Jar
+  const brahmiJarGroup = new THREE.Group();
+  brahmiJarGroup.position.set(3.2, 0.77, -1.7);
+  const jarGlass = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.09, 0.24, 14),
+    new THREE.MeshPhongMaterial({ color: 0xd97706, transparent: true, opacity: 0.82, shininess: 120 })
+  );
+  jarGlass.position.y = 0.12;
+  brahmiJarGroup.add(jarGlass);
+  const jarLid = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 14), brassBandMat);
+  jarLid.position.y = 0.25;
+  brahmiJarGroup.add(jarLid);
+  brahmiJarGroup.userData = {
+    type: 'ingredient',
+    id: 'herb_brahmi',
+    label: 'Brahmi Medhya Jar',
+    icon: '🏺',
+    restingPos: [3.2, 0.77, -1.7],
+    restingRot: [0, 0, 0]
+  };
+  scene.add(brahmiJarGroup);
+  refs.herbBrahmi = brahmiJarGroup;
+  refs.interactableItems.push(brahmiJarGroup);
 
   // ── Plinths & Interactive Altars: 5 ELEMENTS ───────────────────────────────
   refs.elementPlinths = [];
@@ -453,8 +775,9 @@ function buildAyurvedaWorld(scene, refs) {
     );
     plinth.position.set(el.pos[0], 0.48, el.pos[2]);
     plinth.receiveShadow = true;
-    plinth.userData = { type: 'element', ...el };
+    plinth.userData = { type: 'element_plinth', plinthId: el.id, ...el };
     scene.add(plinth);
+    refs.elementPlinths.push(plinth);
 
     // Glowing Rune Ring on top of plinth
     const runeRing = new THREE.Mesh(
@@ -466,7 +789,7 @@ function buildAyurvedaWorld(scene, refs) {
     scene.add(runeRing);
     refs[`plinth_rune_${el.id}`] = runeRing;
 
-    // Elemental Orb (Visible as mystical dormant relic, radiant when discovered)
+    // Elemental Orb (Can be picked up, carried, examined, or returned to plinth!)
     const orb = new THREE.Mesh(
       new THREE.SphereGeometry(0.35, 24, 18),
       new THREE.MeshPhongMaterial({
@@ -476,9 +799,22 @@ function buildAyurvedaWorld(scene, refs) {
     orb.position.set(...el.pos);
     orb.scale.set(0.75, 0.75, 0.75);
     orb.visible = true;
-    orb.userData = { type: 'element', ...el };
+    orb.userData = {
+      type: 'relic',
+      id: `relic_${el.id}`,
+      conceptId: el.id,
+      label: `${el.label} Relic`,
+      desc: el.desc,
+      color: el.color,
+      emissive: el.emissive,
+      icon: el.id === 'water' ? '💧' : el.id === 'fire' ? '🔥' : el.id === 'earth' ? '🪨' : el.id === 'air' ? '💨' : '✨',
+      plinthPos: [...el.pos],
+      restingPos: [...el.pos],
+      restingRot: [0, 0, 0]
+    };
     scene.add(orb);
     refs.elementOrbs.push(orb);
+    refs.interactableItems.push(orb);
 
     // Energy halo ring
     const halo = new THREE.Mesh(
@@ -612,7 +948,32 @@ function updateAyurvedaWorld(t, delta, refs, discoveryStates, dhongaState) {
   if (refs.pestle && (!dhongaState || dhongaState.status === 'RESTING')) {
     refs.pestle.rotation.z = 0.35 + Math.sin(now * 2.2) * 0.12;
   }
-  if (refs.herbJars) refs.herbJars.forEach((j, i) => { j.rotation.y = Math.sin(now * 0.5 + i) * 0.1; });
+
+  // Lantern lights subtle organic flicker
+  if (refs.lanternLights) {
+    refs.lanternLights.forEach((l, idx) => {
+      l.intensity = 1.9 + Math.sin(now * 5.4 + idx * 1.7) * 0.35 + Math.sin(now * 11.2 + idx) * 0.15;
+    });
+  }
+
+  // Living botanical plant sway in mountain breeze
+  if (refs.plants) {
+    refs.plants.forEach((p, idx) => {
+      p.rotation.z = Math.sin(now * 1.8 + idx * 0.7) * 0.04;
+      p.rotation.x = Math.cos(now * 1.4 + idx * 0.5) * 0.03;
+    });
+  }
+  if (refs.hangingHerbs) {
+    refs.hangingHerbs.forEach((h, idx) => {
+      h.rotation.z = Math.sin(now * 2.1 + idx * 0.8) * 0.06;
+    });
+  }
+
+  // Subtle natural breathing bob on held item
+  if (refs.handAnchor) {
+    refs.handAnchor.position.y = -0.22 + Math.sin(now * 2.8) * 0.006;
+    refs.handAnchor.position.x = 0.28 + Math.cos(now * 1.4) * 0.004;
+  }
 
   // Update rising herbal aroma from Patila (awakens in Station 3 or when grinding)
   if (refs.aromaPos && refs.aromaGeom && refs.aromaMat) {
@@ -781,15 +1142,121 @@ function buildAyurvedaAudio() {
       } catch (_) {}
     };
 
+    // Tactile item pickup audio feedback (pleasant, subtle wood/stone handling)
+    const playPickupSound = () => {
+      if (!ctx || ctx.state === 'closed') return;
+      try {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(380, now);
+        osc.frequency.exponentialRampToValueAtTime(560, now + 0.045);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.12, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } catch (_) {}
+    };
+
+    // Natural item placement audio feedback (gentle organic contact)
+    const playPlaceSound = () => {
+      if (!ctx || ctx.state === 'closed') return;
+      try {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(95, now + 0.07);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.085);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } catch (_) {}
+    };
+
+    // Crisp botanical leaf deposit sound
+    const playHerbDepositSound = () => {
+      if (!ctx || ctx.state === 'closed') return;
+      try {
+        const now = ctx.currentTime;
+        const bufferSize = Math.floor(ctx.sampleRate * 0.12);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(1100, now);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(master);
+        noise.start(now);
+        noise.stop(now + 0.12);
+      } catch (_) {}
+    };
+
+    // Ambient Himalayan Mountain Breeze (ultra-subtle, non-intrusive, zero loops)
+    let ambientGain = null;
+    let ambientSource = null;
+    const startAmbientBreeze = () => {
+      if (!ctx || ctx.state === 'closed' || ambientSource) return;
+      try {
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          data[i] = (b0 + b1 + b2) * 0.04;
+        }
+        ambientSource = ctx.createBufferSource();
+        ambientSource.buffer = buffer;
+        ambientSource.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, ctx.currentTime);
+
+        ambientGain = ctx.createGain();
+        ambientGain.gain.setValueAtTime(0.022, ctx.currentTime);
+
+        ambientSource.connect(filter);
+        filter.connect(ambientGain);
+        ambientGain.connect(master);
+        ambientSource.start();
+      } catch (_) {}
+    };
+
     return {
       ctx,
       master,
       playDiscoveryChime,
       playGrindFrictionSound,
+      playPickupSound,
+      playPlaceSound,
+      playHerbDepositSound,
+      startAmbientBreeze,
       setMuted: (muted) => {
         master.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 0.03);
       },
       close: () => {
+        try { if (ambientSource) ambientSource.stop(); } catch (_) {}
         try { ctx.close(); } catch (_) {}
       }
     };
@@ -1047,11 +1514,17 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   infoPanelRef.current = infoPanel;
   const dismissedConceptIdRef = useRef(null);
   const popupStateRef = useRef('NONE'); // 'NONE' | 'FOCUSED' | 'OPEN' | 'DISMISSED'
+  const lastTargetRef = useRef(null);
 
-  // Dhonga & Pestle Grinding State
+  // ── Universal Object Grab, Carry, Placement & Grinding System ─────────────
+  const [heldObject, setHeldObject] = useState(null);
+  const heldObjectRef = useRef(null);
+  heldObjectRef.current = heldObject;
+
   const [dhongaState, setDhongaState] = useState({
     status: 'RESTING', // 'RESTING' | 'FOCUSED' | 'HELD' | 'GRINDING' | 'COMPLETED'
     progress: 0,
+    hasHerbs: false
   });
   const dhongaRef = useRef({
     status: 'RESTING',
@@ -1059,8 +1532,9 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     accumulatedAngle: 0,
     lastAngle: null,
     completed: false,
-    holder: null, // 'mouse' | 'controller_0' | 'controller_1'
+    holder: null,
     heldController: null,
+    hasHerbs: false
   });
   const heldToolRef = useRef(null);
 
@@ -1088,27 +1562,21 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   const handleDiscoverConcept = useCallback((concept, isDeliberate = true) => {
     if (!concept || !concept.id) return;
 
-    // Reset dismissal guard on intentional activation
     if (isDeliberate) {
       dismissedConceptIdRef.current = null;
     }
 
     popupStateRef.current = 'OPEN';
-
-    // Validate & Discover
     setDiscoveryStates(prev => ({ ...prev, [concept.id]: 'DISCOVERED' }));
 
-    // Sound feedback: Harmonic singing bowl ping
     if (audioRef.current?.playDiscoveryChime) {
       const freq = concept.type === 'dosha' ? 660 : 528;
       audioRef.current.playDiscoveryChime(freq);
     }
 
-    // Banner celebration
     setDiscoveryAlert({ label: concept.label, type: concept.type });
     setTimeout(() => setDiscoveryAlert(null), 3600);
 
-    // Event logging
     eventLogger.log('CONCEPT_DISCOVERED', {
       conceptId: concept.id,
       type: concept.type,
@@ -1117,7 +1585,6 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       deliberate: isDeliberate
     });
 
-    // Open Lore Card
     setInfoPanel({
       id: concept.id,
       label: concept.label,
@@ -1129,56 +1596,199 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   }, []);
   handleDiscoverConceptRef.current = handleDiscoverConcept;
 
-  // ── Shared Dhonga (Mortar & Pestle) Gameplay Handlers ──────────────────────
-  const handleGrabPestle = useCallback((holder = 'mouse') => {
-    if (dhongaRef.current.status === 'HELD') return;
-    dhongaRef.current.status = 'HELD';
-    dhongaRef.current.holder = holder;
-    heldToolRef.current = 'pestle';
+  // ── Universal Grab Object (Pestle, Ingredients, Elemental Relics) ──────────
+  const handleGrabItem = useCallback((item, holder = 'mouse') => {
+    if (!item || !item.id) return;
+    if (heldObjectRef.current) {
+      handleReleaseItem();
+    }
 
-    setDhongaState(prev => ({ ...prev, status: 'HELD' }));
+    const anchor = worldRefs.current.handAnchor;
+    let targetMesh = null;
 
-    if (audioRef.current?.playDiscoveryChime) {
-      audioRef.current.playDiscoveryChime(440);
+    if (item.id === 'dhonga_pestle') {
+      targetMesh = worldRefs.current.pestle;
+      dhongaRef.current.status = 'HELD';
+      dhongaRef.current.holder = holder;
+      heldToolRef.current = 'pestle';
+      setDhongaState(prev => ({ ...prev, status: 'HELD' }));
+    } else if (item.id === 'herb_ashwagandha') {
+      targetMesh = worldRefs.current.herbAshwagandha;
+    } else if (item.id === 'herb_tulsi') {
+      targetMesh = worldRefs.current.herbTulsi;
+    } else if (item.id === 'herb_brahmi') {
+      targetMesh = worldRefs.current.herbBrahmi;
+    } else if (item.id?.startsWith('relic_') || item.type === 'relic') {
+      const elId = item.conceptId || item.id.replace('relic_', '');
+      targetMesh = (worldRefs.current.elementOrbs || []).find(o => o.userData?.conceptId === elId || o.userData?.id === item.id);
+    }
+
+    if (targetMesh && anchor) {
+      anchor.attach(targetMesh);
+      targetMesh.position.set(0, 0, 0);
+      if (item.id === 'dhonga_pestle') {
+        targetMesh.rotation.set(0.2, 0.4, 0.1);
+      } else {
+        targetMesh.rotation.set(0, 0, 0);
+      }
+    }
+
+    setHeldObject(item);
+    heldObjectRef.current = item;
+
+    if (audioRef.current?.playPickupSound) {
+      audioRef.current.playPickupSound();
     }
 
     eventLogger.log('OBJECT_GRABBED', {
-      objectId: 'dhonga_pestle',
+      objectId: item.id,
+      itemType: item.type,
       holder,
       videoTimestamp: currentTimeRef.current
     });
   }, []);
 
-  const handleReleasePestle = useCallback(() => {
-    if (dhongaRef.current.status !== 'HELD' && dhongaRef.current.status !== 'GRINDING') return;
+  // ── Universal Release / Put Down Object ────────────────────────────────────
+  const handleReleaseItem = useCallback(() => {
+    const cur = heldObjectRef.current;
+    if (!cur) return;
 
-    const completed = dhongaRef.current.completed;
-    dhongaRef.current.status = completed ? 'COMPLETED' : 'RESTING';
-    dhongaRef.current.holder = null;
-    dhongaRef.current.heldController = null;
-    dhongaRef.current.lastAngle = null;
-    heldToolRef.current = null;
+    const scene = sceneRef.current;
+    let targetMesh = null;
 
-    setDhongaState(prev => ({
-      ...prev,
-      status: completed ? 'COMPLETED' : 'RESTING'
-    }));
-
-    // Smoothly restore pestle to resting posture beside mortar
-    if (worldRefs.current.pestle) {
-      worldRefs.current.pestle.position.set(2.95, 0.88, -1.82);
-      worldRefs.current.pestle.rotation.set(0.15, 0.1, 0.45);
+    if (cur.id === 'dhonga_pestle') {
+      targetMesh = worldRefs.current.pestle;
+      const completed = dhongaRef.current.completed;
+      dhongaRef.current.status = completed ? 'COMPLETED' : 'RESTING';
+      dhongaRef.current.holder = null;
+      dhongaRef.current.lastAngle = null;
+      heldToolRef.current = null;
+      setDhongaState(prev => ({ ...prev, status: completed ? 'COMPLETED' : 'RESTING' }));
+      if (worldRefs.current.grindZoneRing) {
+        worldRefs.current.grindZoneRing.material.opacity = 0.0;
+      }
+    } else if (cur.id === 'herb_ashwagandha') {
+      targetMesh = worldRefs.current.herbAshwagandha;
+    } else if (cur.id === 'herb_tulsi') {
+      targetMesh = worldRefs.current.herbTulsi;
+    } else if (cur.id === 'herb_brahmi') {
+      targetMesh = worldRefs.current.herbBrahmi;
+    } else if (cur.id?.startsWith('relic_') || cur.type === 'relic') {
+      const elId = cur.conceptId || cur.id.replace('relic_', '');
+      targetMesh = (worldRefs.current.elementOrbs || []).find(o => o.userData?.conceptId === elId || o.userData?.id === cur.id);
     }
-    if (worldRefs.current.grindZoneRing) {
-      worldRefs.current.grindZoneRing.material.opacity = 0.0;
+
+    if (targetMesh && scene) {
+      scene.attach(targetMesh);
+      const rPos = cur.restingPos || cur.plinthPos || [2.8, 0.85, -2.0];
+      const rRot = cur.restingRot || [0, 0, 0];
+      targetMesh.position.set(rPos[0], rPos[1], rPos[2]);
+      targetMesh.rotation.set(rRot[0], rRot[1], rRot[2]);
+    }
+
+    setHeldObject(null);
+    heldObjectRef.current = null;
+
+    if (audioRef.current?.playPlaceSound) {
+      audioRef.current.playPlaceSound();
     }
 
     eventLogger.log('OBJECT_RELEASED', {
-      objectId: 'dhonga_pestle',
-      completed,
+      objectId: cur.id,
       videoTimestamp: currentTimeRef.current
     });
   }, []);
+
+  // ── Deposit Raw Botanicals into Patila Mortar ─────────────────────────────
+  const handleDepositHerbs = useCallback(() => {
+    const cur = heldObjectRef.current;
+    if (!cur || cur.type !== 'ingredient') return;
+
+    dhongaRef.current.hasHerbs = true;
+    setDhongaState(prev => ({ ...prev, hasHerbs: true }));
+
+    if (worldRefs.current.leafFlakes) {
+      worldRefs.current.leafFlakes.scale.set(1.2, 1.2, 1.2);
+      worldRefs.current.leafFlakes.rotation.y += Math.PI / 3;
+    }
+    if (worldRefs.current.herbBedMat) {
+      worldRefs.current.herbBedMat.color.setHex(0x14532d);
+    }
+
+    if (audioRef.current?.playHerbDepositSound) {
+      audioRef.current.playHerbDepositSound();
+    }
+
+    setDiscoveryAlert({
+      label: `🌿 ${cur.label} Deposited! Ready for Sacred Grinding`,
+      type: 'ingredient'
+    });
+    setTimeout(() => setDiscoveryAlert(null), 3800);
+
+    eventLogger.log('OBJECT_PLACED', {
+      objectId: cur.id,
+      target: 'dhonga_mortar',
+      videoTimestamp: currentTimeRef.current
+    });
+
+    handleReleaseItem();
+  }, [handleReleaseItem]);
+
+  // ── Align Relic on Sacred Marble Plinth ────────────────────────────────────
+  const handlePlaceRelicOnPlinth = useCallback((relic) => {
+    const item = heldObjectRef.current || relic;
+    if (!item) return;
+
+    const elId = item.conceptId || item.id.replace('relic_', '');
+    const orbMesh = (worldRefs.current.elementOrbs || []).find(o => o.userData?.conceptId === elId || o.userData?.id === item.id);
+    const scene = sceneRef.current;
+
+    if (orbMesh && scene) {
+      scene.attach(orbMesh);
+      const pos = item.plinthPos || item.restingPos;
+      orbMesh.position.set(pos[0], pos[1], pos[2]);
+      orbMesh.rotation.set(0, 0, 0);
+    }
+
+    const rune = worldRefs.current[`plinth_rune_${elId}`];
+    if (rune) {
+      rune.material.opacity = 1.0;
+    }
+
+    if (audioRef.current?.playDiscoveryChime) {
+      audioRef.current.playDiscoveryChime(528);
+    }
+
+    setDiscoveryAlert({
+      label: `✨ ${item.label} Aligned on its Sacred Plinth!`,
+      type: 'element'
+    });
+    setTimeout(() => setDiscoveryAlert(null), 3600);
+
+    setHeldObject(null);
+    heldObjectRef.current = null;
+
+    eventLogger.log('OBJECT_PLACED', {
+      objectId: item.id,
+      target: `plinth_${elId}`,
+      videoTimestamp: currentTimeRef.current
+    });
+  }, []);
+
+  const handleGrabPestle = useCallback((holder = 'mouse') => {
+    handleGrabItem({
+      type: 'tool',
+      id: 'dhonga_pestle',
+      label: 'Sacred Grinding Pestle (Musal)',
+      icon: '🥣',
+      restingPos: [2.95, 0.88, -1.82],
+      restingRot: [0.15, 0.1, 0.45]
+    }, holder);
+  }, [handleGrabItem]);
+
+  const handleReleasePestle = useCallback(() => {
+    handleReleaseItem();
+  }, [handleReleaseItem]);
 
   const handleGrindComplete = useCallback(() => {
     if (dhongaRef.current.completed) return;
@@ -1186,10 +1796,10 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     dhongaRef.current.status = 'COMPLETED';
     dhongaRef.current.progress = 1.0;
 
-    setDhongaState({ status: 'COMPLETED', progress: 1.0 });
+    setDhongaState(prev => ({ ...prev, status: 'COMPLETED', progress: 1.0 }));
 
     if (audioRef.current?.playDiscoveryChime) {
-      audioRef.current.playDiscoveryChime(792); // Radiant completion chord
+      audioRef.current.playDiscoveryChime(792);
     }
 
     eventLogger.log('DHONGA_GRIND_COMPLETE', {
@@ -1197,7 +1807,6 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       storySegment: 'seg3_plants_preparations'
     });
 
-    // Connect to approved Vata learning content (Station 3 -> Vata Principle of Movement)
     handleDiscoverConcept({
       id: 'vata',
       label: 'Vata Dosha (Air + Ether)',
@@ -1338,6 +1947,25 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     gArc.scale.setScalar(0);
     reticle.add(gArc);
     worldRefs.current.gazeArc = gArc;
+
+    // First-person Hand Carry Anchor (moves naturally with player camera & rig)
+    const handAnchor = new THREE.Group();
+    handAnchor.position.set(0.32, -0.25, -0.65);
+    camera.add(handAnchor);
+    worldRefs.current.handAnchor = handAnchor;
+
+    // Center 3D Reticle Focus Indicator Ring
+    const targetRingMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide
+    });
+    const targetRing = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.42, 32), targetRingMat);
+    targetRing.rotation.x = -Math.PI / 2;
+    targetRing.visible = false;
+    scene.add(targetRing);
+    worldRefs.current.targetRing = targetRing;
 
     // ── Shared Grinding Physics & Gesture Validation Function ──────────────
     const performGrind = (pestlePos, dt, source = 'mouse') => {
@@ -1581,60 +2209,139 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         }
       }
 
-      // Center Raycast & Proximity Detection (STRICT Progressive Narrative Gating)
-      const candidateList = [];
+      // ── Instant 0ms Center-Raycast Target Detection & Highlighting ────────
+      const centerRay = new THREE.Raycaster();
+      centerRay.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-      // Elements awaken only when Station 2 arrives (t >= 27) OR already discovered
-      const hasDiscoveredElements = Object.keys(discoveryStatesRef.current).some(
-        k => ['earth', 'water', 'fire', 'air', 'ether'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
-      );
-      if (t >= 27 || hasDiscoveredElements) {
-        candidateList.push(...(ELEMENTS || []));
-      }
+      const rayTargets = [
+        ...(worldRefs.current.interactableItems || []),
+        ...(worldRefs.current.elementOrbs || []),
+        ...(worldRefs.current.doshaObjects || [])
+      ].filter(Boolean);
 
-      // Sacred Patila & Pestle awakens in Station 3 (t >= 32) OR when near table
-      const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
-      if ((t >= 32 || distToTable <= 3.8) && dhongaRef.current.status !== 'COMPLETED') {
-        candidateList.push({
-          id: 'dhonga_pestle',
-          label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Patila)' : 'Sacred Patila & Pestle',
-          type: 'tool',
-          pos: [2.8, 1.0, -2.0]
-        });
-      }
+      const curHeld = heldObjectRef.current;
+      const filteredTargets = rayTargets.filter(obj => !curHeld || obj.userData?.id !== curHeld.id);
 
-      // Doshas awaken in Station 4 (t >= 53) OR if unlocked by completing herb grinding
-      const hasDiscoveredDoshas = Object.keys(discoveryStatesRef.current).some(
-        k => ['vata', 'pitta', 'kapha'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
-      );
-      if (t >= 53 || dhongaRef.current.status === 'COMPLETED' || hasDiscoveredDoshas) {
-        candidateList.push(...(DOSHAS || []));
-      }
+      let hitCandidate = null;
+      const hits = centerRay.intersectObjects(filteredTargets, true);
 
-      let nearestCandidate = null;
-      let minDistance = 999;
-
-      candidateList.forEach(cand => {
-        const candPos = new THREE.Vector3(...cand.pos);
-        const dist = rig.position.distanceTo(candPos);
-        if (dist < minDistance && dist <= INTERACTION_DIST) {
-          minDistance = dist;
-          nearestCandidate = cand;
+      if (hits.length > 0) {
+        let root = hits[0].object;
+        while (root && !root.userData?.id && root.parent && root.parent !== scene) {
+          root = root.parent;
         }
-      });
+        if (root?.userData?.id) {
+          const u = root.userData;
+          const rootPos = new THREE.Vector3();
+          root.getWorldPosition(rootPos);
+          const dist = rig.position.distanceTo(rootPos);
 
-      setTargetedObject(nearestCandidate);
+          if (dist <= INTERACTION_DIST + 0.8) {
+            const isElement = u.type === 'element' || u.type === 'relic';
+            const isDosha = u.type === 'dosha';
+            const hasElements = Object.keys(discoveryStatesRef.current).some(
+              k => ['earth', 'water', 'fire', 'air', 'ether'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
+            );
+            const hasDoshas = Object.keys(discoveryStatesRef.current).some(
+              k => ['vata', 'pitta', 'kapha'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
+            );
 
-      // Check if nearestCandidate was explicitly dismissed by user
-      const isDismissed = nearestCandidate && (nearestCandidate.id === dismissedConceptIdRef.current);
+            let unlocked = true;
+            if (isElement && t < 27 && !hasElements) unlocked = false;
+            if (isDosha && t < 53 && !dhongaRef.current.completed && !hasDoshas) unlocked = false;
 
-      // Gaze Dwell for VR (ONLY in active VR session, and NEVER for dismissed objects or desktop)
+            if (unlocked) {
+              hitCandidate = { ...u, mesh: root, dist };
+            }
+          }
+        }
+      }
+
+      // Proximity fallback if center ray didn't hit a specific sub-mesh
+      if (!hitCandidate) {
+        const candidateList = [];
+        const hasDiscoveredElements = Object.keys(discoveryStatesRef.current).some(
+          k => ['earth', 'water', 'fire', 'air', 'ether'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
+        );
+        if (t >= 27 || hasDiscoveredElements) {
+          candidateList.push(...(ELEMENTS || []));
+        }
+
+        const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
+        if ((t >= 32 || distToTable <= 3.8) && dhongaRef.current.status !== 'COMPLETED') {
+          candidateList.push({
+            id: 'dhonga_pestle',
+            label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Patila)' : 'Sacred Patila & Pestle',
+            type: 'tool',
+            pos: [2.8, 1.0, -2.0]
+          });
+        }
+
+        const hasDiscoveredDoshas = Object.keys(discoveryStatesRef.current).some(
+          k => ['vata', 'pitta', 'kapha'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
+        );
+        if (t >= 53 || dhongaRef.current.status === 'COMPLETED' || hasDiscoveredDoshas) {
+          candidateList.push(...(DOSHAS || []));
+        }
+
+        let nearestCandidate = null;
+        let minDistance = 999;
+        candidateList.forEach(cand => {
+          const candPos = new THREE.Vector3(...cand.pos);
+          const dist = rig.position.distanceTo(candPos);
+          if (dist < minDistance && dist <= INTERACTION_DIST) {
+            minDistance = dist;
+            nearestCandidate = cand;
+          }
+        });
+        if (nearestCandidate) {
+          hitCandidate = nearestCandidate;
+        }
+      }
+
+      // ── Event-Driven Instant Target Switch & Clear (0ms Latency) ──────────
+      const prevTarget = lastTargetRef.current;
+      if (hitCandidate?.id !== prevTarget?.id) {
+        // Clear previous highlight immediately
+        if (prevTarget?.id === 'dhonga_pestle' && worldRefs.current.pestleHighlight) {
+          worldRefs.current.pestleHighlight.material.opacity = 0.0;
+        }
+        if (worldRefs.current.targetRing) {
+          worldRefs.current.targetRing.visible = false;
+        }
+        if (prevTarget) {
+          eventLogger.log('TARGET_BLURRED', { targetId: prevTarget.id, videoTimestamp: t });
+        }
+
+        // Apply new highlight immediately
+        if (hitCandidate) {
+          if (hitCandidate.id === 'dhonga_pestle' && worldRefs.current.pestleHighlight) {
+            worldRefs.current.pestleHighlight.material.opacity = 0.65;
+          }
+          if (worldRefs.current.targetRing && hitCandidate.mesh) {
+            const worldPos = new THREE.Vector3();
+            hitCandidate.mesh.getWorldPosition(worldPos);
+            worldRefs.current.targetRing.position.copy(worldPos);
+            worldRefs.current.targetRing.position.y += 0.04;
+            worldRefs.current.targetRing.visible = true;
+          }
+          eventLogger.log('TARGET_FOCUSED', { targetId: hitCandidate.id, type: hitCandidate.type, videoTimestamp: t });
+        }
+
+        lastTargetRef.current = hitCandidate;
+        setTargetedObject(hitCandidate);
+      }
+
+      // Check if candidate was explicitly dismissed by user
+      const isDismissed = hitCandidate && (hitCandidate.id === dismissedConceptIdRef.current);
+
+      // Gaze Dwell for VR (ONLY in active WebXR session, NEVER on desktop or for dismissed popups)
       const sessionActive = !!renderer.xr.getSession();
-      if (sessionActive && nearestCandidate && !isDismissed && nearestCandidate.type !== 'tool') {
-        const id = nearestCandidate.id;
+      if (sessionActive && hitCandidate && !isDismissed && hitCandidate.type !== 'tool') {
+        const id = hitCandidate.id;
         if (!gazeTimes.current[id]) gazeTimes.current[id] = now;
         const prog = clamp((now - gazeTimes.current[id]) / GAZE_DWELL_MS, 0, 1);
-        setGazeInfo({ id, progress: prog, label: nearestCandidate.label });
+        setGazeInfo({ id, progress: prog, label: hitCandidate.label });
         if (worldRefs.current.gazeArc) {
           worldRefs.current.gazeArc.scale.setScalar(1);
           worldRefs.current.gazeArc.rotation.z = -Math.PI / 2;
@@ -1642,7 +2349,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         if (prog >= 1) {
           gazeTimes.current[id] = null;
           if (handleDiscoverConceptRef.current) {
-            handleDiscoverConceptRef.current(nearestCandidate, true);
+            handleDiscoverConceptRef.current(hitCandidate, true);
           }
           setGazeInfo(null);
         }
@@ -1686,29 +2393,73 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         setIsExploring(true);
       }
 
-      // Deliberate E Key: Pick up/put down pestle OR inspect focused concept
+      // Deliberate R Key: Rotate held object in hand for 3D examination
+      if ((e.key === 'r' || e.key === 'R') && heldObjectRef.current && worldRefs.current.handAnchor?.children?.length > 0) {
+        worldRefs.current.handAnchor.children[0].rotation.y += 0.35;
+      }
+
+      // Deliberate E Key: Contextual Universal Action
       if (e.key === 'e' || e.key === 'E') {
-        if (targetedObjectRef.current?.id === 'dhonga_pestle') {
-          if (dhongaRef.current.status === 'HELD') {
-            handleReleasePestle();
-          } else {
+        const curHeld = heldObjectRef.current;
+        const curTarget = targetedObjectRef.current;
+
+        // If holding an ingredient and targeting the Mortar: Deposit!
+        if (curHeld?.type === 'ingredient' && (curTarget?.id === 'dhonga_mortar' || curTarget?.id === 'dhonga_pestle')) {
+          handleDepositHerbs();
+          return;
+        }
+
+        // If holding an elemental relic and targeting matching plinth: Align!
+        if (curHeld?.type === 'relic' && curTarget?.type === 'element_plinth') {
+          handlePlaceRelicOnPlinth(curHeld);
+          return;
+        }
+
+        // If holding an object without special target, press E to put down
+        if (curHeld && !curTarget) {
+          handleReleaseItem();
+          return;
+        }
+
+        // If hands are free:
+        if (!curHeld && curTarget) {
+          if (curTarget.id === 'dhonga_pestle') {
             handleGrabPestle('mouse');
+            return;
+          }
+          if (curTarget.type === 'ingredient' || curTarget.type === 'relic') {
+            handleGrabItem(curTarget, 'mouse');
+            return;
+          }
+          if (curTarget.id === 'dhonga_mortar') {
+            if (!dhongaRef.current.completed) handleGrabPestle('mouse');
+            return;
+          }
+          if (handleDiscoverConceptRef.current) {
+            handleDiscoverConceptRef.current(curTarget, true);
           }
           return;
         }
 
-        if (targetedObjectRef.current && handleDiscoverConceptRef.current) {
-          handleDiscoverConceptRef.current(targetedObjectRef.current, true);
+        // If modal popup is open: close it
+        if (infoPanelRef.current) {
+          handleDismissPanel(e);
+          return;
         }
       }
 
-      // Q Key: Put down held pestle
-      if ((e.key === 'q' || e.key === 'Q') && dhongaRef.current.status === 'HELD') {
-        handleReleasePestle();
+      // Q Key: Universal Put Down / Release
+      if ((e.key === 'q' || e.key === 'Q') && heldObjectRef.current) {
+        handleReleaseItem();
       }
 
+      // Escape Key: Close info popup or toggle pause
       if (e.key === 'Escape') {
-        setIsPaused(p => !p);
+        if (infoPanelRef.current) {
+          handleDismissPanel(e);
+        } else {
+          setIsPaused(p => !p);
+        }
       }
     };
 
@@ -1732,18 +2483,13 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
         return;
       }
 
-      // Right-click releases held pestle
-      if (e.button === 2 && dhongaRef.current.status === 'HELD') {
-        handleReleasePestle();
+      // Right-click releases held object
+      if (e.button === 2 && heldObjectRef.current) {
+        handleReleaseItem();
         return;
       }
 
       pointerDownPos = { x: e.clientX, y: e.clientY, time: performance.now() };
-
-      // If pestle is currently held, mouse clicks manipulate the tool inside Patila, so do not drag camera
-      if (dhongaRef.current.status === 'HELD') {
-        return;
-      }
 
       // Normal camera drag initiation
       isDragging = true;
@@ -1758,33 +2504,31 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
       const ray = new THREE.Raycaster();
       ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
 
-      // If pestle is held on laptop, project ray onto mortar table plane to move implement
-      if (dhongaRef.current.status === 'HELD' && dhongaRef.current.holder === 'mouse' && worldRefs.current.pestle) {
-        // Table plane at mortar cavity height (y = 1.15)
+      // If pestle is held and player is in the mortar grinding zone, project ray onto mortar table plane
+      const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
+      const isGrindingContext = dhongaRef.current.status === 'HELD' && distToTable <= 2.2 && pitch.current < -0.15;
+
+      if (isGrindingContext && worldRefs.current.pestle) {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.15);
         const hitPt = new THREE.Vector3();
         ray.ray.intersectPlane(plane, hitPt);
 
         if (hitPt) {
-          // Constrain movement to table work area
-          const cx = clamp(hitPt.x, 2.3, 3.3);
-          const cz = clamp(hitPt.z, -2.5, -1.5);
+          const cx = clamp(hitPt.x, 2.45, 3.15);
+          const cz = clamp(hitPt.z, -2.35, -1.65);
           worldRefs.current.pestle.position.set(cx, 1.15, cz);
 
-          // Tilt pestle slightly towards mortar center (2.8, -2.0)
           const dx = cx - 2.8, dz = cz - (-2.0);
           worldRefs.current.pestle.rotation.set(dz * 0.4, 0, -dx * 0.4);
 
-          // Perform grinding logic
           performGrind(worldRefs.current.pestle.position, 0.016, 'mouse');
         }
-        return;
       }
 
       // Highlight pestle on hover
-      if (worldRefs.current.pestle && worldRefs.current.pestleHighlight) {
+      if (worldRefs.current.pestle && worldRefs.current.pestleHighlight && dhongaRef.current.status !== 'HELD') {
         const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
-        worldRefs.current.pestleHighlight.material.opacity = pestleHits.length > 0 ? 0.5 : 0.0;
+        worldRefs.current.pestleHighlight.material.opacity = pestleHits.length > 0 ? 0.6 : 0.0;
       }
 
       const isLocked = !!(document.pointerLockElement && (document.pointerLockElement === mount || document.pointerLockElement === renderer.domElement));
@@ -1821,70 +2565,51 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 
       if (!isDeliberateClick) return;
 
-      // Raycast for deliberate 3D click on pestle or altar
-      const rect = renderer.domElement.getBoundingClientRect();
-      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      const ray = new THREE.Raycaster();
-      ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+      const curHeld = heldObjectRef.current;
+      const curTarget = targetedObjectRef.current;
 
-      // Check pestle click (pick up / put down)
-      if (worldRefs.current.pestle) {
-        const pestleHits = ray.intersectObject(worldRefs.current.pestle, true);
-        if (pestleHits.length > 0) {
-          if (dhongaRef.current.status === 'HELD') {
-            handleReleasePestle();
-          } else {
-            handleGrabPestle('mouse');
-          }
-          return;
-        }
-      }
-
-      // If pestle is held, clicks don't activate distant altars
-      if (dhongaRef.current.status === 'HELD') {
+      // Deposit herbs into mortar
+      if (curHeld?.type === 'ingredient' && (curTarget?.id === 'dhonga_mortar' || curTarget?.id === 'dhonga_pestle')) {
+        handleDepositHerbs();
         return;
       }
 
-      // Check altar orbs & crystals
-      const interactables = [...(worldRefs.current.elementOrbs || []), ...(worldRefs.current.doshaObjects || [])];
-      const hits = ray.intersectObjects(interactables, true);
-      if (hits.length > 0) {
-        let hitObj = hits[0].object;
-        while (hitObj && !hitObj.userData?.id && hitObj.parent) hitObj = hitObj.parent;
-        if (hitObj?.userData?.id && handleDiscoverConceptRef.current) {
-          const uData = hitObj.userData;
-          const curT = currentTimeRef.current;
+      // Align relic on plinth
+      if (curHeld?.type === 'relic' && curTarget?.type === 'element_plinth') {
+        handlePlaceRelicOnPlinth(curHeld);
+        return;
+      }
 
-          // Progressive Story Gating
-          if (uData.type === 'element' && curT < 27) {
-            setDiscoveryAlert({
-              label: `${uData.label} is currently Dormant — Awakens in Station 2 (The Five Elements Ring)`,
-              type: 'dormant'
-            });
-            setTimeout(() => setDiscoveryAlert(null), 3600);
-            return;
-          }
+      // If holding an item, deliberate click on empty space does not trigger distant altars
+      if (curHeld) {
+        return;
+      }
 
-          if (uData.type === 'dosha' && curT < 53 && !dhongaRef.current.completed) {
-            setDiscoveryAlert({
-              label: `${uData.label} Sanctuary is Dormant — Awakens in Station 4 (or unlock by grinding herbs)`,
-              type: 'dormant'
-            });
-            setTimeout(() => setDiscoveryAlert(null), 3600);
-            return;
-          }
-
-          handleDiscoverConceptRef.current(uData, true);
+      // Pick up targeted item or discover concept
+      if (curTarget) {
+        if (curTarget.id === 'dhonga_pestle') {
+          handleGrabPestle('mouse');
+          return;
+        }
+        if (curTarget.type === 'ingredient' || curTarget.type === 'relic') {
+          handleGrabItem(curTarget, 'mouse');
+          return;
+        }
+        if (curTarget.id === 'dhonga_mortar') {
+          if (!dhongaRef.current.completed) handleGrabPestle('mouse');
+          return;
+        }
+        if (handleDiscoverConceptRef.current) {
+          handleDiscoverConceptRef.current(curTarget, true);
         }
       }
     };
 
     const onContextMenu = (e) => {
-      // Prevent context menu when right-clicking to release pestle
-      if (dhongaRef.current.status === 'HELD') {
+      // Prevent context menu when right-clicking to release held items
+      if (heldObjectRef.current) {
         e.preventDefault();
-        handleReleasePestle();
+        handleReleaseItem();
       }
     };
 
@@ -1893,8 +2618,13 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     };
 
     const onWheel = (e) => {
-      camera.fov = clamp(camera.fov + e.deltaY * 0.04, 45, 90);
-      camera.updateProjectionMatrix();
+      if (heldObjectRef.current && worldRefs.current.handAnchor?.children?.length > 0) {
+        worldRefs.current.handAnchor.children[0].rotation.y += e.deltaY * 0.005;
+        worldRefs.current.handAnchor.children[0].rotation.x += (e.deltaX || 0) * 0.005;
+      } else {
+        camera.fov = clamp(camera.fov + e.deltaY * 0.04, 45, 90);
+        camera.updateProjectionMatrix();
+      }
     };
 
     mount.style.cursor = 'grab';
@@ -2036,22 +2766,72 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
               className="c4-interaction-prompt"
               onClick={(e) => {
                 e.stopPropagation();
-                if (targetedObject.id === 'dhonga_pestle') {
-                  if (dhongaState.status === 'HELD') handleReleasePestle();
-                  else handleGrabPestle('mouse');
-                } else {
-                  handleDiscoverConcept(targetedObject, true);
+                if (heldObject?.type === 'ingredient' && (targetedObject.id === 'dhonga_mortar' || targetedObject.id === 'dhonga_pestle')) {
+                  handleDepositHerbs();
+                  return;
                 }
+                if (heldObject?.type === 'relic' && targetedObject.type === 'element_plinth') {
+                  handlePlaceRelicOnPlinth(heldObject);
+                  return;
+                }
+                if (heldObject) {
+                  handleReleaseItem();
+                  return;
+                }
+                if (targetedObject.id === 'dhonga_pestle') {
+                  handleGrabPestle('mouse');
+                  return;
+                }
+                if (targetedObject.type === 'ingredient' || targetedObject.type === 'relic') {
+                  handleGrabItem(targetedObject, 'mouse');
+                  return;
+                }
+                if (targetedObject.id === 'dhonga_mortar') {
+                  if (!dhongaState.completed) handleGrabPestle('mouse');
+                  return;
+                }
+                handleDiscoverConcept(targetedObject, true);
               }}
             >
               <span className="c4-prompt-key">E</span>
               <span className="c4-prompt-text">
-                {targetedObject.id === 'dhonga_pestle'
-                  ? (dhongaState.status === 'HELD' ? 'Put Down Pestle (Q / Right-Click)' : 'Pick Up Pestle & Grind Herbs')
-                  : (discoveryStates[targetedObject.id] === 'DISCOVERED'
-                    ? `Inspect ${targetedObject.label}`
-                    : `Discover ${targetedObject.label}`)}
+                {heldObject?.type === 'ingredient' && (targetedObject.id === 'dhonga_mortar' || targetedObject.id === 'dhonga_pestle')
+                  ? `Deposit ${heldObject.label} into Patila Mortar`
+                  : heldObject?.type === 'relic' && targetedObject.type === 'element_plinth'
+                    ? `Align ${heldObject.label} on Plinth`
+                    : heldObject
+                      ? `Put Down ${heldObject.label} [Q]`
+                      : targetedObject.id === 'dhonga_pestle'
+                        ? 'Pick Up Pestle & Grind Herbs'
+                        : (targetedObject.type === 'ingredient' || targetedObject.type === 'relic')
+                          ? `Pick Up ${targetedObject.label}`
+                          : targetedObject.id === 'dhonga_mortar'
+                            ? 'Approach Mortar & Pick Up Pestle'
+                            : (discoveryStates[targetedObject.id] === 'DISCOVERED'
+                              ? `Inspect ${targetedObject.label}`
+                              : `Discover ${targetedObject.label}`)}
               </span>
+            </div>
+          )}
+
+          {/* Universal Held Item Carry HUD */}
+          {heldObject && (
+            <div className="c4-held-item-hud" role="status" aria-live="polite">
+              <span className="c4-held-icon">{heldObject.icon || '✋'}</span>
+              <div className="c4-held-info">
+                <div className="c4-held-title">{heldObject.label}</div>
+                <div className="c4-held-actions">
+                  {heldObject.type === 'tool' ? (
+                    <span><strong>[WASD]</strong> Move | <strong>Circle in Patila</strong> Grind | <strong>[Q]</strong> Put Down</span>
+                  ) : heldObject.type === 'ingredient' ? (
+                    <span><strong>[WASD]</strong> Carry | <strong>[Wheel/R]</strong> Inspect | <strong>[E]</strong> at Patila to Deposit | <strong>[Q]</strong> Drop</span>
+                  ) : heldObject.type === 'relic' ? (
+                    <span><strong>[WASD]</strong> Carry | <strong>[Wheel/R]</strong> Inspect | <strong>[E]</strong> at Plinth to Align | <strong>[Q]</strong> Drop</span>
+                  ) : (
+                    <span><strong>[WASD]</strong> Carry | <strong>[Wheel/R]</strong> Inspect | <strong>[Q]</strong> Put Down</span>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
