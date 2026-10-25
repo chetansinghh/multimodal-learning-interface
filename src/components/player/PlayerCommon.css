@@ -1262,11 +1262,84 @@
   font-weight: 800;
   flex-shrink: 0;
 }
-.c3-opt-text { flex: 1; line-height: 1.3; }
 .c3-feedback-banner.wrong {
   background: rgba(239,68,68,0.2);
   color: #fca5a5;
   border: 1px solid rgba(239,68,68,0.4);
+}
+
+/* ── C3 Action-Based Styles (Zero Assessment Contamination) ── */
+.c3-hotspots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.c3-hotspot-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.c3-hotspot-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #38bdf8;
+  transform: translateY(-2px);
+}
+.c3-hotspot-btn.touched {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+.c3-dial-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.c3-dial-ring {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 3px dashed rgba(16, 185, 129, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  transition: border-color 0.2s ease;
+}
+.c3-dial-ring:hover {
+  border-color: #34d399;
+}
+.c3-dial-center {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+.c3-drag-track {
+  width: 100%;
+  max-width: 320px;
+  margin: 16px auto;
+  position: relative;
 }
 
 /* ── @keyframes shared ──────────────────────────────────────────────────────── */

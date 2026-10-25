@@ -8,6 +8,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import * as THREE from 'three';
 import { eventLogger } from '../../services/EventLogger';
 import { formatTime } from '../../services/StoryLoader';
+import { spatialAudio } from '../../services/SpatialAudioEngine';
 import './PlayerCommon.css';
 
 const PLAYBACK_END_SEC = 110.2;
@@ -50,45 +51,101 @@ const DOSHAS = [
     desc: 'The principle of cohesion and structure, governed by Earth and Water. Provides bodily strength, immunity, and lubrication. In balance: calm strength and endurance; out of balance: heaviness and lethargy.' },
 ];
 
+// ── Approved Action-Based C3 Interactions (Zero Assessment Contamination) ────
 const C3_INTERACTIONS_BASE = [
   {
-    id: 'c3_int_1', label: 'Tap the Sacred River',
-    active_window: ['0:18', '0:26'], gate: { type: 'hold_at', hold_at: '0:23', max_wait_sec: 7 },
-    type: 'tap', prompt: '🌊 Tap the sacred river to begin your Ayurvedic journey', emoji: '🌊', color: '#38bdf8',
+    id: 'int_01',
+    label: 'Sacred Banyan Light',
+    active_window: ['0:10', '0:26'],
+    gate: { type: 'hold_at', hold_at: '0:26', max_wait_sec: 6 },
+    type: 'hold',
+    prompt: '🌳 Press and hold the Banyan tree to let the morning light grow',
+    duration: 1500,
+    color: '#8b5cf6',
+    emoji: '🌳'
   },
   {
-    id: 'c3_int_2', label: 'Identify the Element of Transformation',
-    active_window: ['0:27', '0:34'], gate: { type: 'hold_at', hold_at: '0:30', max_wait_sec: 7 },
-    type: 'select', prompt: '✨ Which element represents transformation and digestion in Ayurveda?',
-    options: ['Prithvi (Earth)', 'Jala (Water)', 'Agni (Fire)', 'Vayu (Air)'], correct: 2,
-    color: '#ef4444', emoji: '🔥',
+    id: 'int_02',
+    label: 'Awaken the Five Elements',
+    active_window: ['0:27', '0:34'],
+    gate: { type: 'hold_at', hold_at: '0:34', max_wait_sec: 6 },
+    type: 'hotspots',
+    prompt: '✨ Touch each glowing element to awaken the sacred diagram',
+    color: '#38bdf8',
+    emoji: '✨',
+    hotspots: [
+      { id: 'earth', label: 'Prithvi (Earth)', icon: '🌍' },
+      { id: 'water', label: 'Jala (Water)', icon: '💧' },
+      { id: 'fire', label: 'Agni (Fire)', icon: '🔥' },
+      { id: 'air', label: 'Vayu (Air)', icon: '💨' },
+      { id: 'ether', label: 'Akasha (Ether)', icon: '✨' }
+    ]
   },
   {
-    id: 'c3_int_3', label: 'Grind the Herbs',
-    active_window: ['0:40', '0:52'], gate: { type: 'hold_at', hold_at: '0:44', max_wait_sec: 7 },
-    type: 'hold', prompt: '🌿 Hold to grind the medicinal herbs in the mortar', duration: 2500,
-    color: '#10b981', emoji: '🌿',
+    id: 'int_03',
+    label: 'Medicinal Plant Study',
+    active_window: ['0:35', '0:43'],
+    gate: { type: 'hold_at', hold_at: '0:43', max_wait_sec: 6 },
+    type: 'tap',
+    prompt: '🌿 Touch the glowing medicinal leaf to study its properties',
+    color: '#10b981',
+    emoji: '🌿'
   },
   {
-    id: 'c3_int_4', label: 'Identify Your Dosha',
-    active_window: ['0:53', '1:02'], gate: { type: 'hold_at', hold_at: '0:57', max_wait_sec: 7 },
-    type: 'select', prompt: '🧬 Which Dosha is associated with the elements Fire and Water?',
-    options: ['Vata (Air + Ether)', 'Pitta (Fire + Water)', 'Kapha (Earth + Water)', 'Sama (Balanced)'], correct: 1,
-    color: '#f97316', emoji: '🧬',
+    id: 'int_04',
+    label: 'Mortar Herb Grinding',
+    active_window: ['0:44', '0:52'],
+    gate: { type: 'hold_at', hold_at: '0:52', max_wait_sec: 6 },
+    type: 'gesture_circle',
+    prompt: '🥣 Trace circular strokes around the mortar bowl to grind the herbs',
+    color: '#10b981',
+    emoji: '🥣'
   },
   {
-    id: 'c3_int_5', label: 'Morning Meditation',
-    active_window: ['1:03', '1:10'], gate: { type: 'hold_at', hold_at: '1:06', max_wait_sec: 7 },
-    type: 'hold', prompt: '🧘 Hold to complete your sunrise meditation ritual', duration: 2000,
-    color: '#264653', emoji: '🧘',
+    id: 'int_05',
+    label: 'The Three Doshas',
+    active_window: ['0:53', '1:02'],
+    gate: { type: 'hold_at', hold_at: '1:02', max_wait_sec: 6 },
+    type: 'hotspots',
+    prompt: '🧬 Touch each of the three sacred dosha figures',
+    color: '#f59e0b',
+    emoji: '🧬',
+    hotspots: [
+      { id: 'vata', label: 'Vata (Air + Ether)', icon: '💨' },
+      { id: 'pitta', label: 'Pitta (Fire + Water)', icon: '🔥' },
+      { id: 'kapha', label: 'Kapha (Water + Earth)', icon: '🌱' }
+    ]
   },
   {
-    id: 'c3_int_6', label: 'Concept of Balance',
-    active_window: ['1:15', '1:20'], gate: { type: 'hold_at', hold_at: '1:16', max_wait_sec: 7 },
-    type: 'select', prompt: '⚖️ In Ayurveda, what is the Sanskrit term for the concept of bodily balance?',
-    options: ['Prakriti', 'Samadosha', 'Vikriti', 'Sattva'], correct: 1,
-    color: '#6a4c93', emoji: '⚖️',
+    id: 'int_06',
+    label: 'Morning Sun Ritual',
+    active_window: ['1:03', '1:10'],
+    gate: { type: 'hold_at', hold_at: '1:10', max_wait_sec: 6 },
+    type: 'drag_path',
+    prompt: '☀️ Drag the sun along its morning arc over the river',
+    color: '#f59e0b',
+    emoji: '☀️'
   },
+  {
+    id: 'int_07',
+    label: 'Therapeutic Preparations',
+    active_window: ['1:11', '1:20'],
+    gate: { type: 'hold_at', hold_at: '1:20', max_wait_sec: 6 },
+    type: 'tap',
+    prompt: '🏺 Touch the therapeutic brass bowl on the treatment table',
+    color: '#6366f1',
+    emoji: '🏺'
+  },
+  {
+    id: 'int_08',
+    label: 'Preserving Sacred Knowledge',
+    active_window: ['1:21', '1:30'],
+    gate: { type: 'hold_at', hold_at: '1:30', max_wait_sec: 6 },
+    type: 'drag_item',
+    prompt: '📜 Pass the sacred scroll to the student reader',
+    color: '#14b8a6',
+    emoji: '📜'
+  }
 ];
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -705,6 +762,12 @@ function buildAyurvedaWorld(scene, refs) {
     root.position.set((Math.random() - 0.5) * 0.08, 0.04 + (r % 3) * 0.02, (Math.random() - 0.5) * 0.08);
     ashwaGroup.add(root);
   }
+  const ashwaHitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.28, 0.42),
+    new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 })
+  );
+  ashwaHitbox.position.y = 0.08;
+  ashwaGroup.add(ashwaHitbox);
   ashwaGroup.userData = {
     type: 'ingredient',
     id: 'herb_ashwagandha',
@@ -728,6 +791,12 @@ function buildAyurvedaWorld(scene, refs) {
     leafM.position.set((Math.random() - 0.5) * 0.1, 0.04 + l * 0.008, (Math.random() - 0.5) * 0.1);
     tulsiSaucerGroup.add(leafM);
   }
+  const tulsiHitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.38, 0.25, 0.38),
+    new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 })
+  );
+  tulsiHitbox.position.y = 0.08;
+  tulsiSaucerGroup.add(tulsiHitbox);
   tulsiSaucerGroup.userData = {
     type: 'ingredient',
     id: 'herb_tulsi',
@@ -752,6 +821,12 @@ function buildAyurvedaWorld(scene, refs) {
   const jarLid = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 14), brassBandMat);
   jarLid.position.y = 0.25;
   brahmiJarGroup.add(jarLid);
+  const brahmiHitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.32, 0.38, 0.32),
+    new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 })
+  );
+  brahmiHitbox.position.y = 0.14;
+  brahmiJarGroup.add(brahmiHitbox);
   brahmiJarGroup.userData = {
     type: 'ingredient',
     id: 'herb_brahmi',
@@ -1266,16 +1341,19 @@ function buildAyurvedaAudio() {
   }
 }
 
-// ── C3 Interactive Overlay Component ─────────────────────────────────────────
+// ── C3 Interactive Overlay Component (Action-Based, Zero Quiz Contamination) ──
 function C3Panel({ interaction, onComplete }) {
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
-  const [selectedIdx, setSelectedIdx] = useState(null);
-  const [feedback, setFeedback] = useState(null);
   const [tapped, setTapped] = useState(false);
+  const [touchedHotspots, setTouchedHotspots] = useState(new Set());
+  const [dialAngle, setDialAngle] = useState(0);
+  const [grindProgress, setGrindProgress] = useState(0);
+  const [sliderPos, setSliderPos] = useState(0);
+  const [isItemPassed, setIsItemPassed] = useState(false);
   const holdRef = useRef(null);
   const holdStartRef = useRef(null);
-  const DUR = interaction.duration || 2500;
+  const DUR = interaction.duration || 1800;
 
   const startHold = () => {
     if (isHolding) return;
@@ -1291,23 +1369,51 @@ function C3Panel({ interaction, onComplete }) {
       }
     }, 16);
   };
+
   const stopHold = () => {
     if (holdRef.current) clearInterval(holdRef.current);
     setIsHolding(false);
     setHoldProgress(0);
   };
-  const handleSelect = (idx) => {
-    if (feedback) return;
-    setSelectedIdx(idx);
-    const ok = idx === interaction.correct;
-    setFeedback(ok ? 'correct' : 'wrong');
-    eventLogger.log('C3_ANSWER', { interactionId: interaction.id, selected: idx, correct: interaction.correct, isCorrect: ok });
-    setTimeout(() => {
-      if (ok) onComplete(interaction.id);
-      else { setFeedback(null); setSelectedIdx(null); }
-    }, 1200);
+
+  const handleTap = () => {
+    setTapped(true);
+    setTimeout(() => onComplete(interaction.id), 400);
   };
-  const handleTap = () => { setTapped(true); setTimeout(() => onComplete(interaction.id), 400); };
+
+  const handleTouchHotspot = (hId) => {
+    const next = new Set(touchedHotspots).add(hId);
+    setTouchedHotspots(next);
+    eventLogger.log('C3_HOTSPOT_TOUCH', { interactionId: interaction.id, hotspotId: hId });
+    if (interaction.hotspots && next.size >= interaction.hotspots.length) {
+      setTimeout(() => onComplete(interaction.id), 500);
+    }
+  };
+
+  const handleDialGrind = () => {
+    const nextProg = Math.min(1.0, grindProgress + 0.25);
+    setGrindProgress(nextProg);
+    setDialAngle(a => a + 90);
+    eventLogger.log('C3_GRIND_STROKE', { interactionId: interaction.id, progress: nextProg });
+    if (nextProg >= 1.0) {
+      setTimeout(() => onComplete(interaction.id), 400);
+    }
+  };
+
+  const handleSunSlider = (e) => {
+    const val = Number(e.target.value);
+    setSliderPos(val);
+    if (val >= 95) {
+      eventLogger.log('C3_SUN_DRAG_COMPLETE', { interactionId: interaction.id });
+      setTimeout(() => onComplete(interaction.id), 400);
+    }
+  };
+
+  const handlePassItem = () => {
+    setIsItemPassed(true);
+    eventLogger.log('C3_SCROLL_PASSED', { interactionId: interaction.id });
+    setTimeout(() => onComplete(interaction.id), 500);
+  };
 
   return (
     <div className="c3-panel-overlay" style={{ '--c3accent': interaction.color || '#f4a261' }}>
@@ -1317,7 +1423,7 @@ function C3Panel({ interaction, onComplete }) {
 
         {interaction.type === 'tap' && (
           <button className={`c3-tap-btn${tapped ? ' tapped' : ''}`} onClick={handleTap} style={{ background: interaction.color }}>
-            {tapped ? '✓ Done!' : '👆 Tap Here'}
+            {tapped ? '✓ Completed!' : '👆 Touch Object'}
           </button>
         )}
 
@@ -1334,23 +1440,63 @@ function C3Panel({ interaction, onComplete }) {
           </div>
         )}
 
-        {interaction.type === 'select' && interaction.options && (
-          <div className="c3-options-grid">
-            {interaction.options.map((opt, i) => (
-              <button
-                key={i}
-                className={`c3-option-btn${selectedIdx === i ? (feedback === 'correct' ? ' correct' : ' wrong') : ''}${selectedIdx !== null && i === interaction.correct && feedback === 'wrong' ? ' correct-reveal' : ''}`}
-                onClick={() => handleSelect(i)}
-                disabled={!!feedback}
-              >
-                <span className="c3-opt-letter">{String.fromCharCode(65 + i)}</span>
-                <span className="c3-opt-text">{opt}</span>
-              </button>
-            ))}
+        {interaction.type === 'hotspots' && interaction.hotspots && (
+          <div className="c3-hotspots-grid">
+            {interaction.hotspots.map(h => {
+              const isTouched = touchedHotspots.has(h.id);
+              return (
+                <button
+                  key={h.id}
+                  className={`c3-hotspot-btn${isTouched ? ' touched' : ''}`}
+                  onClick={() => handleTouchHotspot(h.id)}
+                >
+                  <span>{h.icon || '✨'}</span>
+                  <span>{h.label}</span>
+                  {isTouched && <span>✓</span>}
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {feedback && <div className={`c3-feedback-banner ${feedback}`}>{feedback === 'correct' ? '✓ Correct! Well done!' : '✗ Try again…'}</div>}
+        {interaction.type === 'gesture_circle' && (
+          <div className="c3-dial-area">
+            <div
+              className="c3-dial-ring"
+              onClick={handleDialGrind}
+              style={{ transform: `rotate(${dialAngle}deg)` }}
+              title="Click or trace circles to grind"
+            >
+              <div className="c3-dial-center">🥣</div>
+            </div>
+            <button className="c3-tap-btn" onClick={handleDialGrind} style={{ background: interaction.color, marginTop: '8px' }}>
+              {grindProgress >= 1.0 ? '✓ Ground to Sacred Powder!' : `Grind Circle (${Math.round(grindProgress * 100)}%)`}
+            </button>
+          </div>
+        )}
+
+        {interaction.type === 'drag_path' && (
+          <div className="c3-drag-track">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sliderPos}
+              onChange={handleSunSlider}
+              style={{ width: '100%', accentColor: interaction.color || '#f59e0b', cursor: 'pointer' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.8, marginTop: '4px' }}>
+              <span>🌅 Morning Horizon</span>
+              <span>☀️ Mid-Morning Sky</span>
+            </div>
+          </div>
+        )}
+
+        {interaction.type === 'drag_item' && (
+          <button className={`c3-tap-btn${isItemPassed ? ' tapped' : ''}`} onClick={handlePassItem} style={{ background: interaction.color }}>
+            {isItemPassed ? '✓ Passed to Student Reader' : '📜 Pass Scroll to Student'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1366,6 +1512,7 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   const rigRef = useRef(null);
   const worldRefs = useRef({});
   const audioRef = useRef(null);
+  const narrationAudioRef = useRef(null);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -1396,15 +1543,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   const [completedC3, setCompletedC3] = useState(new Set());
   const waitingC3 = useRef(false);
 
-  // Shuffle C3 options on mount
-  const [c3List] = useState(() => C3_INTERACTIONS_BASE.map(item => {
-    if (item.type === 'select' && item.options) {
-      const ct = item.options[item.correct];
-      const sh = [...item.options].sort(() => Math.random() - 0.5);
-      return { ...item, options: sh, correct: sh.indexOf(ct) };
-    }
-    return { ...item };
-  }));
+  // Action-based C3 interactions list
+  const [c3List] = useState(() => C3_INTERACTIONS_BASE);
 
   const currentTimeRef = useRef(0);
   const playingRef = useRef(false);
@@ -1768,7 +1908,26 @@ const GRIP_REGISTRY = {
     const cur = heldObjectRef.current;
     if (!cur || cur.type !== 'ingredient') return;
 
+    const scene = sceneRef.current;
+    let targetMesh = null;
+    if (cur.id === 'herb_ashwagandha') {
+      targetMesh = worldRefs.current.herbAshwagandha;
+    } else if (cur.id === 'herb_tulsi') {
+      targetMesh = worldRefs.current.herbTulsi;
+    } else if (cur.id === 'herb_brahmi') {
+      targetMesh = worldRefs.current.herbBrahmi;
+    }
+
+    if (targetMesh && scene) {
+      scene.attach(targetMesh);
+      // Place directly inside the mortar cavity at [2.8, 0.96, -2.0]
+      targetMesh.position.set(2.8, 0.96, -2.0);
+      targetMesh.rotation.set(0, 0, 0);
+      targetMesh.scale.set(0.65, 0.65, 0.65);
+    }
+
     dhongaRef.current.hasHerbs = true;
+    dhongaRef.current.depositedIngredient = cur.id;
     setDhongaState(prev => ({ ...prev, hasHerbs: true }));
 
     if (worldRefs.current.leafFlakes) {
@@ -1784,19 +1943,75 @@ const GRIP_REGISTRY = {
     }
 
     setDiscoveryAlert({
-      label: `🌿 ${cur.label} Deposited! Ready for Sacred Grinding`,
+      label: `🌿 ${cur.label} Deposited into Mortar! Ready for Grinding`,
       type: 'ingredient'
     });
     setTimeout(() => setDiscoveryAlert(null), 3800);
+
+    setHeldObject(null);
+    heldObjectRef.current = null;
 
     eventLogger.log('OBJECT_PLACED', {
       objectId: cur.id,
       target: 'dhonga_mortar',
       videoTimestamp: currentTimeRef.current
     });
+  }, []);
 
-    handleReleaseItem();
-  }, [handleReleaseItem]);
+  // ── Reset / Retry Grinding Workstation Activity ────────────────────────────
+  const handleResetWorkstation = useCallback(() => {
+    dhongaRef.current.status = 'RESTING';
+    dhongaRef.current.progress = 0;
+    dhongaRef.current.accumulatedAngle = 0;
+    dhongaRef.current.hasHerbs = false;
+    dhongaRef.current.completed = false;
+    dhongaRef.current.holder = null;
+    dhongaRef.current.lastAngle = null;
+
+    setDhongaState({ status: 'RESTING', progress: 0, hasHerbs: false });
+
+    const scene = sceneRef.current;
+    if (worldRefs.current.pestle && scene) {
+      scene.attach(worldRefs.current.pestle);
+      worldRefs.current.pestle.position.set(2.95, 0.88, -1.82);
+      worldRefs.current.pestle.rotation.set(0.15, 0.1, 0.45);
+      worldRefs.current.pestle.scale.set(1, 1, 1);
+    }
+
+    if (worldRefs.current.herbAshwagandha && scene) {
+      scene.attach(worldRefs.current.herbAshwagandha);
+      worldRefs.current.herbAshwagandha.position.set(2.1, 0.77, -1.9);
+      worldRefs.current.herbAshwagandha.rotation.set(0, 0, 0);
+      worldRefs.current.herbAshwagandha.scale.set(1, 1, 1);
+    }
+
+    if (worldRefs.current.herbTulsi && scene) {
+      scene.attach(worldRefs.current.herbTulsi);
+      worldRefs.current.herbTulsi.position.set(3.4, 0.77, -2.1);
+      worldRefs.current.herbTulsi.rotation.set(0, 0, 0);
+      worldRefs.current.herbTulsi.scale.set(1, 1, 1);
+    }
+
+    if (worldRefs.current.herbBrahmi && scene) {
+      scene.attach(worldRefs.current.herbBrahmi);
+      worldRefs.current.herbBrahmi.position.set(3.2, 0.77, -1.7);
+      worldRefs.current.herbBrahmi.rotation.set(0, 0, 0);
+      worldRefs.current.herbBrahmi.scale.set(1, 1, 1);
+    }
+
+    if (worldRefs.current.leafFlakes) {
+      worldRefs.current.leafFlakes.scale.set(1, 1, 1);
+    }
+    if (worldRefs.current.herbBedMat) {
+      worldRefs.current.herbBedMat.color.setHex(0x166534);
+    }
+
+    setHeldObject(null);
+    heldObjectRef.current = null;
+    heldToolRef.current = null;
+
+    eventLogger.log('WORKSTATION_RESET', { videoTimestamp: currentTimeRef.current });
+  }, []);
 
   // ── Align Relic on Sacred Marble Plinth ────────────────────────────────────
   const handlePlaceRelicOnPlinth = useCallback((relic) => {
@@ -1881,18 +2096,30 @@ const GRIP_REGISTRY = {
     }, true);
   }, [handleDiscoverConcept]);
 
-  // ── Video Controls ─────────────────────────────────────────────────────────
+  // ── Video & Narration Controls ─────────────────────────────────────────────
   const playVideo = useCallback(() => {
     if (!videoRef.current) return;
+
+    // C1: Play separate Ava narration track
+    if (conditionRef.current === 'C1' && narrationAudioRef.current) {
+      narrationAudioRef.current.play().catch(e => console.warn('[C1 Narration] play blocked:', e));
+      eventLogger.log('AUDIO_START', { source: 'narration_track', track: 'ayurveda_narration_only', videoTimestamp: currentTimeRef.current });
+    }
+
     videoRef.current.play().then(() => {
       setPlaying(true);
       playingRef.current = true;
       if (audioRef.current?.ctx?.state === 'suspended') audioRef.current.ctx.resume();
+      if (conditionRef.current === 'C2') spatialAudio.resume();
       eventLogger.log('VIDEO_START', { videoTimestamp: currentTimeRef.current, condition: conditionRef.current });
     }).catch(e => console.warn('[AC] play blocked:', e));
   }, []);
 
   const pauseVideo = useCallback(() => {
+    if (conditionRef.current === 'C1' && narrationAudioRef.current) {
+      narrationAudioRef.current.pause();
+      eventLogger.log('AUDIO_PAUSE', { source: 'narration_track', videoTimestamp: currentTimeRef.current });
+    }
     if (!videoRef.current) return;
     videoRef.current.pause();
     setPlaying(false);
@@ -1903,6 +2130,11 @@ const GRIP_REGISTRY = {
   const seekVideo = useCallback((time) => {
     const t = clamp(time, 0, PLAYBACK_END_SEC);
     if (videoRef.current) videoRef.current.currentTime = t;
+    if (conditionRef.current === 'C1' && narrationAudioRef.current) {
+      const narrDur = narrationAudioRef.current.duration || 94.35;
+      narrationAudioRef.current.currentTime = Math.min(t, narrDur);
+      eventLogger.log('AUDIO_SEEK', { time: t, source: 'narration_track' });
+    }
     setCurrentTime(t);
     currentTimeRef.current = t;
     updateProgressiveUnlocks(t);
@@ -1910,6 +2142,9 @@ const GRIP_REGISTRY = {
 
   const handleRestart = useCallback(() => {
     seekVideo(0);
+    if (conditionRef.current === 'C1' && narrationAudioRef.current) {
+      narrationAudioRef.current.currentTime = 0;
+    }
     const resetStates = {};
     ELEMENTS.forEach(el => { resetStates[el.id] = 'HIDDEN'; });
     DOSHAS.forEach(d => { resetStates[d.id] = 'HIDDEN'; });
@@ -1926,6 +2161,18 @@ const GRIP_REGISTRY = {
     const t = videoRef.current.currentTime;
     setCurrentTime(t);
     currentTimeRef.current = t;
+
+    // In C1: keep narration track tightly synchronized with video
+    if (conditionRef.current === 'C1' && narrationAudioRef.current) {
+      const narrDur = narrationAudioRef.current.duration || 94.35;
+      if (t < narrDur) {
+        const drift = Math.abs(narrationAudioRef.current.currentTime - t);
+        if (drift > 0.3) {
+          narrationAudioRef.current.currentTime = t;
+        }
+      }
+    }
+
     const si = STATIONS.findIndex(s => t >= s.t[0] && t <= s.t[1]);
     if (si >= 0) setStationIdx(si);
     updateProgressiveUnlocks(t);
@@ -1933,6 +2180,7 @@ const GRIP_REGISTRY = {
 
     if (t >= PLAYBACK_END_SEC) {
       videoRef.current.pause();
+      if (narrationAudioRef.current) narrationAudioRef.current.pause();
       setPlaying(false);
       playingRef.current = false;
       eventLogger.log('VIDEO_COMPLETE', { videoTimestamp: PLAYBACK_END_SEC });
@@ -2045,6 +2293,12 @@ const GRIP_REGISTRY = {
 
       if (inZone) {
         const curAngle = Math.atan2(dz, dx);
+        // Physical fidelity: grinding progress advances only when herbs are present in the mortar
+        if (!dhongaRef.current.hasHerbs) {
+          dhongaRef.current.lastAngle = curAngle;
+          return;
+        }
+
         if (dhongaRef.current.lastAngle !== null) {
           let dTheta = curAngle - dhongaRef.current.lastAngle;
           if (dTheta > Math.PI) dTheta -= 2 * Math.PI;
@@ -2363,14 +2617,53 @@ const GRIP_REGISTRY = {
           candidateList.push(...(ELEMENTS || []));
         }
 
+        const curHeld = heldObjectRef.current;
         const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
-        if ((t >= 32 || distToTable <= 3.8) && dhongaRef.current.status !== 'COMPLETED') {
-          candidateList.push({
-            id: 'dhonga_pestle',
-            label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Patila)' : 'Sacred Patila & Pestle',
-            type: 'tool',
-            pos: [2.8, 1.0, -2.0]
-          });
+
+        if (distToTable <= 3.8) {
+          if (curHeld?.type === 'ingredient') {
+            // Holding an ingredient: target the mortar for deposition
+            candidateList.push({
+              id: 'dhonga_mortar',
+              label: 'Sacred Ayurvedic Patila (Dhonga)',
+              type: 'dhonga_mortar',
+              pos: [2.8, 1.0, -2.0]
+            });
+          } else if (!dhongaRef.current.hasHerbs) {
+            // Table ingredients available for selection: roots, tulsi, brahmi, and pestle
+            candidateList.push({
+              id: 'herb_ashwagandha',
+              label: 'Ashwagandha Roots & Leaves',
+              type: 'ingredient',
+              pos: [2.1, 0.77, -1.9]
+            });
+            candidateList.push({
+              id: 'herb_tulsi',
+              label: 'Fresh Tulsi Leaves',
+              type: 'ingredient',
+              pos: [3.4, 0.77, -2.1]
+            });
+            candidateList.push({
+              id: 'herb_brahmi',
+              label: 'Brahmi Medhya Jar',
+              type: 'ingredient',
+              pos: [3.2, 0.77, -1.7]
+            });
+            candidateList.push({
+              id: 'dhonga_pestle',
+              label: 'Sacred Grinding Pestle (Musal)',
+              type: 'tool',
+              pos: [2.95, 0.88, -1.82]
+            });
+          } else if (dhongaRef.current.status !== 'COMPLETED') {
+            // Herbs deposited: target pestle for grinding
+            candidateList.push({
+              id: 'dhonga_pestle',
+              label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Patila)' : 'Sacred Grinding Pestle (Musal)',
+              type: 'tool',
+              pos: [2.95, 0.88, -1.82]
+            });
+          }
         }
 
         const hasDiscoveredDoshas = Object.keys(discoveryStatesRef.current).some(
@@ -2393,6 +2686,16 @@ const GRIP_REGISTRY = {
         if (nearestCandidate) {
           hitCandidate = nearestCandidate;
         }
+      }
+
+      // Update Spatial Audio Listener orientation and position in 3D scene
+      if (conditionRef.current === 'C2' || conditionRef.current === 'C4') {
+        const camPos = new THREE.Vector3();
+        const camDir = new THREE.Vector3();
+        camera.getWorldPosition(camPos);
+        camera.getWorldDirection(camDir);
+        spatialAudio.updateListenerPosition(camPos);
+        spatialAudio.updateListenerOrientation(camDir, camera.up);
       }
 
       // ── Event-Driven Instant Target Switch & Clear (0ms Latency) ──────────
@@ -2795,6 +3098,9 @@ const GRIP_REGISTRY = {
       if (!audioRef.current) {
         audioRef.current = buildAyurvedaAudio();
       }
+      if (conditionRef.current === 'C2') {
+        spatialAudio.resume();
+      }
     };
     document.addEventListener('pointerdown', unlockAudio, { once: true });
     return () => {
@@ -2803,11 +3109,57 @@ const GRIP_REGISTRY = {
     };
   }, []);
 
+  // Condition C1: Dedicated Ava Narration Audio Track (Mutes mixed video audio)
+  useEffect(() => {
+    if (condition === 'C1') {
+      const audio = new Audio('/videos/ayurveda_narration_only.mp3');
+      audio.preload = 'auto';
+      audio.muted = isMuted;
+      narrationAudioRef.current = audio;
+
+      const handleNarrationEnded = () => {
+        eventLogger.log('AUDIO_COMPLETE', { source: 'narration_track', track: 'ayurveda_narration_only' });
+      };
+      audio.addEventListener('ended', handleNarrationEnded);
+
+      // Force video element to be strictly muted in C1 so no original soundtrack leaks
+      if (videoRef.current) {
+        videoRef.current.muted = true;
+      }
+
+      return () => {
+        audio.removeEventListener('ended', handleNarrationEnded);
+        audio.pause();
+        audio.src = '';
+        narrationAudioRef.current = null;
+      };
+    }
+  }, [condition, isMuted]);
+
+  // Condition C2: Initialize Genuine Spatial Audio Engine with 3D Cues
+  useEffect(() => {
+    if (condition === 'C2') {
+      spatialAudio.init().then(async () => {
+        eventLogger.log('AUDIO_SPATIAL_INIT', { condition: 'C2', mode: 'HRTF' });
+        await spatialAudio.createSource('birds', null, { x: 0, y: 4.5, z: 3.0 });
+        await spatialAudio.createSource('river_water', null, { x: -6.0, y: 0.2, z: -4.0 });
+        await spatialAudio.createSource('breeze', null, { x: -8.0, y: 2.5, z: 0.0 });
+        await spatialAudio.createSource('mortar_grind', null, { x: 2.8, y: 1.0, z: -2.0 });
+      }).catch(err => console.warn('[C2 SpatialAudio] init warning:', err));
+    }
+  }, [condition]);
+
   const toggleMute = () => {
     const nextMute = !isMuted;
     setIsMuted(nextMute);
+    if (condition === 'C1') {
+      if (videoRef.current) videoRef.current.muted = true; // Always muted in C1
+      if (narrationAudioRef.current) narrationAudioRef.current.muted = nextMute;
+    } else {
+      if (videoRef.current) videoRef.current.muted = nextMute;
+    }
     if (audioRef.current) audioRef.current.setMuted(nextMute);
-    if (videoRef.current) videoRef.current.muted = nextMute;
+    spatialAudio.setMasterVolume(nextMute ? 0 : 1.0);
   };
 
   const startExploring = () => {
@@ -2855,7 +3207,7 @@ const GRIP_REGISTRY = {
         src="/videos/ayurveda_explainer.mp4"
         className={`player-canvas${condition === 'C4' ? ' video-hidden' : ''}`}
         playsInline
-        muted={isMuted}
+        muted={condition === 'C1' ? true : isMuted}
         onTimeUpdate={handleTimeUpdate}
         onEnded={() => { setPlaying(false); if (onComplete) onComplete(); }}
       />

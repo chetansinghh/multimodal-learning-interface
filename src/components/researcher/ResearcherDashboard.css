@@ -282,6 +282,18 @@
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
+.story-badge-ayurveda {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.story-badge-unknown {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.35);
+}
+
 /* ─── Dashboard Filter Bar ───────── */
 .dashboard-filter-bar {
   display: flex;

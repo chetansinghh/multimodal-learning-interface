@@ -22,7 +22,7 @@ export default function ParticipantFlow() {
   const [participantIdentity, setParticipantIdentity] = useState(user || null);
   const [sessionId] = useState(() => user?.sessionId || uuidv4());
   const [condition, setCondition] = useState(user?.condition || 'C1');
-  const [storyUrl, setStoryUrl] = useState(user?.storyUrl || '/stories/story_missing_kite_v1.json');
+  const [storyUrl, setStoryUrl] = useState(user?.storyUrl || '/stories/story_ayurveda_v1.json');
   const [availableStories, setAvailableStories] = useState([]);
   const [storyConfig, setStoryConfig] = useState(null);
   const [loading, setLoading] = useState(false);

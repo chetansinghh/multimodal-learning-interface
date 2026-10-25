@@ -245,8 +245,7 @@ export function getVRSegmentConfig(vrScene, segmentId) {
 
 /** Fallback list of available stories */
 export const AVAILABLE_STORIES = [
-  { id: 'missing_kite_v1', path: '/stories/story_missing_kite_v1.json', title: 'The Missing Kite' },
-  { id: 'lantern_garden_v1', path: '/stories/story_lantern_garden_v1.json', title: "The Lantern in Grandmother's Garden" }
+  { id: 'ayurveda_intro_v1', path: '/stories/story_ayurveda_v1.json', title: 'Ayurveda', subtitle: 'Origins, Elements, and Mindful Living' }
 ];
 
 /** Dynamically fetch auto-discovered available stories from manifest */

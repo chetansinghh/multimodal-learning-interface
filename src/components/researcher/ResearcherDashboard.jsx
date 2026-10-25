@@ -6,27 +6,8 @@ import authService from '../../services/AuthService';
 import AdminLoginGate from './AdminLoginGate';
 import './ResearcherDashboard.css';
 
-// Helper to identify story details cleanly
-export function getStoryInfo(sessionOrStoryId) {
-  if (!sessionOrStoryId) return { id: 'story_missing_kite', title: 'The Missing Kite', emoji: '🪁', badgeClass: 'story-badge-kite' };
-  const s = typeof sessionOrStoryId === 'object' ? sessionOrStoryId : { story_id: sessionOrStoryId };
-  const idStr = String(s.story_id || s.story_title || s.version_snapshot?.story_id || s.version_snapshot?.story_title || '').toLowerCase();
-
-  if (idStr.includes('lantern') || idStr.includes('garden')) {
-    return {
-      id: 'story_lantern_garden',
-      title: s.story_title || s.version_snapshot?.story_title || "The Lantern in Grandmother's Garden",
-      emoji: '🏮',
-      badgeClass: 'story-badge-lantern'
-    };
-  }
-  return {
-    id: 'story_missing_kite',
-    title: s.story_title || s.version_snapshot?.story_title || 'The Missing Kite',
-    emoji: '🪁',
-    badgeClass: 'story-badge-kite'
-  };
-}
+import { getStoryInfo } from '../../services/StoryInfo';
+export { getStoryInfo };
 
 export default function ResearcherDashboard() {
   return (
@@ -444,8 +425,10 @@ function ResearcherDashboardContent() {
               onChange={(e) => setStoryFilter(e.target.value)}
             >
               <option value="all">📖 All Stories ({sessions.length})</option>
-              <option value="story_missing_kite">🪁 The Missing Kite</option>
-              <option value="story_lantern_garden">🏮 Grandmother's Garden</option>
+              <option value="ayurveda_intro_v1">🌿 Ayurveda</option>
+              <option value="story_missing_kite">🪁 The Missing Kite (Historical)</option>
+              <option value="story_lantern_garden">🏮 Grandmother's Garden (Historical)</option>
+              <option value="unknown">❓ Unrecognized Stories</option>
             </select>
 
             <select
@@ -1158,9 +1141,16 @@ function ResearcherDashboardContent() {
 
     const exportJSON = (type) => {
       let data = sessions;
-      if (type === 'events') data = events;
-      else if (type === 'assessments') data = assessments;
-      else if (type === 'technical') {
+      if (type === 'sessions') {
+        data = sessions.map(s => {
+          const { participant_name, participant_email, ...safeSession } = s;
+          return safeSession;
+        });
+      } else if (type === 'events') {
+        data = events;
+      } else if (type === 'assessments') {
+        data = assessments;
+      } else if (type === 'technical') {
         data = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed');
       }
       downloadFile(`${type}.json`, JSON.stringify(data, null, 2), 'application/json');

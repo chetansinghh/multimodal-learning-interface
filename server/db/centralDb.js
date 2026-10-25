@@ -41,13 +41,34 @@ async function ensureSchema() {
     );
     CREATE TABLE IF NOT EXISTS events (
       id SERIAL PRIMARY KEY,
+      event_id TEXT,
       session_id TEXT,
       participant_id TEXT,
+      condition TEXT,
+      story_id TEXT,
       event_type TEXT,
       event_timestamp TIMESTAMPTZ,
+      elapsed_ms BIGINT,
+      video_timestamp NUMERIC,
+      target_id TEXT,
+      action TEXT,
+      result TEXT,
+      payload JSONB,
       data JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    -- Ensure backward compatible columns on existing table
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS event_id TEXT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS condition TEXT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS story_id TEXT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS elapsed_ms BIGINT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS video_timestamp NUMERIC;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS target_id TEXT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS action TEXT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS result TEXT;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS payload JSONB;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_events_event_id ON events (event_id) WHERE event_id IS NOT NULL;
+
     CREATE TABLE IF NOT EXISTS assessments (
       id SERIAL PRIMARY KEY,
       session_id TEXT,
@@ -65,14 +86,61 @@ async function ensureSchema() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
-  console.log('✅ Supabase schema ready');
+  console.log('✅ Supabase schema ready with canonical event payload and timestamp support');
+}
+
+/** Helper to normalize database rows into canonical research event schema */
+function normalizeDbEvent(row) {
+  if (!row) return row;
+  const rawData = row.data && typeof row.data === 'object' ? row.data : {};
+  const payload = row.payload !== undefined && row.payload !== null
+    ? row.payload
+    : (rawData.payload !== undefined && rawData.payload !== null ? rawData.payload : (row.data || {}));
+
+  const evType = row.event_type || row.event || rawData.event_type || rawData.event || 'UNKNOWN';
+  const timestampUtc = row.event_timestamp
+    ? new Date(row.event_timestamp).toISOString()
+    : (rawData.timestamp_utc || rawData.wall_clock || new Date().toISOString());
+
+  const elapsedMs = row.elapsed_ms != null
+    ? Number(row.elapsed_ms)
+    : (rawData.elapsed_ms != null ? Number(rawData.elapsed_ms) : (typeof rawData.timestamp === 'number' ? rawData.timestamp : 0));
+
+  const videoTimestamp = row.video_timestamp != null
+    ? Number(row.video_timestamp)
+    : (rawData.video_timestamp != null ? Number(rawData.video_timestamp) : 0);
+
+  return {
+    ...rawData,
+    ...row,
+    id: row.id,
+    event_id: row.event_id || rawData.event_id || ('ev_' + row.id),
+    session_id: row.session_id || rawData.session_id,
+    participant_id: row.participant_id || rawData.participant_id,
+    condition: row.condition || rawData.condition,
+    story_id: row.story_id || rawData.story_id,
+    event: evType,
+    event_type: evType,
+    category: row.category || rawData.category,
+    event_timestamp: timestampUtc,
+    timestamp_utc: timestampUtc,
+    elapsed_ms: elapsedMs,
+    timestamp: elapsedMs,
+    video_timestamp: videoTimestamp,
+    target_id: row.target_id || rawData.target_id || rawData.object_id || null,
+    object_id: rawData.object_id || row.target_id || null,
+    action: row.action || rawData.action || null,
+    result: row.result || rawData.result || 'completed',
+    payload,
+    data: rawData
+  };
 }
 
 export const centralDb = {
 
   async getDashboardData() {
     if (!pool) {
-      return { sessions: memDb.sessions, events: memDb.events, assessments: memDb.assessments };
+      return { sessions: memDb.sessions, events: memDb.events.map(normalizeDbEvent), assessments: memDb.assessments };
     }
     await ensureSchema();
     const [s, e, a] = await Promise.all([
@@ -80,7 +148,11 @@ export const centralDb = {
       pool.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 5000'),
       pool.query('SELECT * FROM assessments ORDER BY created_at DESC'),
     ]);
-    return { sessions: s.rows, events: e.rows, assessments: a.rows };
+    return {
+      sessions: s.rows,
+      events: e.rows.map(normalizeDbEvent),
+      assessments: a.rows
+    };
   },
 
   async saveSession(sessionData) {
@@ -118,21 +190,97 @@ export const centralDb = {
 
   async saveEvents(newEvents) {
     const eventArray = Array.isArray(newEvents) ? newEvents : [newEvents];
-    if (!pool) {
-      memDb.events.push(...eventArray);
-      return eventArray.length;
-    }
-    await ensureSchema();
+    let savedCount = 0;
+
     for (const ev of eventArray) {
-      await pool.query(
-        `INSERT INTO events (session_id, participant_id, event_type, event_timestamp, data)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [ev.session_id, ev.participant_id, ev.event_type,
-         ev.timestamp || new Date().toISOString(),
-         ev.data ? JSON.stringify(ev.data) : null]
-      );
+      if (!ev || (!ev.session_id && !ev.event_type && !ev.event)) {
+        continue; // skip invalid or empty records
+      }
+
+      const eventType = ev.event_type || ev.event || 'UNKNOWN';
+      const actualPayload = ev.payload !== undefined && ev.payload !== null
+        ? ev.payload
+        : (ev.data !== undefined && ev.data !== null ? ev.data : {});
+
+      // Parse timestamps distinctly:
+      // timestamp_utc is canonical ISO UTC
+      const timestampUtc = ev.timestamp_utc || (typeof ev.timestamp === 'string' && ev.timestamp.includes('T')
+        ? ev.timestamp
+        : (ev.wall_clock && ev.wall_clock.includes('T') ? ev.wall_clock : new Date().toISOString()));
+
+      // elapsed_ms is the session clock offset in milliseconds
+      const elapsedMs = typeof ev.elapsed_ms === 'number'
+        ? Math.round(ev.elapsed_ms)
+        : (typeof ev.timestamp === 'number' ? Math.round(ev.timestamp) : 0);
+
+      const videoTimestamp = typeof ev.video_timestamp === 'number' ? ev.video_timestamp : 0;
+      const eventId = ev.event_id || ('ev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8));
+      const targetId = ev.target_id || ev.object_id || null;
+      const action = ev.action || null;
+      const result = ev.result || 'completed';
+
+      if (!pool) {
+        // In-memory fallback: deduplicate by event_id or session_id + event + elapsed_ms
+        const existingIdx = memDb.events.findIndex(e =>
+          (e.event_id && e.event_id === eventId) ||
+          (e.session_id === ev.session_id && (e.event_type === eventType || e.event === eventType) && e.elapsed_ms === elapsedMs)
+        );
+        const record = {
+          ...ev,
+          event_id: eventId,
+          event_type: eventType,
+          event: eventType,
+          event_timestamp: timestampUtc,
+          timestamp_utc: timestampUtc,
+          elapsed_ms: elapsedMs,
+          timestamp: elapsedMs,
+          video_timestamp: videoTimestamp,
+          target_id: targetId,
+          action,
+          result,
+          payload: actualPayload,
+          data: { ...ev, payload: actualPayload }
+        };
+        if (existingIdx >= 0) {
+          memDb.events[existingIdx] = record;
+        } else {
+          memDb.events.push(record);
+        }
+        savedCount++;
+      } else {
+        await ensureSchema();
+        // Insert with deduplication on event_id
+        await pool.query(
+          `INSERT INTO events (
+             session_id, participant_id, event_type, event_timestamp, data,
+             event_id, condition, story_id, elapsed_ms, video_timestamp, target_id, action, result, payload
+           )
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+           ON CONFLICT (event_id) DO UPDATE SET
+             payload = EXCLUDED.payload,
+             data = EXCLUDED.data,
+             result = EXCLUDED.result`,
+          [
+            ev.session_id,
+            ev.participant_id,
+            eventType,
+            timestampUtc,
+            JSON.stringify({ ...ev, payload: actualPayload }),
+            eventId,
+            ev.condition || null,
+            ev.story_id || null,
+            elapsedMs,
+            videoTimestamp,
+            targetId,
+            action,
+            result,
+            JSON.stringify(actualPayload)
+          ]
+        );
+        savedCount++;
+      }
     }
-    return eventArray.length;
+    return savedCount;
   },
 
   async saveAssessments(newAssessments) {
@@ -161,10 +309,10 @@ export const centralDb = {
   },
 
   async getEvents() {
-    if (!pool) return memDb.events;
+    if (!pool) return memDb.events.map(normalizeDbEvent);
     await ensureSchema();
     const r = await pool.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 5000');
-    return r.rows;
+    return r.rows.map(normalizeDbEvent);
   },
 
   async getAssessments() {

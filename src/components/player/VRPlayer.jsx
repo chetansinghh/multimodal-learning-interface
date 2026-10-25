@@ -119,7 +119,7 @@ export default function VRPlayer({ storyConfig, onComplete }) {
   const segments = storyConfig.segments || [];
   const vrScene = storyConfig.vr_scene || {};
   const totalDuration = storyConfig.duration_sec || TOTAL_DURATION;
-  const storyId = storyConfig.story_id || 'missing_kite_v1';
+  const storyId = storyConfig.story_id || 'ayurveda_intro_v1';
 
   // ─── Chrome Keepalive for SpeechSynthesis ────
   useEffect(() => {

@@ -1,27 +1,5 @@
 [
   {
-    "id": "missing_kite_v1",
-    "path": "/stories/story_missing_kite_v1.json",
-    "title": "The Missing Kite",
-    "subtitle": "An Afternoon Adventure in the Park",
-    "emoji": "🪁",
-    "banner_class": "kite-banner",
-    "segments_count": 5,
-    "interactions_count": 8,
-    "assessment_count": 8
-  },
-  {
-    "id": "lantern_garden_v1",
-    "path": "/stories/story_lantern_garden_v1.json",
-    "title": "The Lantern in Grandmother's Garden",
-    "subtitle": "An Evening Adventure in Grandmother's Garden",
-    "emoji": "🏮",
-    "banner_class": "garden-banner",
-    "segments_count": 11,
-    "interactions_count": 6,
-    "assessment_count": 8
-  },
-  {
     "id": "ayurveda_intro_v1",
     "path": "/stories/story_ayurveda_v1.json",
     "title": "Ayurveda",
