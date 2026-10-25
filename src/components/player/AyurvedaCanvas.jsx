@@ -1601,8 +1601,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
 const GRIP_REGISTRY = {
   dhonga_pestle: {
     desktop: {
-      position: [0.0, -0.20, 0.0],
-      rotation: [0.38, 0.22, -0.12],
+      position: [0.0, -0.12, 0.0],
+      rotation: [0.35, 0.18, -0.10],
       scale: [1, 1, 1]
     },
     vr: {
@@ -2211,6 +2211,31 @@ const GRIP_REGISTRY = {
         performGrind(pestleWorldPos, dt, 'vr_controller');
       }
 
+      // Desktop Held Pestle Coordinate Space Manager (Hand Carry vs Mortar Grinding)
+      if (heldObjectRef.current?.id === 'dhonga_pestle' && !dhongaRef.current.heldController && worldRefs.current.pestle) {
+        const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
+        const isGrindingContext = dhongaRef.current.status === 'HELD' && distToTable <= 2.2 && pitch.current < -0.15;
+
+        if (isGrindingContext) {
+          // Inside grinding zone: attach to world scene so pestle sits directly in Patila cavity
+          if (worldRefs.current.pestle.parent !== scene) {
+            scene.attach(worldRefs.current.pestle);
+            worldRefs.current.pestle.position.set(2.8, 1.05, -2.0);
+            worldRefs.current.pestle.rotation.set(0, 0, 0);
+            worldRefs.current.pestle.scale.set(1, 1, 1);
+          }
+        } else {
+          // Outside grinding zone: attach to first-person hand anchor so pestle is held in hand
+          if (worldRefs.current.pestle.parent !== worldRefs.current.handAnchor && worldRefs.current.handAnchor) {
+            worldRefs.current.handAnchor.add(worldRefs.current.pestle);
+            const grip = GRIP_REGISTRY.dhonga_pestle.desktop;
+            worldRefs.current.pestle.position.set(...grip.position);
+            worldRefs.current.pestle.rotation.set(...grip.rotation);
+            worldRefs.current.pestle.scale.set(...grip.scale);
+          }
+        }
+      }
+
       // Laptop First-Person Locomotion (WASD) — Smooth, Zero Snapping!
       if (!isPausedRef.current) {
         const speed = (keysDown.current['Shift'] ? 6.5 : 3.8) * dt;
@@ -2577,20 +2602,32 @@ const GRIP_REGISTRY = {
 
       // If pestle is held and player is in the mortar grinding zone, project ray onto mortar table plane
       const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
-      const isGrindingContext = dhongaRef.current.status === 'HELD' && distToTable <= 2.2 && pitch.current < -0.15;
+      const isGrindingContext = dhongaRef.current.status === 'HELD' && !dhongaRef.current.heldController && distToTable <= 2.2 && pitch.current < -0.15;
 
       if (isGrindingContext && worldRefs.current.pestle) {
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.15);
+        if (worldRefs.current.pestle.parent !== scene) {
+          scene.attach(worldRefs.current.pestle);
+        }
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.05);
         const hitPt = new THREE.Vector3();
         ray.ray.intersectPlane(plane, hitPt);
 
         if (hitPt) {
-          const cx = clamp(hitPt.x, 2.45, 3.15);
-          const cz = clamp(hitPt.z, -2.35, -1.65);
-          worldRefs.current.pestle.position.set(cx, 1.15, cz);
+          const dx = hitPt.x - 2.8;
+          const dz = hitPt.z - (-2.0);
+          const maxR = 0.22;
+          const dist = Math.hypot(dx, dz);
+          let cx = hitPt.x;
+          let cz = hitPt.z;
+          if (dist > maxR && dist > 0.0001) {
+            cx = 2.8 + (dx / dist) * maxR;
+            cz = -2.0 + (dz / dist) * maxR;
+          }
+          worldRefs.current.pestle.position.set(cx, 1.05, cz);
 
-          const dx = cx - 2.8, dz = cz - (-2.0);
-          worldRefs.current.pestle.rotation.set(dz * 0.4, 0, -dx * 0.4);
+          const tiltX = clamp((cz - (-2.0)) * 0.7, -0.4, 0.4);
+          const tiltZ = clamp(-(cx - 2.8) * 0.7, -0.4, 0.4);
+          worldRefs.current.pestle.rotation.set(tiltX, 0, tiltZ);
 
           performGrind(worldRefs.current.pestle.position, 0.016, 'mouse');
         }
@@ -2870,8 +2907,10 @@ const GRIP_REGISTRY = {
                   ? `Deposit ${heldObject.label} into Patila Mortar`
                   : heldObject?.type === 'relic' && targetedObject.type === 'element_plinth'
                     ? `Align ${heldObject.label} on Plinth`
-                    : heldObject
-                      ? `Put Down ${heldObject.label} [Q]`
+                    : heldObject?.id === 'dhonga_pestle'
+                      ? (dhongaState.status === 'COMPLETED' ? 'Grinding Complete! Put Down Pestle [Q]' : 'Grind Herbs: Move Pestle in Circles [or Q to Put Down]')
+                      : heldObject
+                        ? `Put Down ${heldObject.label} [Q]`
                       : targetedObject.id === 'dhonga_pestle'
                         ? 'Pick Up Pestle & Grind Herbs'
                         : (targetedObject.type === 'ingredient' || targetedObject.type === 'relic')
