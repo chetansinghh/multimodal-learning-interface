@@ -107,7 +107,8 @@
         "y": 0.42,
         "radius": 0.18,
         "hold_time_ms": 1500,
-        "label": "Banyan Tree"
+        "label": "Banyan Tree",
+        "color": "#8b5cf6"
       }
     },
     {
@@ -127,11 +128,11 @@
       },
       "config": {
         "hotspots": [
-          { "id": "earth", "label": "Earth", "x": 0.32, "y": 0.65 },
-          { "id": "water", "label": "Water", "x": 0.42, "y": 0.68 },
-          { "id": "fire", "label": "Fire", "x": 0.50, "y": 0.52 },
-          { "id": "air", "label": "Air", "x": 0.58, "y": 0.40 },
-          { "id": "ether", "label": "Ether", "x": 0.50, "y": 0.22 }
+          { "id": "ether", "label": "Ether", "x": 0.50, "y": 0.16, "icon": "⭕", "color": "#facc15" },
+          { "id": "earth", "label": "Earth", "x": 0.28, "y": 0.36, "icon": "⛰️", "color": "#8b5a2b" },
+          { "id": "fire", "label": "Fire", "x": 0.72, "y": 0.36, "icon": "🔥", "color": "#ef4444" },
+          { "id": "water", "label": "Water", "x": 0.34, "y": 0.84, "icon": "🌊", "color": "#0284c7" },
+          { "id": "air", "label": "Air", "x": 0.67, "y": 0.84, "icon": "💨", "color": "#818cf8" }
         ]
       }
     },
@@ -152,14 +153,14 @@
       },
       "config": {
         "hotspots": [
-          { "id": "herb_leaf", "label": "Herb Leaf", "x": 0.52, "y": 0.50 }
+          { "id": "herb_leaf", "label": "Herb Leaf", "x": 0.50, "y": 0.55, "icon": "🌿", "color": "#10b981" }
         ]
       }
     },
     {
       "id": "int_04",
       "segment_id": "seg3",
-      "verb": "trace_path",
+      "verb": "circular_drag",
       "active_window": [
         "00:44",
         "00:52"
@@ -173,15 +174,12 @@
         "max_wait_sec": 6
       },
       "config": {
+        "x": 0.48,
+        "y": 0.62,
+        "radius": 0.18,
+        "required_circles": 3,
         "color": "#10b981",
-        "tolerance": 0.15,
-        "path_points": [
-          { "x": 0.50, "y": 0.42 },
-          { "x": 0.62, "y": 0.52 },
-          { "x": 0.50, "y": 0.62 },
-          { "x": 0.38, "y": 0.52 },
-          { "x": 0.50, "y": 0.42 }
-        ]
+        "label": "Mortar & Pestle"
       }
     },
     {
@@ -201,35 +199,31 @@
       },
       "config": {
         "hotspots": [
-          { "id": "vata", "label": "Vata", "x": 0.28, "y": 0.50 },
-          { "id": "pitta", "label": "Pitta", "x": 0.50, "y": 0.48 },
-          { "id": "kapha", "label": "Kapha", "x": 0.72, "y": 0.50 }
+          { "id": "vata", "label": "Vata", "x": 0.18, "y": 0.52, "icon": "💨", "color": "#38bdf8" },
+          { "id": "pitta", "label": "Pitta", "x": 0.50, "y": 0.52, "icon": "🔥", "color": "#f97316" },
+          { "id": "kapha", "label": "Kapha", "x": 0.82, "y": 0.52, "icon": "🌱", "color": "#10b981" }
         ]
       }
     },
     {
       "id": "int_06",
       "segment_id": "seg5",
-      "verb": "trace_path",
+      "verb": "select_hotspot",
       "active_window": [
         "01:03",
         "01:10"
       ],
-      "object_id": "sun_over_river",
-      "prompt": "Drag the sun along its path over the river",
-      "completion": "sun dragged across the morning arc",
+      "object_id": "sunrise",
+      "prompt": "Touch the morning sunrise over the river",
+      "completion": "sunrise touched",
       "gate": {
         "type": "hold_at",
         "hold_at": "01:10.5",
         "max_wait_sec": 6
       },
       "config": {
-        "color": "#f59e0b",
-        "tolerance": 0.18,
-        "path_points": [
-          { "x": 0.25, "y": 0.40 },
-          { "x": 0.50, "y": 0.24 },
-          { "x": 0.75, "y": 0.38 }
+        "hotspots": [
+          { "id": "sunrise", "label": "Sunrise", "x": 0.61, "y": 0.41, "icon": "☀️", "color": "#f59e0b" }
         ]
       }
     },
@@ -250,14 +244,14 @@
       },
       "config": {
         "hotspots": [
-          { "id": "brass_bowl", "label": "Brass Bowl", "x": 0.42, "y": 0.62 }
+          { "id": "brass_bowl", "label": "Brass Bowl", "x": 0.64, "y": 0.91, "icon": "🥣", "color": "#eab308" }
         ]
       }
     },
     {
       "id": "int_08",
       "segment_id": "seg7",
-      "verb": "drag_sort",
+      "verb": "drag_item",
       "active_window": [
         "01:21",
         "01:30"
@@ -271,12 +265,8 @@
         "max_wait_sec": 6
       },
       "config": {
-        "items": [
-          { "id": "scroll", "label": "📜 Sacred Scroll" }
-        ],
-        "zones": [
-          { "id": "student", "label": "Student Reader", "accepts": ["scroll"] }
-        ]
+        "item": { "id": "scroll", "label": "📜 Sacred Scroll", "x": 0.12, "y": 0.88 },
+        "zone": { "id": "student", "label": "Student Reader", "x": 0.75, "y": 0.70, "radius": 0.18 }
       }
     }
   ],
