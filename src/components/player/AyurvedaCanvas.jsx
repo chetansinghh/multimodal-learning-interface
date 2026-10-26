@@ -51,100 +51,129 @@ const DOSHAS = [
     desc: 'The principle of cohesion and structure, governed by Earth and Water. Provides bodily strength, immunity, and lubrication. In balance: calm strength and endurance; out of balance: heaviness and lethargy.' },
 ];
 
-// ── Approved Action-Based C3 Interactions (Zero Assessment Contamination) ────
+// ── C3 Pedagogically-Aligned Interactions — Video Scene Locked ───────────────
+// Each interaction fires when the video PAUSES at the scene gate.
+// The panel slides in from the RIGHT so the frozen video frame remains visible.
 const C3_INTERACTIONS_BASE = [
   {
     id: 'int_01',
-    label: 'Sacred Banyan Light',
+    label: 'Nature & Observation',
     active_window: ['0:10', '0:26'],
-    gate: { type: 'hold_at', hold_at: '0:26', max_wait_sec: 6 },
-    type: 'hold',
-    prompt: '🌳 Press and hold the Banyan tree to let the morning light grow',
-    duration: 1500,
+    gate: { type: 'hold_at', hold_at: '0:26', max_wait_sec: 10 },
+    type: 'sort_sequence',
+    prompt: 'The sage observed nature to understand Ayurveda. Tap these in the order they appear in the scene:',
     color: '#8b5cf6',
-    emoji: '🌳'
+    emoji: '🌳',
+    items: [
+      { id: 'river', label: 'River flowing', icon: '🌊', correct_order: 1 },
+      { id: 'tree', label: 'Banyan tree', icon: '🌳', correct_order: 2 },
+      { id: 'sage', label: 'Sage sitting', icon: '🧘', correct_order: 3 },
+      { id: 'scroll', label: 'Open scroll', icon: '📜', correct_order: 4 }
+    ]
   },
   {
     id: 'int_02',
-    label: 'Awaken the Five Elements',
+    label: 'The Five Elements',
     active_window: ['0:27', '0:34'],
-    gate: { type: 'hold_at', hold_at: '0:34', max_wait_sec: 6 },
-    type: 'hotspots',
-    prompt: '✨ Touch each glowing element to awaken the sacred diagram',
+    gate: { type: 'hold_at', hold_at: '0:34', max_wait_sec: 10 },
+    type: 'build_diagram',
+    prompt: 'The book in the video shows five elements. Place each element into the Ayurvedic circle:',
     color: '#38bdf8',
     emoji: '✨',
-    hotspots: [
-      { id: 'earth', label: 'Prithvi (Earth)', icon: '🌍' },
-      { id: 'water', label: 'Jala (Water)', icon: '💧' },
-      { id: 'fire', label: 'Agni (Fire)', icon: '🔥' },
-      { id: 'air', label: 'Vayu (Air)', icon: '💨' },
-      { id: 'ether', label: 'Akasha (Ether)', icon: '✨' }
+    items: [
+      { id: 'earth', label: 'Earth', icon: '🟫', hint: 'Heavy, solid, stable' },
+      { id: 'water', label: 'Water', icon: '💧', hint: 'Fluid, cool, binding' },
+      { id: 'fire', label: 'Fire', icon: '🔥', hint: 'Hot, sharp, light' },
+      { id: 'air', label: 'Air', icon: '💨', hint: 'Mobile, light, dry' },
+      { id: 'ether', label: 'Ether', icon: '⭕', hint: 'Space, subtle, infinite' }
     ]
   },
   {
     id: 'int_03',
-    label: 'Medicinal Plant Study',
+    label: 'Identify the Plant Parts',
     active_window: ['0:35', '0:43'],
-    gate: { type: 'hold_at', hold_at: '0:43', max_wait_sec: 6 },
-    type: 'tap',
-    prompt: '🌿 Touch the glowing medicinal leaf to study its properties',
+    gate: { type: 'hold_at', hold_at: '0:43', max_wait_sec: 10 },
+    type: 'label_parts',
+    prompt: 'Ayurvedic practitioners used different parts of plants. Match what the sage is studying in the video:',
     color: '#10b981',
-    emoji: '🌿'
+    emoji: '🌿',
+    items: [
+      { id: 'leaf', label: 'Leaf', icon: '🍃', use: 'Teas and powders' },
+      { id: 'root', label: 'Root', icon: '🌱', use: 'Tonics and extracts' },
+      { id: 'bark', label: 'Bark', icon: '🪵', use: 'Pastes and decoctions' }
+    ]
   },
   {
     id: 'int_04',
-    label: 'Mortar Herb Grinding',
+    label: 'Grind the Herbs',
     active_window: ['0:44', '0:52'],
-    gate: { type: 'hold_at', hold_at: '0:52', max_wait_sec: 6 },
-    type: 'gesture_circle',
-    prompt: '🥣 Trace circular strokes around the mortar bowl to grind the herbs',
+    gate: { type: 'hold_at', hold_at: '0:52', max_wait_sec: 12 },
+    type: 'circular_drag',
+    prompt: '🥣 The video shows hands grinding herbs in a stone mortar. Drag your mouse in CIRCLES around the bowl to mimic the motion:',
     color: '#10b981',
-    emoji: '🥣'
+    emoji: '🥣',
+    required_circles: 3
   },
   {
     id: 'int_05',
     label: 'The Three Doshas',
     active_window: ['0:53', '1:02'],
-    gate: { type: 'hold_at', hold_at: '1:02', max_wait_sec: 6 },
-    type: 'hotspots',
-    prompt: '🧬 Touch each of the three sacred dosha figures',
+    gate: { type: 'hold_at', hold_at: '1:02', max_wait_sec: 10 },
+    type: 'match_pairs',
+    prompt: 'The video shows three medallions: Vata, Pitta, and Kapha. Match each dosha to its key quality:',
     color: '#f59e0b',
     emoji: '🧬',
-    hotspots: [
-      { id: 'vata', label: 'Vata (Air + Ether)', icon: '💨' },
-      { id: 'pitta', label: 'Pitta (Fire + Water)', icon: '🔥' },
-      { id: 'kapha', label: 'Kapha (Water + Earth)', icon: '🌱' }
+    pairs: [
+      { id: 'vata',  dosha: 'Vata',  icon: '💨', quality: 'Movement & Air' },
+      { id: 'pitta', dosha: 'Pitta', icon: '🔥', quality: 'Transformation & Fire' },
+      { id: 'kapha', dosha: 'Kapha', icon: '🌱', quality: 'Structure & Earth' }
     ]
   },
   {
     id: 'int_06',
-    label: 'Morning Sun Ritual',
+    label: 'Sequence the Daily Routine',
     active_window: ['1:03', '1:10'],
-    gate: { type: 'hold_at', hold_at: '1:10', max_wait_sec: 6 },
-    type: 'drag_path',
-    prompt: '☀️ Drag the sun along its morning arc over the river',
+    gate: { type: 'hold_at', hold_at: '1:10', max_wait_sec: 10 },
+    type: 'sort_sequence',
+    prompt: 'The video shows a figure following daily Ayurvedic routines at sunrise. Put these in the correct morning order:',
     color: '#f59e0b',
-    emoji: '☀️'
+    emoji: '☀️',
+    items: [
+      { id: 'wake', label: 'Wake before sunrise', icon: '🌅', correct_order: 1 },
+      { id: 'meditate', label: 'Meditate', icon: '🧘', correct_order: 2 },
+      { id: 'eat', label: 'Mindful eating', icon: '🍃', correct_order: 3 },
+      { id: 'routine', label: 'Seasonal practice', icon: '🌿', correct_order: 4 }
+    ]
   },
   {
     id: 'int_07',
-    label: 'Therapeutic Preparations',
+    label: 'Identify the Therapy Tool',
     active_window: ['1:11', '1:20'],
-    gate: { type: 'hold_at', hold_at: '1:20', max_wait_sec: 6 },
-    type: 'tap',
-    prompt: '🏺 Touch the therapeutic brass bowl on the treatment table',
+    gate: { type: 'hold_at', hold_at: '1:20', max_wait_sec: 10 },
+    type: 'select_one',
+    prompt: 'The video shows an Ayurvedic treatment. Which object on the table holds the warm therapeutic oil?',
     color: '#6366f1',
-    emoji: '🏺'
+    emoji: '🏺',
+    options: [
+      { id: 'brass_bowl', label: 'Brass Bowl (Kansa)', icon: '🫙', correct: true },
+      { id: 'mortar', label: 'Stone Mortar', icon: '🥣', correct: false },
+      { id: 'scroll', label: 'Rolled Scroll', icon: '📜', correct: false }
+    ]
   },
   {
     id: 'int_08',
-    label: 'Preserving Sacred Knowledge',
-    active_window: ['1:21', '1:30'],
-    gate: { type: 'hold_at', hold_at: '1:30', max_wait_sec: 6 },
-    type: 'drag_item',
-    prompt: '📜 Pass the sacred scroll to the student reader',
+    label: 'How Knowledge Was Preserved',
+    active_window: ['1:21', '1:45'],
+    gate: { type: 'hold_at', hold_at: '1:40', max_wait_sec: 12 },
+    type: 'sort_sequence',
+    prompt: 'The video shows how Ayurvedic wisdom was preserved. Place these three steps in the correct order:',
     color: '#14b8a6',
-    emoji: '📜'
+    emoji: '📜',
+    items: [
+      { id: 'observe', label: 'Sages observe nature', icon: '👁️', correct_order: 1 },
+      { id: 'record', label: 'Knowledge written in texts', icon: '✍️', correct_order: 2 },
+      { id: 'teach', label: 'Teacher passes to student', icon: '🧑‍🏫', correct_order: 3 }
+    ]
   }
 ];
 
@@ -1341,161 +1370,285 @@ function buildAyurvedaAudio() {
   }
 }
 
-// ── C3 Interactive Overlay Component (Action-Based, Zero Quiz Contamination) ──
+// ── C3 Interactive Panel — Pedagogically aligned, video frame stays visible ───
 function C3Panel({ interaction, onComplete }) {
-  const [holdProgress, setHoldProgress] = useState(0);
-  const [isHolding, setIsHolding] = useState(false);
-  const [tapped, setTapped] = useState(false);
-  const [touchedHotspots, setTouchedHotspots] = useState(new Set());
-  const [dialAngle, setDialAngle] = useState(0);
-  const [grindProgress, setGrindProgress] = useState(0);
-  const [sliderPos, setSliderPos] = useState(0);
-  const [isItemPassed, setIsItemPassed] = useState(false);
-  const holdRef = useRef(null);
-  const holdStartRef = useRef(null);
-  const DUR = interaction.duration || 1800;
+  // ── Sequence sorter state
+  const [seqOrder, setSeqOrder] = useState([]);
+  // ── Build-diagram / label-parts state
+  const [placedItems, setPlacedItems] = useState(new Set());
+  // ── Match pairs state
+  const [selectedDosha, setSelectedDosha] = useState(null);
+  const [matchedPairs, setMatchedPairs] = useState({});
+  // ── Select-one state
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [revealed, setRevealed] = useState(false);
+  // ── Circular drag gesture state
+  const grindRef = useRef({ active: false, lastAngle: null, totalRotation: 0 });
+  const [grindCircles, setGrindCircles] = useState(0);
+  const [grindDone, setGrindDone] = useState(false);
+  const dialRef = useRef(null);
+  const REQUIRED_CIRCLES = interaction.required_circles || 3;
 
-  const startHold = () => {
-    if (isHolding) return;
-    setIsHolding(true);
-    holdStartRef.current = performance.now();
-    holdRef.current = setInterval(() => {
-      const p = clamp((performance.now() - holdStartRef.current) / DUR, 0, 1);
-      setHoldProgress(p);
-      if (p >= 1) {
-        clearInterval(holdRef.current);
-        setIsHolding(false);
-        onComplete(interaction.id);
-      }
-    }, 16);
-  };
+  // ── helpers
+  const allSeqDone = interaction.items && seqOrder.length === interaction.items.length;
+  const allPlaced   = interaction.items && placedItems.size === interaction.items.length;
+  const allMatched  = interaction.pairs && Object.keys(matchedPairs).length === interaction.pairs.length;
 
-  const stopHold = () => {
-    if (holdRef.current) clearInterval(holdRef.current);
-    setIsHolding(false);
-    setHoldProgress(0);
-  };
-
-  const handleTap = () => {
-    setTapped(true);
-    setTimeout(() => onComplete(interaction.id), 400);
-  };
-
-  const handleTouchHotspot = (hId) => {
-    const next = new Set(touchedHotspots).add(hId);
-    setTouchedHotspots(next);
-    eventLogger.log('C3_HOTSPOT_TOUCH', { interactionId: interaction.id, hotspotId: hId });
-    if (interaction.hotspots && next.size >= interaction.hotspots.length) {
-      setTimeout(() => onComplete(interaction.id), 500);
+  // Sequence tap handler
+  const handleSeqTap = (itemId) => {
+    if (seqOrder.includes(itemId)) return;
+    const next = [...seqOrder, itemId];
+    setSeqOrder(next);
+    eventLogger.log('C3_SEQ_TAP', { interactionId: interaction.id, itemId, position: next.length });
+    if (next.length === interaction.items.length) {
+      setTimeout(() => onComplete(interaction.id), 600);
     }
   };
 
-  const handleDialGrind = () => {
-    const nextProg = Math.min(1.0, grindProgress + 0.25);
-    setGrindProgress(nextProg);
-    setDialAngle(a => a + 90);
-    eventLogger.log('C3_GRIND_STROKE', { interactionId: interaction.id, progress: nextProg });
-    if (nextProg >= 1.0) {
-      setTimeout(() => onComplete(interaction.id), 400);
+  // Build-diagram / label-parts: place item
+  const handlePlaceItem = (itemId) => {
+    const next = new Set(placedItems).add(itemId);
+    setPlacedItems(next);
+    eventLogger.log('C3_ITEM_PLACED', { interactionId: interaction.id, itemId });
+    if (next.size === interaction.items.length) {
+      setTimeout(() => onComplete(interaction.id), 600);
     }
   };
 
-  const handleSunSlider = (e) => {
-    const val = Number(e.target.value);
-    setSliderPos(val);
-    if (val >= 95) {
-      eventLogger.log('C3_SUN_DRAG_COMPLETE', { interactionId: interaction.id });
-      setTimeout(() => onComplete(interaction.id), 400);
+  // Match pairs
+  const handleDoshaSelect = (doshaId) => {
+    setSelectedDosha(doshaId);
+  };
+  const handleQualitySelect = (pair) => {
+    if (!selectedDosha) return;
+    const next = { ...matchedPairs, [selectedDosha]: pair.id };
+    setMatchedPairs(next);
+    setSelectedDosha(null);
+    eventLogger.log('C3_PAIR_MATCHED', { interactionId: interaction.id, dosha: selectedDosha, quality: pair.id });
+    if (Object.keys(next).length === interaction.pairs.length) {
+      setTimeout(() => onComplete(interaction.id), 600);
     }
   };
 
-  const handlePassItem = () => {
-    setIsItemPassed(true);
-    eventLogger.log('C3_SCROLL_PASSED', { interactionId: interaction.id });
-    setTimeout(() => onComplete(interaction.id), 500);
+  // Select one
+  const handleSelectOne = (optId) => {
+    if (revealed) return;
+    setSelectedOption(optId);
+    setRevealed(true);
+    const opt = interaction.options.find(o => o.id === optId);
+    eventLogger.log('C3_SELECT_ONE', { interactionId: interaction.id, selected: optId, correct: opt?.correct });
+    setTimeout(() => onComplete(interaction.id), 900);
   };
+
+  // ── Circular drag gesture (real mouse/touch drag tracking)
+  const getAngle = (cx, cy, ex, ey) => Math.atan2(ey - cy, ex - cx) * 180 / Math.PI;
+
+  const handleGrindPointerDown = (e) => {
+    if (grindDone) return;
+    e.preventDefault();
+    const rect = dialRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const ex = e.clientX || (e.touches && e.touches[0].clientX);
+    const ey = e.clientY || (e.touches && e.touches[0].clientY);
+    grindRef.current = { active: true, lastAngle: getAngle(cx, cy, ex, ey), totalRotation: grindRef.current.totalRotation };
+    dialRef.current.setPointerCapture(e.pointerId);
+  };
+
+  const handleGrindPointerMove = (e) => {
+    if (!grindRef.current.active || grindDone) return;
+    e.preventDefault();
+    const rect = dialRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const ex = e.clientX || (e.touches && e.touches[0].clientX);
+    const ey = e.clientY || (e.touches && e.touches[0].clientY);
+    const angle = getAngle(cx, cy, ex, ey);
+    let delta = angle - grindRef.current.lastAngle;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    grindRef.current.lastAngle = angle;
+    grindRef.current.totalRotation += Math.abs(delta);
+    const circles = grindRef.current.totalRotation / 360;
+    setGrindCircles(Math.min(circles, REQUIRED_CIRCLES));
+    if (circles >= REQUIRED_CIRCLES && !grindDone) {
+      setGrindDone(true);
+      eventLogger.log('C3_GRIND_DONE', { interactionId: interaction.id, totalDeg: grindRef.current.totalRotation });
+      setTimeout(() => onComplete(interaction.id), 600);
+    }
+  };
+
+  const handleGrindPointerUp = () => { grindRef.current.active = false; };
+
+  const grindPct = Math.min(1, grindCircles / REQUIRED_CIRCLES);
 
   return (
-    <div className="c3-panel-overlay" style={{ '--c3accent': interaction.color || '#f4a261' }}>
-      <div className="c3-panel-card">
-        <div className="c3-panel-emoji">{interaction.emoji || '✨'}</div>
+    <div className="c3-panel-overlay">
+      <div className="c3-panel-card" style={{ '--c3accent': interaction.color || '#f4a261' }}>
+        <div className="c3-panel-header">
+          <span className="c3-panel-emoji">{interaction.emoji}</span>
+          <span className="c3-panel-label">{interaction.label}</span>
+          <span className="c3-panel-badge">Pause &amp; Interact</span>
+        </div>
         <p className="c3-panel-prompt">{interaction.prompt}</p>
 
-        {interaction.type === 'tap' && (
-          <button className={`c3-tap-btn${tapped ? ' tapped' : ''}`} onClick={handleTap} style={{ background: interaction.color }}>
-            {tapped ? '✓ Completed!' : '👆 Touch Object'}
-          </button>
-        )}
-
-        {interaction.type === 'hold' && (
-          <div className="c3-hold-area">
-            <div className="c3-hold-btn" onPointerDown={startHold} onPointerUp={stopHold} onPointerLeave={stopHold} style={{ background: interaction.color }}>
-              <svg viewBox="0 0 100 100" className="c3-hold-ring">
-                <circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.2)" strokeWidth="6" fill="none" />
-                <circle cx="50" cy="50" r="44" stroke="white" strokeWidth="6" fill="none"
-                  strokeDasharray={`${holdProgress * 276.46} 276.46`} strokeLinecap="round" transform="rotate(-90 50 50)" />
-              </svg>
-              <span className="c3-hold-label">{holdProgress >= 1 ? '✓' : isHolding ? `${Math.round(holdProgress * 100)}%` : 'HOLD'}</span>
+        {/* ── SORT SEQUENCE ── */}
+        {interaction.type === 'sort_sequence' && interaction.items && (
+          <div className="c3-seq-area">
+            <div className="c3-seq-items">
+              {interaction.items.map(item => {
+                const pos = seqOrder.indexOf(item.id);
+                const done = pos !== -1;
+                return (
+                  <button
+                    key={item.id}
+                    className={`c3-seq-btn${done ? ' seq-done' : ''}`}
+                    onClick={() => handleSeqTap(item.id)}
+                    disabled={done}
+                  >
+                    <span className="c3-seq-icon">{item.icon}</span>
+                    <span className="c3-seq-lbl">{item.label}</span>
+                    {done && <span className="c3-seq-num">{pos + 1}</span>}
+                  </button>
+                );
+              })}
             </div>
+            {allSeqDone && (
+              <div className="c3-success-banner">✓ Sequence Complete!</div>
+            )}
           </div>
         )}
 
-        {interaction.type === 'hotspots' && interaction.hotspots && (
-          <div className="c3-hotspots-grid">
-            {interaction.hotspots.map(h => {
-              const isTouched = touchedHotspots.has(h.id);
+        {/* ── BUILD DIAGRAM (elements / label plant parts) ── */}
+        {(interaction.type === 'build_diagram' || interaction.type === 'label_parts') && interaction.items && (
+          <div className="c3-build-area">
+            <div className="c3-build-items">
+              {interaction.items.map(item => {
+                const placed = placedItems.has(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    className={`c3-build-btn${placed ? ' placed' : ''}`}
+                    onClick={() => handlePlaceItem(item.id)}
+                    disabled={placed}
+                  >
+                    <span className="c3-build-icon">{item.icon}</span>
+                    <div className="c3-build-text">
+                      <span className="c3-build-name">{item.label}</span>
+                      {item.hint && <span className="c3-build-hint">{item.hint}</span>}
+                      {item.use  && <span className="c3-build-hint">{item.use}</span>}
+                    </div>
+                    {placed && <span className="c3-placed-check">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {allPlaced && (
+              <div className="c3-success-banner">✓ All Placed!</div>
+            )}
+          </div>
+        )}
+
+        {/* ── MATCH PAIRS (doshas) ── */}
+        {interaction.type === 'match_pairs' && interaction.pairs && (
+          <div className="c3-match-area">
+            <div className="c3-match-row">
+              <div className="c3-match-col">
+                <p className="c3-match-colhdr">Dosha</p>
+                {interaction.pairs.map(p => {
+                  const isSelected = selectedDosha === p.id;
+                  const isMatched  = p.id in matchedPairs;
+                  return (
+                    <button
+                      key={p.id}
+                      className={`c3-match-btn dosha-btn${isSelected ? ' selected' : ''}${isMatched ? ' matched' : ''}`}
+                      onClick={() => !isMatched && handleDoshaSelect(p.id)}
+                      disabled={isMatched}
+                    >
+                      {p.icon} {p.dosha}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="c3-match-col">
+                <p className="c3-match-colhdr">Key Quality</p>
+                {interaction.pairs.map(p => {
+                  const isMatchedTarget = Object.values(matchedPairs).includes(p.id);
+                  return (
+                    <button
+                      key={p.id + '_q'}
+                      className={`c3-match-btn quality-btn${isMatchedTarget ? ' matched' : ''}${selectedDosha ? ' glow' : ''}`}
+                      onClick={() => !isMatchedTarget && handleQualitySelect(p)}
+                      disabled={isMatchedTarget || !selectedDosha}
+                    >
+                      {p.quality}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {allMatched && (
+              <div className="c3-success-banner">✓ All Matched!</div>
+            )}
+          </div>
+        )}
+
+        {/* ── SELECT ONE ── */}
+        {interaction.type === 'select_one' && interaction.options && (
+          <div className="c3-select-area">
+            {interaction.options.map(opt => {
+              const isSelected = selectedOption === opt.id;
+              const cls = revealed
+                ? (opt.correct ? ' correct' : (isSelected ? ' wrong' : ''))
+                : (isSelected ? ' selected' : '');
               return (
                 <button
-                  key={h.id}
-                  className={`c3-hotspot-btn${isTouched ? ' touched' : ''}`}
-                  onClick={() => handleTouchHotspot(h.id)}
+                  key={opt.id}
+                  className={`c3-select-btn${cls}`}
+                  onClick={() => handleSelectOne(opt.id)}
+                  disabled={revealed}
                 >
-                  <span>{h.icon || '✨'}</span>
-                  <span>{h.label}</span>
-                  {isTouched && <span>✓</span>}
+                  <span className="c3-select-icon">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                  {revealed && opt.correct && <span className="c3-correct-mark">✓</span>}
                 </button>
               );
             })}
           </div>
         )}
 
-        {interaction.type === 'gesture_circle' && (
-          <div className="c3-dial-area">
+        {/* ── CIRCULAR DRAG GRIND ── */}
+        {interaction.type === 'circular_drag' && (
+          <div className="c3-grind-area">
+            <div className="c3-grind-instruction">
+              {grindDone ? '✅ Ground!' : `${REQUIRED_CIRCLES - Math.floor(grindCircles)} circle${Math.floor(grindCircles) < REQUIRED_CIRCLES - 1 ? 's' : ''} left`}
+            </div>
             <div
-              className="c3-dial-ring"
-              onClick={handleDialGrind}
-              style={{ transform: `rotate(${dialAngle}deg)` }}
-              title="Click or trace circles to grind"
+              ref={dialRef}
+              className={`c3-grind-bowl${grindDone ? ' done' : ''}`}
+              onPointerDown={handleGrindPointerDown}
+              onPointerMove={handleGrindPointerMove}
+              onPointerUp={handleGrindPointerUp}
+              onPointerCancel={handleGrindPointerUp}
+              style={{ touchAction: 'none', cursor: grindDone ? 'default' : 'grab' }}
             >
-              <div className="c3-dial-center">🥣</div>
+              <svg className="c3-grind-ring-svg" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,0.15)" strokeWidth="7" fill="none" />
+                <circle
+                  cx="60" cy="60" r="52"
+                  stroke={interaction.color || '#10b981'}
+                  strokeWidth="7" fill="none"
+                  strokeDasharray={`${grindPct * 326.7} 326.7`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 60 60)"
+                  style={{ transition: 'stroke-dasharray 0.05s linear' }}
+                />
+              </svg>
+              <div className="c3-grind-bowl-inner">🥣</div>
+              <div className="c3-grind-pestle" style={{ transform: `rotate(${grindRef.current.totalRotation || 0}deg)` }}>🔄</div>
             </div>
-            <button className="c3-tap-btn" onClick={handleDialGrind} style={{ background: interaction.color, marginTop: '8px' }}>
-              {grindProgress >= 1.0 ? '✓ Ground to Sacred Powder!' : `Grind Circle (${Math.round(grindProgress * 100)}%)`}
-            </button>
+            <p className="c3-grind-tip">↻ Hold and drag in a circle around the bowl</p>
           </div>
-        )}
-
-        {interaction.type === 'drag_path' && (
-          <div className="c3-drag-track">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={sliderPos}
-              onChange={handleSunSlider}
-              style={{ width: '100%', accentColor: interaction.color || '#f59e0b', cursor: 'pointer' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.8, marginTop: '4px' }}>
-              <span>🌅 Morning Horizon</span>
-              <span>☀️ Mid-Morning Sky</span>
-            </div>
-          </div>
-        )}
-
-        {interaction.type === 'drag_item' && (
-          <button className={`c3-tap-btn${isItemPassed ? ' tapped' : ''}`} onClick={handlePassItem} style={{ background: interaction.color }}>
-            {isItemPassed ? '✓ Passed to Student Reader' : '📜 Pass Scroll to Student'}
-          </button>
         )}
       </div>
     </div>
