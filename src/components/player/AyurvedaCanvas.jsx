@@ -1408,7 +1408,24 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
   // ── Hold Charge State (int_01 Banyan Tree)
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
+  const isHoldingRef = useRef(false);
   const holdIntervalRef = useRef(null);
+  const currentTimeRef = useRef(currentTime);
+
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  // Cleanup hold charge interval on unmount or interaction change
+  useEffect(() => {
+    return () => {
+      if (holdIntervalRef.current) {
+        clearInterval(holdIntervalRef.current);
+        holdIntervalRef.current = null;
+      }
+      isHoldingRef.current = false;
+    };
+  }, [interaction.id]);
 
   // ── Hotspot Selection State (int_02 Elements, int_03 Leaf, int_05 Doshas, int_06 Sunrise, int_07 Brass Bowl)
   const [selectedHotspots, setSelectedHotspots] = useState(new Set());
@@ -1434,7 +1451,7 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
 
     const duration_ms = Date.now() - startTimeRef.current;
     eventLogger.log('C3_COMPLETE', {
-      videoTimestamp: currentTime || 0,
+      videoTimestamp: currentTimeRef.current || 0,
       interactionId: interaction.id,
       verb: interaction.verb,
       duration_ms,
@@ -1446,14 +1463,15 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
     setTimeout(() => {
       onComplete(interaction.id, { duration_ms, input_modality: modality });
     }, 600);
-  }, [interaction, onComplete, audio, currentTime]);
+  }, [interaction, onComplete, audio]);
 
   // ── 1. Hold Charge Handlers (int_01 Banyan Tree)
   const startHold = useCallback((modality = 'mouse') => {
-    if (completedRef.current || isHolding) return;
+    if (completedRef.current || isHoldingRef.current) return;
+    isHoldingRef.current = true;
     setIsHolding(true);
     eventLogger.log('C3_HOLD_START', {
-      videoTimestamp: currentTime || 0,
+      videoTimestamp: currentTimeRef.current || 0,
       interactionId: interaction.id,
       modality
     });
@@ -1461,19 +1479,32 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
     const holdMs = interaction.config?.hold_time_ms || 1500;
     const startT = Date.now();
 
-    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
     holdIntervalRef.current = setInterval(() => {
+      if (completedRef.current) {
+        if (holdIntervalRef.current) {
+          clearInterval(holdIntervalRef.current);
+          holdIntervalRef.current = null;
+        }
+        return;
+      }
       const elapsed = Date.now() - startT;
       const prog = Math.min(1.0, elapsed / holdMs);
       setHoldProgress(prog);
       if (prog >= 1.0) {
-        clearInterval(holdIntervalRef.current);
-        holdIntervalRef.current = null;
+        if (holdIntervalRef.current) {
+          clearInterval(holdIntervalRef.current);
+          holdIntervalRef.current = null;
+        }
+        isHoldingRef.current = false;
         setIsHolding(false);
         handleSuccess(modality, { hold_time_ms: elapsed });
       }
     }, 16);
-  }, [interaction, isHolding, handleSuccess, currentTime]);
+  }, [interaction, handleSuccess]);
 
   const cancelHold = useCallback((modality = 'mouse') => {
     if (completedRef.current) return;
@@ -1481,16 +1512,45 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
       clearInterval(holdIntervalRef.current);
       holdIntervalRef.current = null;
     }
-    if (isHolding) {
+    if (isHoldingRef.current) {
+      isHoldingRef.current = false;
       setIsHolding(false);
       setHoldProgress(0);
       eventLogger.log('C3_HOLD_CANCEL', {
-        videoTimestamp: currentTime || 0,
+        videoTimestamp: currentTimeRef.current || 0,
         interactionId: interaction.id,
         modality
       });
     }
-  }, [isHolding, interaction, currentTime]);
+  }, [interaction]);
+
+  const handleBanyanPointerDown = useCallback((e) => {
+    e.preventDefault();
+    if (completedRef.current) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    startHold(e.pointerType || 'mouse');
+  }, [startHold]);
+
+  const handleBanyanPointerUp = useCallback((e) => {
+    e.preventDefault();
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch (_) {}
+    cancelHold(e.pointerType || 'mouse');
+  }, [cancelHold]);
+
+  const handleBanyanPointerCancel = useCallback((e) => {
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch (_) {}
+    cancelHold(e.pointerType || 'mouse');
+  }, [cancelHold]);
 
   // ── 2. Hotspot Selection Handler (int_02, int_03, int_05, int_06, int_07)
   const handleTouchHotspot = useCallback((hs, modality = 'mouse') => {
@@ -1648,9 +1708,13 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (completedRef.current) return;
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       if (e.key === ' ' || e.key === 'Enter') {
         if (interaction.verb === 'hold_charge') {
-          startHold('keyboard');
+          if (!e.repeat) {
+            e.preventDefault();
+            startHold('keyboard');
+          }
         } else if (interaction.verb === 'select_hotspot') {
           const hotspots = interaction.config?.hotspots || [];
           if (hotspots.length === 1) {
@@ -1669,6 +1733,7 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
     const handleKeyUp = (e) => {
       if (e.key === ' ' || e.key === 'Enter') {
         if (interaction.verb === 'hold_charge') {
+          e.preventDefault();
           cancelHold('keyboard');
         }
       }
@@ -1679,7 +1744,6 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
     };
   }, [interaction, startHold, cancelHold, handleTouchHotspot]);
 
@@ -1715,16 +1779,14 @@ function C3InteractiveOverlay({ interaction, remainingSec, onComplete, onSkip, a
         {/* ── A. Banyan Tree Hold Charge (int_01) ── */}
         {interaction.verb === 'hold_charge' && (
           <div
-            className="c3-banyan-target"
+            className={`c3-banyan-target${isHolding ? ' holding' : ''}`}
             style={{
               left: `${(interaction.config?.x ?? 0.50) * 100}%`,
               top: `${(interaction.config?.y ?? 0.42) * 100}%`
             }}
-            onPointerDown={() => startHold('mouse')}
-            onPointerUp={() => cancelHold('mouse')}
-            onPointerLeave={() => cancelHold('mouse')}
-            onTouchStart={() => startHold('touch')}
-            onTouchEnd={() => cancelHold('touch')}
+            onPointerDown={handleBanyanPointerDown}
+            onPointerUp={handleBanyanPointerUp}
+            onPointerCancel={handleBanyanPointerCancel}
             tabIndex={0}
             role="button"
             aria-label="Hold to let the morning light grow on the Banyan Tree"

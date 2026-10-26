@@ -130,6 +130,20 @@ assert(story.assessment.levels[0].items[2].question.includes('Which five element
 assert(story.assessment.levels[0].items[4].question.includes('Which three doshas were named?'), 'Q5 preserved');
 assert(story.assessment.levels[0].items[6].question.includes('How did the video describe therapies and preparations?'), 'Q7 preserved');
 
+// 9. Hold Button Robustness & Pointer Capture
+console.log('\nCriterion 9: Hold Button Robustness & Event Architecture');
+assert(canvasCode.includes('setPointerCapture'), 'Pointer capture attached to target element on pointerdown', 'Missing setPointerCapture');
+assert(canvasCode.includes('isHoldingRef'), 'isHoldingRef used to prevent state-closure race conditions', 'Missing isHoldingRef');
+assert(canvasCode.includes('currentTimeRef'), 'currentTimeRef prevents interval re-creation on video time ticks', 'Missing currentTimeRef');
+assert(canvasCode.includes('!e.repeat'), 'Keyboard hold ignores repeated keydown events', 'Missing !e.repeat check');
+
+const cssPath = path.join(rootDir, 'src/components/player/PlayerCommon.css');
+const cssCode = fs.readFileSync(cssPath, 'utf8');
+assert(cssCode.includes('.c3-banyan-target') && cssCode.includes('touch-action: none'),
+  'c3-banyan-target has touch-action: none to prevent touch interception', 'Missing touch-action: none');
+assert(cssCode.includes('.c3-banyan-target *') && cssCode.includes('pointer-events: none'),
+  'c3-banyan-target child elements have pointer-events: none to avoid bubbling interruption', 'Missing pointer-events: none on children');
+
 console.log('\n================================================================');
 console.log(`TOTAL TESTS: ${passedCount + failedCount} | PASSED: ${passedCount} | FAILED: ${failedCount}`);
 console.log('================================================================\n');

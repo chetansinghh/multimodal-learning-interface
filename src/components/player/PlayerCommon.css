@@ -1328,9 +1328,13 @@
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   outline: none;
+}
+.c3-banyan-target * {
+  pointer-events: none;
 }
 .c3-banyan-svg {
   position: absolute;
@@ -1351,13 +1355,20 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
-  transition: transform 0.15s ease, background 0.2s ease;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 .c3-banyan-target:hover .c3-banyan-core,
 .c3-banyan-target:focus-visible .c3-banyan-core {
   transform: scale(1.06);
   border-color: #a78bfa;
   box-shadow: 0 0 35px rgba(167, 139, 250, 0.6);
+}
+.c3-banyan-target.holding .c3-banyan-core,
+.c3-banyan-target:active .c3-banyan-core {
+  transform: scale(0.96);
+  border-color: #c4b5fd;
+  box-shadow: 0 0 45px rgba(167, 139, 250, 0.95);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.45) 0%, rgba(15, 23, 42, 0.9) 100%);
 }
 .c3-banyan-icon {
   font-size: 2rem;
