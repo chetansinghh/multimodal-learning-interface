@@ -23,35 +23,43 @@ export function computeSessionMeasures(events, assessments = []) {
     e.event === 'VIDEO_EXIT' && e.action === 'session_complete'
   ) || sorted[sorted.length - 1];
 
-  const totalSessionDurationMs = sessionStartEvent && sessionEndEvent
-    ? sessionEndEvent.timestamp - sessionStartEvent.timestamp
+  const startTs = Number(sessionStartEvent?.timestamp ?? sessionStartEvent?.elapsed_ms ?? 0);
+  const endTs = Number(sessionEndEvent?.timestamp ?? sessionEndEvent?.elapsed_ms ?? 0);
+  const totalSessionDurationMs = (sessionStartEvent && sessionEndEvent && endTs >= startTs)
+    ? endTs - startTs
     : 0;
 
   // ─── 2. Exposure Duration ────
   // VIDEO_START timestamp → VIDEO_COMPLETE timestamp
   const videoStart = sorted.find(e =>
-    e.event === 'VIDEO_START' && e.action !== 'session_begin'
+    (e.event === 'VIDEO_START' || e.event_type === 'VIDEO_START') && e.action !== 'session_begin'
   );
-  const videoComplete = sorted.find(e => e.event === 'VIDEO_COMPLETE');
+  const videoComplete = sorted.find(e => e.event === 'VIDEO_COMPLETE' || e.event_type === 'VIDEO_COMPLETE');
 
-  const exposureDurationMs = videoStart && videoComplete
-    ? videoComplete.timestamp - videoStart.timestamp
+  const vStartTs = Number(videoStart?.timestamp ?? videoStart?.elapsed_ms ?? 0);
+  const vCompTs = Number(videoComplete?.timestamp ?? videoComplete?.elapsed_ms ?? 0);
+  const exposureDurationMs = (videoStart && videoComplete && vCompTs >= vStartTs)
+    ? vCompTs - vStartTs
     : 0;
 
   // ─── 3. Pause Duration ────
   // Sum of all (VIDEO_RESUME timestamp − matching VIDEO_PAUSE timestamp) pairs
   const pauseEvents = sorted.filter(e =>
-    e.event === 'VIDEO_PAUSE' || e.event === 'VIDEO_RESUME'
+    ['VIDEO_PAUSE', 'VIDEO_RESUME'].includes(e.event || e.event_type)
   );
 
   let pauseDurationMs = 0;
   let lastPauseTimestamp = null;
 
   for (const evt of pauseEvents) {
-    if (evt.event === 'VIDEO_PAUSE') {
-      lastPauseTimestamp = evt.timestamp;
-    } else if (evt.event === 'VIDEO_RESUME' && lastPauseTimestamp !== null) {
-      pauseDurationMs += evt.timestamp - lastPauseTimestamp;
+    const evType = evt.event || evt.event_type;
+    const ts = Number(evt.timestamp ?? evt.elapsed_ms ?? 0);
+    if (evType === 'VIDEO_PAUSE') {
+      lastPauseTimestamp = ts;
+    } else if (evType === 'VIDEO_RESUME' && lastPauseTimestamp !== null) {
+      if (ts >= lastPauseTimestamp) {
+        pauseDurationMs += ts - lastPauseTimestamp;
+      }
       lastPauseTimestamp = null;
     }
   }
@@ -60,63 +68,65 @@ export function computeSessionMeasures(events, assessments = []) {
   if (lastPauseTimestamp !== null) {
     const endRef = videoComplete || sorted[sorted.length - 1];
     if (endRef) {
-      pauseDurationMs += endRef.timestamp - lastPauseTimestamp;
+      const endTsRef = Number(endRef.timestamp ?? endRef.elapsed_ms ?? 0);
+      if (endTsRef >= lastPauseTimestamp) {
+        pauseDurationMs += endTsRef - lastPauseTimestamp;
+      }
     }
   }
 
   // ─── 4. Interaction Duration ────
   // Sum of all (interaction-closed − interaction-opened) pairs
   const interactionTriggers = sorted.filter(e =>
-    e.event === 'OBJECT_INTERACT' && e.action === 'interaction_triggered'
+    (e.event === 'OBJECT_INTERACT' || e.event_type === 'OBJECT_INTERACT') && e.action === 'interaction_triggered'
   );
   const interactionCompletes = sorted.filter(e =>
-    e.event === 'OBJECT_INTERACT' && e.action === 'interaction_completed'
+    (e.event === 'OBJECT_INTERACT' || e.event_type === 'OBJECT_INTERACT') && e.action === 'interaction_completed'
   );
 
   let interactionDurationMs = 0;
 
   for (const trigger of interactionTriggers) {
-    // Find the matching completion (same object_id, timestamp after trigger)
-    const completion = interactionCompletes.find(c =>
-      c.timestamp > trigger.timestamp &&
-      (c.object_id === trigger.object_id || true) // fallback: next completion after this trigger
-    );
+    const trigTs = Number(trigger.timestamp ?? trigger.elapsed_ms ?? 0);
+    const completion = interactionCompletes.find(c => {
+      const compTs = Number(c.timestamp ?? c.elapsed_ms ?? 0);
+      return compTs > trigTs && (c.object_id === trigger.object_id || true);
+    });
     if (completion) {
-      interactionDurationMs += completion.timestamp - trigger.timestamp;
+      const compTs = Number(completion.timestamp ?? completion.elapsed_ms ?? 0);
+      interactionDurationMs += compTs - trigTs;
     }
   }
 
   // ─── 5. Active Viewing Duration ────
-  // Exposure duration minus pause duration minus interaction overlay time
   const activeViewingDurationMs = Math.max(0,
     exposureDurationMs - pauseDurationMs - interactionDurationMs
   );
 
   // ─── 6. Assessment Response Times ────
-  // Per question: answer-submitted timestamp − question-displayed timestamp
-  // (These are already tracked per-response in the assessments store as response_time_ms)
-  const assessmentResponseTimes = assessments.map(a => ({
+  const assessmentResponseTimes = (assessments || []).map(a => ({
     question_id: a.question_id,
     level: a.level,
-    response_time_ms: a.response_time_ms || 0,
-    response_time_sec: ((a.response_time_ms || 0) / 1000).toFixed(1),
+    response_time_ms: Number(a.response_time_ms) || 0,
+    response_time_sec: ((Number(a.response_time_ms) || 0) / 1000).toFixed(1),
   }));
 
   return {
-    total_session_duration_ms: totalSessionDurationMs,
-    total_session_duration: formatDuration(totalSessionDurationMs),
+    total_session_duration_ms: totalSessionDurationMs || 0,
+    total_session_duration: formatDuration(totalSessionDurationMs || 0),
 
-    exposure_duration_ms: exposureDurationMs,
-    exposure_duration: formatDuration(exposureDurationMs),
+    exposure_duration_ms: exposureDurationMs || 0,
+    exposure_duration: formatDuration(exposureDurationMs || 0),
 
-    active_viewing_duration_ms: activeViewingDurationMs,
-    active_viewing_duration: formatDuration(activeViewingDurationMs),
+    active_viewing_duration_ms: activeViewingDurationMs || 0,
+    active_viewing_duration: formatDuration(activeViewingDurationMs || 0),
+    active_viewing_duration_sec: (activeViewingDurationMs || 0) / 1000,
 
-    pause_duration_ms: pauseDurationMs,
-    pause_duration: formatDuration(pauseDurationMs),
+    pause_duration_ms: pauseDurationMs || 0,
+    pause_duration: formatDuration(pauseDurationMs || 0),
 
-    interaction_duration_ms: interactionDurationMs,
-    interaction_duration: formatDuration(interactionDurationMs),
+    interaction_duration_ms: interactionDurationMs || 0,
+    interaction_duration: formatDuration(interactionDurationMs || 0),
 
     assessment_response_times: assessmentResponseTimes,
   };

@@ -21,9 +21,13 @@ export default function AdminLoginModal({ onComplete, sessionId }) {
     setLoading(false);
 
     if (res.success) {
+      sessionStorage.setItem('agy_admin_session_token', res.token);
+      sessionStorage.setItem('agy_session_token', res.token);
+      sessionStorage.setItem('agy_admin_id', res.identity?.email || email);
+
       login({
         token: res.token,
-        user: { role: res.role, email: res.identity?.email, name: 'Admin' }
+        user: { role: res.role, email: res.identity?.email || email, name: 'Admin' }
       });
       if (onComplete) onComplete({ role: res.role });
     } else {

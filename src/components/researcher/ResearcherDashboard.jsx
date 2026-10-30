@@ -51,6 +51,16 @@ function ResearcherDashboardContent() {
     loadAvailableStories().then(setAvailableStories);
   }, []);
 
+  const formatTimeSlice = (val) => {
+    if (!val) return '-';
+    if (typeof val === 'string' && val.length >= 19 && val.includes('T')) return val.slice(11, 19);
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return d.toTimeString().slice(0, 8);
+    } catch {}
+    return String(val);
+  };
+
   const loadData = async () => {
     await eventLogger.init();
     let localS = await eventLogger.getAllSessions();
@@ -60,7 +70,7 @@ function ResearcherDashboardContent() {
 
     // Fetch central multi-device database
     try {
-      const token = authService.getToken();
+      const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
       if (token) {
         const res = await fetch('/api/db/dashboard-data', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -77,14 +87,14 @@ function ResearcherDashboardContent() {
 
           const mergedEvents = [...(serverData.events || [])];
           localE.forEach(le => {
-            if (!mergedEvents.some(me => me.session_id === le.session_id && me.timestamp === le.timestamp && me.event === le.event)) {
+            if (!mergedEvents.some(me => me.event_id === le.event_id || (me.session_id === le.session_id && me.elapsed_ms === le.elapsed_ms))) {
               mergedEvents.push(le);
             }
           });
 
           const mergedAssessments = [...(serverData.assessments || [])];
           localA.forEach(la => {
-            if (!mergedAssessments.some(ma => ma.session_id === la.session_id && ma.question_id === la.question_id)) {
+            if (!mergedAssessments.some(ma => ma.session_id === la.session_id && (ma.question_id || ma.item_id) === (la.question_id || la.item_id))) {
               mergedAssessments.push(la);
             }
           });
@@ -163,6 +173,17 @@ function ResearcherDashboardContent() {
     if (e) e.stopPropagation();
     if (!window.confirm('Delete this session and all its logged events & assessments?')) return;
     await eventLogger.deleteSession(sessionId);
+    try {
+      const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
+      if (token) {
+        await fetch(`/api/db/sessions/${sessionId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+    } catch (err) {
+      console.warn('Central DB session deletion warning:', err);
+    }
     if (selectedSession === sessionId) setSelectedSession(null);
     await loadData();
   };
@@ -835,7 +856,7 @@ function ResearcherDashboardContent() {
                       <td>
                         <strong>{formatTime(elapsedSec)}</strong>
                         <div style={{ fontSize: '0.62rem', opacity: 0.6 }}>
-                          {e.timestamp_utc ? e.timestamp_utc.slice(11, 19) : (e.wall_clock ? e.wall_clock.slice(11, 19) : '-')}
+                          {formatTimeSlice(e.timestamp_utc || e.wall_clock)}
                         </div>
                       </td>
                       <td>
@@ -890,7 +911,7 @@ function ResearcherDashboardContent() {
                     <td className={a.accuracy === 1 ? 'correct-cell' : 'incorrect-cell'}>
                       {a.accuracy === 1 ? '✓ Correct' : '✗ Incorrect'}
                     </td>
-                    <td>{Math.round(a.response_time_ms)} ms</td>
+                    <td>{a.response_time_ms != null ? `${Math.round(Number(a.response_time_ms) || 0)} ms` : '-'}</td>
                     <td>{a.answer_changes || 0}</td>
                   </tr>
                 ))}
@@ -1028,7 +1049,16 @@ function ResearcherDashboardContent() {
       events.forEach(e => {
         const evType = e.event_type || e.event || '';
         const cat = e.category || getEventCategory(evType);
-        const wallIso = e.timestamp_utc || (e.wall_clock ? new Date(e.wall_clock).toISOString() : (e.timestamp ? new Date(e.timestamp).toISOString() : ''));
+        const safeIsoDate = (val) => {
+          if (!val) return '';
+          try {
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? String(val) : d.toISOString();
+          } catch {
+            return String(val);
+          }
+        };
+        const wallIso = e.timestamp_utc || safeIsoDate(e.wall_clock || e.timestamp);
         const payloadStr = JSON.stringify(e.payload || e.response || {});
         const row = [
           e.event_id || '',
@@ -1203,11 +1233,11 @@ function ResearcherDashboardContent() {
           s.version_snapshot?.version_hash || s.version_snapshot?.layout_hash || '',
           s.start_time ? new Date(s.start_time).toISOString() : '',
           s.end_time ? new Date(s.end_time).toISOString() : '',
-          (measures.total_session_duration_ms / 1000).toFixed(2),
-          (measures.exposure_duration_ms / 1000).toFixed(2),
-          (measures.active_viewing_duration_sec || (measures.active_viewing_duration_ms / 1000)).toFixed(2),
-          (measures.pause_duration_ms / 1000).toFixed(2),
-          (measures.interaction_duration_ms / 1000).toFixed(2),
+          (Number(measures.total_session_duration_ms || 0) / 1000).toFixed(2),
+          (Number(measures.exposure_duration_ms || 0) / 1000).toFixed(2),
+          (Number(measures.active_viewing_duration_sec ?? ((measures.active_viewing_duration_ms || 0) / 1000))).toFixed(2),
+          (Number(measures.pause_duration_ms || 0) / 1000).toFixed(2),
+          (Number(measures.interaction_duration_ms || 0) / 1000).toFixed(2),
           sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_REPLAY').length,
           sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_PAUSE').length,
           sessEvents.filter(e => (e.event_type || e.event) === 'OBJECT_INTERACT' || (e.event_type || e.event) === 'OBJECT_PLACED').length,
@@ -1401,9 +1431,20 @@ function ResearcherDashboardContent() {
         <div className="danger-zone">
           <h3>⚠️ Danger Zone</h3>
           <button className="danger-btn" onClick={async () => {
-            if (window.confirm('This will permanently delete ALL study data. Are you sure?')) {
+            if (window.confirm('This will permanently delete ALL study data across local storage and the central server. Are you sure?')) {
               await eventLogger.clearAll();
-              loadData();
+              try {
+                const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
+                if (token) {
+                  await fetch('/api/db/clear-all', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                }
+              } catch (err) {
+                console.warn('Central DB clear warning:', err);
+              }
+              await loadData();
             }
           }}>
             Clear All Data
@@ -1415,7 +1456,7 @@ function ResearcherDashboardContent() {
 
   const handleRateQ9 = async (sessionId, score) => {
     try {
-      const token = authService.getToken();
+      const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
       if (token) {
         await fetch(`/api/db/questionnaire-submissions/${sessionId}/q9-score`, {
           method: 'POST',
@@ -1499,7 +1540,7 @@ function ResearcherDashboardContent() {
                 {conditions.map(cId => {
                   const list = byCond[cId] || [];
                   const n = list.length;
-                  const meanScore = n > 0 ? (list.reduce((sum, q) => sum + (q.knowledge_total ?? 0), 0) / n).toFixed(2) : '—';
+                  const meanScore = n > 0 ? (list.reduce((sum, q) => sum + Number(q.knowledge_total ?? 0), 0) / n).toFixed(2) : '—';
                   const pcts = [];
                   for (let i = 1; i <= 8; i++) {
                     const corr = list.filter(q => (q[`Q${i}_score`] === 1 || q[`q${i}_score`] === 1)).length;
@@ -1620,7 +1661,7 @@ function ResearcherDashboardContent() {
                   const list = byCond[cId] || [];
                   const n = list.length;
                   const calcMean = (key) => {
-                    const valid = list.map(q => q[key] ?? q[key.toLowerCase()]).filter(v => v != null);
+                    const valid = list.map(q => q[key] ?? q[key.toLowerCase()]).filter(v => v != null && v !== '');
                     return valid.length > 0 ? (valid.reduce((a, b) => a + Number(b), 0) / valid.length).toFixed(2) : '—';
                   };
                   return (

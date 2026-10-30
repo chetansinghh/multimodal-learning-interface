@@ -19,7 +19,7 @@ const OTP_HASH_SECRET = process.env.OTP_HASH_SECRET || 'local_dev_otp_hash_secre
 const EMAIL_MODE = (process.env.VITE_EMAIL_MODE || process.env.EMAIL_MODE || 'live').toLowerCase();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 /** HMAC-SHA256 hash of OTP code — secret never leaves server */
 function hashCode(code) {
@@ -39,6 +39,27 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', server_time: new Date().toISOString(), mode: EMAIL_MODE });
 });
 
+// ─── Participant Session Creation ────
+app.post('/api/auth/participant-session', (req, res) => {
+  const { participant_id, name, age_group, condition, story_id, session_id } = req.body || {};
+  const pid = participant_id || `P_${(name || 'User').replace(/\s+/g, '')}_${Date.now().toString().slice(-4)}`;
+  const sid = session_id || `SESS_${pid}_${Date.now().toString().slice(-4)}`;
+  
+  const token = jwt.sign(
+    { 
+      participantId: pid, 
+      sessionId: sid,
+      name: name || 'Participant', 
+      role: 'participant',
+      condition: condition || 'C1'
+    },
+    JWT_SECRET,
+    { expiresIn: '48h' }
+  );
+
+  res.json({ success: true, token, participant_id: pid, session_id: sid });
+});
+
 // ─── Admin Email & Password Login ────
 app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
   const { email, password, sessionId } = req.body;
@@ -56,7 +77,6 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
   const isDemoPassword = ['admin', 'password', 'admin123'].includes(password);
   
   if (!isDemoPassword) {
-    // Attempt to verify against ADMIN_ALLOWLIST_JSON if they provided a real password
     let allowlist = [];
     try {
       allowlist = JSON.parse(process.env.ADMIN_ALLOWLIST_JSON || '[]');
@@ -80,7 +100,7 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     role: 'admin', 
     email 
   };
-  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '6h' });
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '12h' });
 
   res.json({ success: true, token, role: 'admin', identity: { email } });
 });
@@ -93,26 +113,69 @@ app.get('/api/db/participants', verifyAdminToken, async (req, res) => {
 
 // ─── Dashboard Data (Admin Only) ────
 app.get('/api/db/dashboard-data', verifyAdminToken, async (req, res) => {
-  const data = await centralDb.getDashboardData();
-  res.json(data);
+  try {
+    const data = await centralDb.getDashboardData();
+    res.json(data);
+  } catch (err) {
+    console.error('Dashboard data fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
 });
 
 // ─── Sessions Sync ────
 app.post('/api/db/sessions', verifySessionScope, async (req, res) => {
-  const session = await centralDb.saveSession(req.body);
-  res.json({ success: true, session });
+  try {
+    const session = await centralDb.saveSession(req.body);
+    res.json({ success: true, session });
+  } catch (err) {
+    console.error('Save session error:', err);
+    res.status(500).json({ error: 'Failed to save session' });
+  }
+});
+
+// ─── Delete Session (Admin Only) ────
+app.delete('/api/db/sessions/:sessionId', verifyAdminToken, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    await centralDb.deleteSession(sessionId);
+    res.json({ success: true, deleted: sessionId });
+  } catch (err) {
+    console.error('Delete session error:', err);
+    res.status(500).json({ error: 'Failed to delete session' });
+  }
+});
+
+// ─── Clear All Study Data (Admin Only) ────
+app.post('/api/db/clear-all', verifyAdminToken, async (req, res) => {
+  try {
+    await centralDb.clearAll();
+    res.json({ success: true, message: 'All study data cleared.' });
+  } catch (err) {
+    console.error('Clear all error:', err);
+    res.status(500).json({ error: 'Failed to clear all data' });
+  }
 });
 
 // ─── Events Sync ────
 app.post('/api/db/events', verifySessionScope, async (req, res) => {
-  const count = await centralDb.saveEvents(req.body);
-  res.json({ success: true, count });
+  try {
+    const count = await centralDb.saveEvents(req.body);
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('Save events error:', err);
+    res.status(500).json({ error: 'Failed to save events' });
+  }
 });
 
 // ─── Assessments Sync ────
 app.post('/api/db/assessments', verifySessionScope, async (req, res) => {
-  const count = await centralDb.saveAssessments(req.body);
-  res.json({ success: true, count });
+  try {
+    const count = await centralDb.saveAssessments(req.body);
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('Save assessments error:', err);
+    res.status(500).json({ error: 'Failed to save assessments' });
+  }
 });
 
 app.get('/api/db/assessments', verifyAdminToken, async (req, res) => {
@@ -244,4 +307,3 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export default app;
-

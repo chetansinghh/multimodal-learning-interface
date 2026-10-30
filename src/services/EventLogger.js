@@ -193,6 +193,13 @@ class EventLogger {
     });
   }
 
+  getToken() {
+    return sessionStorage.getItem('agy_session_token') ||
+           sessionStorage.getItem('agy_participant_token') ||
+           sessionStorage.getItem('agy_admin_session_token') ||
+           (this.currentSession?.participant_id ? `pt_token_${this.currentSession.participant_id}` : 'pt_token_anon');
+  }
+
   /** Flush buffered events to IndexedDB & sync to central backend server */
   async flush() {
     if (!this.db || this.eventBuffer.length === 0) return;
@@ -210,7 +217,7 @@ class EventLogger {
       });
 
       // Sync to central backend API
-      const token = sessionStorage.getItem('agy_participant_token') || sessionStorage.getItem('agy_admin_session_token');
+      const token = this.getToken();
       if (token) {
         fetch('/api/db/events', {
           method: 'POST',
@@ -237,7 +244,7 @@ class EventLogger {
       tx.onerror = () => reject(tx.error);
     });
 
-    const token = sessionStorage.getItem('agy_participant_token') || sessionStorage.getItem('agy_admin_session_token');
+    const token = this.getToken();
     if (token) {
       fetch('/api/db/sessions', {
         method: 'POST',
@@ -260,7 +267,7 @@ class EventLogger {
       tx.onerror = () => reject(tx.error);
     });
 
-    const token = sessionStorage.getItem('agy_participant_token') || sessionStorage.getItem('agy_admin_session_token');
+    const token = this.getToken();
     if (token) {
       fetch('/api/db/assessments', {
         method: 'POST',

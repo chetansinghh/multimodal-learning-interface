@@ -9,16 +9,18 @@ export default function ParticipantSignupForm() {
   const [name, setName] = useState('');
   const [ageGroup, setAgeGroup] = useState('12-13');
   const [consent, setConsent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !consent) return;
+    if (!name.trim() || !consent || isSubmitting) return;
+    setIsSubmitting(true);
 
     const pid = `P_${name.replace(/\s+/g, '')}_${Date.now().toString().slice(-4)}`;
     
     // Create the user object for AuthContext
     const user = {
-      name: name,
+      name: name.trim(),
       participant_id: pid,
       role: 'participant',
       age_group: ageGroup,
@@ -26,12 +28,30 @@ export default function ParticipantSignupForm() {
       consent_timestamp: new Date().toISOString()
     };
 
-    // Log in locally (issues sessionStorage token)
+    let token = `pt_token_${pid}`;
+    try {
+      const res = await fetch('/api/auth/participant-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_id: pid, name: name.trim(), age_group: ageGroup })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          token = data.token;
+        }
+      }
+    } catch (err) {
+      console.warn('Participant session sync auth warning:', err);
+    }
+
+    // Log in (issues sessionStorage token across unified keys)
     login({
-      token: `pt_token_${pid}`,
-      user: user
+      token,
+      user
     });
 
+    setIsSubmitting(false);
     navigate('/participant');
   };
 
@@ -78,8 +98,8 @@ export default function ParticipantSignupForm() {
           </label>
         </div>
 
-        <button type="submit" className="submit-btn" disabled={!consent || !name.trim()} style={{ marginTop: '20px' }}>
-          Proceed to Portal
+        <button type="submit" className="submit-btn" disabled={!consent || !name.trim() || isSubmitting} style={{ marginTop: '20px' }}>
+          {isSubmitting ? 'Starting...' : 'Proceed to Portal'}
         </button>
       </form>
     </div>
