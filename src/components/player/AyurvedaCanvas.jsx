@@ -743,6 +743,13 @@ function buildAyurvedaWorld(scene, refs) {
   refs.aromaGeom = aromaGeom;
   refs.aromaMat = aromaMat;
 
+  const mortarHitbox = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55, 0.45, 0.48, 16),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+  );
+  mortarHitbox.position.y = 0.22;
+  dhongaMortar.add(mortarHitbox);
+
   dhongaMortar.userData = {
     type: 'dhonga_mortar',
     id: 'dhonga_mortar',
@@ -794,6 +801,14 @@ function buildAyurvedaWorld(scene, refs) {
   pestleGroup.add(pestleHighlight);
   refs.pestleHighlight = pestleHighlight;
 
+  // Generous invisible raycast hitbox
+  const pestleHitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.38, 0.62, 0.38),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+  );
+  pestleHitbox.position.y = 0.20;
+  pestleGroup.add(pestleHitbox);
+
   pestleGroup.userData = {
     type: 'tool',
     id: 'dhonga_pestle',
@@ -821,11 +836,12 @@ function buildAyurvedaWorld(scene, refs) {
     root.position.set((Math.random() - 0.5) * 0.08, 0.04 + (r % 3) * 0.02, (Math.random() - 0.5) * 0.08);
     ashwaGroup.add(root);
   }
+  // Generous invisible raycast hitbox
   const ashwaHitbox = new THREE.Mesh(
-    new THREE.BoxGeometry(0.42, 0.28, 0.42),
-    new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 })
+    new THREE.BoxGeometry(0.55, 0.40, 0.55),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
   );
-  ashwaHitbox.position.y = 0.08;
+  ashwaHitbox.position.y = 0.12;
   ashwaGroup.add(ashwaHitbox);
   ashwaGroup.userData = {
     type: 'ingredient',
@@ -851,10 +867,10 @@ function buildAyurvedaWorld(scene, refs) {
     tulsiSaucerGroup.add(leafM);
   }
   const tulsiHitbox = new THREE.Mesh(
-    new THREE.BoxGeometry(0.38, 0.25, 0.38),
-    new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 })
+    new THREE.BoxGeometry(0.50, 0.38, 0.50),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
   );
-  tulsiHitbox.position.y = 0.08;
+  tulsiHitbox.position.y = 0.10;
   tulsiSaucerGroup.add(tulsiHitbox);
   tulsiSaucerGroup.userData = {
     type: 'ingredient',
@@ -881,10 +897,10 @@ function buildAyurvedaWorld(scene, refs) {
   jarLid.position.y = 0.25;
   brahmiJarGroup.add(jarLid);
   const brahmiHitbox = new THREE.Mesh(
-    new THREE.BoxGeometry(0.32, 0.38, 0.32),
-    new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 })
+    new THREE.BoxGeometry(0.44, 0.52, 0.44),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
   );
-  brahmiHitbox.position.y = 0.14;
+  brahmiHitbox.position.y = 0.16;
   brahmiJarGroup.add(brahmiHitbox);
   brahmiJarGroup.userData = {
     type: 'ingredient',
@@ -2172,7 +2188,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
   const [dhongaState, setDhongaState] = useState({
     status: 'RESTING', // 'RESTING' | 'FOCUSED' | 'HELD' | 'GRINDING' | 'COMPLETED'
     progress: 0,
-    hasHerbs: false
+    hasHerbs: false,
+    depositedCount: 0
   });
   const dhongaRef = useRef({
     status: 'RESTING',
@@ -2182,7 +2199,8 @@ export default function AyurvedaCanvas({ condition = 'C1', storyConfig, onComple
     completed: false,
     holder: null,
     heldController: null,
-    hasHerbs: false
+    hasHerbs: false,
+    depositedIngredients: new Set()
   });
   const heldToolRef = useRef(null);
 
@@ -2428,18 +2446,34 @@ const GRIP_REGISTRY = {
 
     if (targetMesh && scene) {
       scene.attach(targetMesh);
-      // Place directly inside the mortar cavity at [2.8, 0.96, -2.0]
-      targetMesh.position.set(2.8, 0.96, -2.0);
-      targetMesh.rotation.set(0, 0, 0);
-      targetMesh.scale.set(0.65, 0.65, 0.65);
+      // Place directly inside the mortar cavity with natural offset for multiple botanicals
+      if (cur.id === 'herb_ashwagandha') {
+        targetMesh.position.set(2.74, 0.95, -1.97);
+        targetMesh.rotation.set(0, 0.2, 0);
+        targetMesh.scale.set(0.55, 0.55, 0.55);
+      } else if (cur.id === 'herb_brahmi') {
+        targetMesh.position.set(2.86, 0.95, -2.03);
+        targetMesh.rotation.set(0, -0.3, 0);
+        targetMesh.scale.set(0.48, 0.48, 0.48);
+      } else if (cur.id === 'herb_tulsi') {
+        targetMesh.position.set(2.80, 0.96, -1.94);
+        targetMesh.rotation.set(0, 0.5, 0);
+        targetMesh.scale.set(0.52, 0.52, 0.52);
+      }
     }
 
+    if (!dhongaRef.current.depositedIngredients) {
+      dhongaRef.current.depositedIngredients = new Set();
+    }
+    dhongaRef.current.depositedIngredients.add(cur.id);
     dhongaRef.current.hasHerbs = true;
     dhongaRef.current.depositedIngredient = cur.id;
-    setDhongaState(prev => ({ ...prev, hasHerbs: true }));
+
+    const depCount = dhongaRef.current.depositedIngredients.size;
+    setDhongaState(prev => ({ ...prev, hasHerbs: true, depositedCount: depCount }));
 
     if (worldRefs.current.leafFlakes) {
-      worldRefs.current.leafFlakes.scale.set(1.2, 1.2, 1.2);
+      worldRefs.current.leafFlakes.scale.set(1.2 + depCount * 0.2, 1.2 + depCount * 0.2, 1.2 + depCount * 0.2);
       worldRefs.current.leafFlakes.rotation.y += Math.PI / 3;
     }
     if (worldRefs.current.herbBedMat) {
@@ -2450,8 +2484,13 @@ const GRIP_REGISTRY = {
       audioRef.current.playHerbDepositSound();
     }
 
+    const hasBothMain = dhongaRef.current.depositedIngredients.has('herb_ashwagandha') &&
+                        dhongaRef.current.depositedIngredients.has('herb_brahmi');
+
     setDiscoveryAlert({
-      label: `🌿 ${cur.label} Deposited into Mortar! Ready for Grinding`,
+      label: hasBothMain
+        ? `🌿 Ashwagandha Roots & Brahmi Jar Both Deposited! Grab Pestle to Grind Formulation`
+        : `🌿 ${cur.label} Deposited into Mortar! Add more herbs or Grab Pestle to Grind`,
       type: 'ingredient'
     });
     setTimeout(() => setDiscoveryAlert(null), 3800);
@@ -2462,6 +2501,7 @@ const GRIP_REGISTRY = {
     eventLogger.log('OBJECT_PLACED', {
       objectId: cur.id,
       target: 'dhonga_mortar',
+      depositedCount: depCount,
       videoTimestamp: currentTimeRef.current
     });
   }, []);
@@ -2472,11 +2512,12 @@ const GRIP_REGISTRY = {
     dhongaRef.current.progress = 0;
     dhongaRef.current.accumulatedAngle = 0;
     dhongaRef.current.hasHerbs = false;
+    dhongaRef.current.depositedIngredients = new Set();
     dhongaRef.current.completed = false;
     dhongaRef.current.holder = null;
     dhongaRef.current.lastAngle = null;
 
-    setDhongaState({ status: 'RESTING', progress: 0, hasHerbs: false });
+    setDhongaState({ status: 'RESTING', progress: 0, hasHerbs: false, depositedCount: 0 });
 
     const scene = sceneRef.current;
     if (worldRefs.current.pestle && scene) {
@@ -3079,6 +3120,7 @@ const GRIP_REGISTRY = {
       const rayTargets = [
         ...(worldRefs.current.interactableItems || []),
         ...(worldRefs.current.elementOrbs || []),
+        ...(worldRefs.current.elementPlinths || []),
         ...(worldRefs.current.doshaObjects || [])
       ].filter(Boolean);
 
@@ -3100,7 +3142,7 @@ const GRIP_REGISTRY = {
           const dist = rig.position.distanceTo(rootPos);
 
           if (dist <= INTERACTION_DIST + 0.8) {
-            const isElement = u.type === 'element' || u.type === 'relic';
+            const isElement = u.type === 'element' || u.type === 'relic' || u.type === 'element_plinth';
             const isDosha = u.type === 'dosha';
             const hasElements = Object.keys(discoveryStatesRef.current).some(
               k => ['earth', 'water', 'fire', 'air', 'ether'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
@@ -3120,63 +3162,87 @@ const GRIP_REGISTRY = {
         }
       }
 
-      // Proximity fallback if center ray didn't hit a specific sub-mesh
+      // Strict forward gaze focus: ONLY target if looking directly towards candidate!
       if (!hitCandidate) {
+        const camPos = new THREE.Vector3();
+        camera.getWorldPosition(camPos);
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+
         const candidateList = [];
+        const deposited = dhongaRef.current.depositedIngredients || new Set();
+
+        // 1. Ashwagandha Roots on table: available if not currently held and not deposited
+        if (!deposited.has('herb_ashwagandha') && curHeld?.id !== 'herb_ashwagandha') {
+          candidateList.push({
+            id: 'herb_ashwagandha',
+            label: 'Ashwagandha Roots & Leaves',
+            type: 'ingredient',
+            pos: [2.1, 0.77, -1.9],
+            mesh: worldRefs.current.herbAshwagandha
+          });
+        }
+
+        // 2. Tulsi Leaves on table: available if not currently held and not deposited
+        if (!deposited.has('herb_tulsi') && curHeld?.id !== 'herb_tulsi') {
+          candidateList.push({
+            id: 'herb_tulsi',
+            label: 'Fresh Tulsi Leaves',
+            type: 'ingredient',
+            pos: [3.4, 0.77, -2.1],
+            mesh: worldRefs.current.herbTulsi
+          });
+        }
+
+        // 3. Brahmi Medhya Apothecary Glass Jar on table: available if not currently held and not deposited
+        if (!deposited.has('herb_brahmi') && curHeld?.id !== 'herb_brahmi') {
+          candidateList.push({
+            id: 'herb_brahmi',
+            label: 'Brahmi Medhya Jar',
+            type: 'ingredient',
+            pos: [3.2, 0.77, -1.7],
+            mesh: worldRefs.current.herbBrahmi
+          });
+        }
+
+        // 4. Mortar
+        if (curHeld?.type === 'ingredient') {
+          candidateList.push({
+            id: 'dhonga_mortar',
+            label: 'Sacred Ayurvedic Patila (Dhonga)',
+            type: 'dhonga_mortar',
+            pos: [2.8, 1.0, -2.0],
+            mesh: worldRefs.current.dhongaMortar
+          });
+        } else if (dhongaRef.current.status !== 'COMPLETED') {
+          candidateList.push({
+            id: 'dhonga_mortar',
+            label: 'Sacred Ayurvedic Patila (Dhonga)',
+            type: 'dhonga_mortar',
+            pos: [2.8, 1.0, -2.0],
+            mesh: worldRefs.current.dhongaMortar
+          });
+        }
+
+        // 5. Pestle (Musal)
+        if (curHeld?.id !== 'dhonga_pestle') {
+          candidateList.push({
+            id: 'dhonga_pestle',
+            label: dhongaRef.current.status === 'HELD'
+              ? 'Grinding Herbs (Move in circles in Patila)'
+              : (dhongaRef.current.hasHerbs ? 'Sacred Grinding Pestle (Musal) - Ready to Grind' : 'Sacred Grinding Pestle (Musal)'),
+            type: 'tool',
+            pos: [2.95, 0.88, -1.82],
+            mesh: worldRefs.current.pestle
+          });
+        }
+
+        // Elements & Doshas if unlocked
         const hasDiscoveredElements = Object.keys(discoveryStatesRef.current).some(
           k => ['earth', 'water', 'fire', 'air', 'ether'].includes(k) && discoveryStatesRef.current[k] !== 'HIDDEN'
         );
         if (t >= 27 || hasDiscoveredElements) {
           candidateList.push(...(ELEMENTS || []));
-        }
-
-        const curHeld = heldObjectRef.current;
-        const distToTable = rig.position.distanceTo(new THREE.Vector3(2.8, 1.0, -2.0));
-
-        if (distToTable <= 3.8) {
-          if (curHeld?.type === 'ingredient') {
-            // Holding an ingredient: target the mortar for deposition
-            candidateList.push({
-              id: 'dhonga_mortar',
-              label: 'Sacred Ayurvedic Patila (Dhonga)',
-              type: 'dhonga_mortar',
-              pos: [2.8, 1.0, -2.0]
-            });
-          } else if (!dhongaRef.current.hasHerbs) {
-            // Table ingredients available for selection: roots, tulsi, brahmi, and pestle
-            candidateList.push({
-              id: 'herb_ashwagandha',
-              label: 'Ashwagandha Roots & Leaves',
-              type: 'ingredient',
-              pos: [2.1, 0.77, -1.9]
-            });
-            candidateList.push({
-              id: 'herb_tulsi',
-              label: 'Fresh Tulsi Leaves',
-              type: 'ingredient',
-              pos: [3.4, 0.77, -2.1]
-            });
-            candidateList.push({
-              id: 'herb_brahmi',
-              label: 'Brahmi Medhya Jar',
-              type: 'ingredient',
-              pos: [3.2, 0.77, -1.7]
-            });
-            candidateList.push({
-              id: 'dhonga_pestle',
-              label: 'Sacred Grinding Pestle (Musal)',
-              type: 'tool',
-              pos: [2.95, 0.88, -1.82]
-            });
-          } else if (dhongaRef.current.status !== 'COMPLETED') {
-            // Herbs deposited: target pestle for grinding
-            candidateList.push({
-              id: 'dhonga_pestle',
-              label: dhongaRef.current.status === 'HELD' ? 'Grinding Herbs (Move in circles in Patila)' : 'Sacred Grinding Pestle (Musal)',
-              type: 'tool',
-              pos: [2.95, 0.88, -1.82]
-            });
-          }
         }
 
         const hasDiscoveredDoshas = Object.keys(discoveryStatesRef.current).some(
@@ -3186,18 +3252,26 @@ const GRIP_REGISTRY = {
           candidateList.push(...(DOSHAS || []));
         }
 
-        let nearestCandidate = null;
-        let minDistance = 999;
+        // Strictly require looking directly towards the object!
+        // cosAngle >= 0.96 means within ~16° of the exact screen center crosshair.
+        let bestCandidate = null;
+        let maxCos = 0.96;
         candidateList.forEach(cand => {
           const candPos = new THREE.Vector3(...cand.pos);
-          const dist = rig.position.distanceTo(candPos);
-          if (dist < minDistance && dist <= INTERACTION_DIST) {
-            minDistance = dist;
-            nearestCandidate = cand;
+          const toCand = candPos.clone().sub(camPos);
+          const dist = toCand.length();
+          if (dist <= INTERACTION_DIST) {
+            toCand.normalize();
+            const cosAngle = camDir.dot(toCand);
+            if (cosAngle > maxCos) {
+              maxCos = cosAngle;
+              bestCandidate = { ...cand, dist };
+            }
           }
         });
-        if (nearestCandidate) {
-          hitCandidate = nearestCandidate;
+
+        if (bestCandidate) {
+          hitCandidate = bestCandidate;
         }
       }
 
@@ -3315,8 +3389,13 @@ const GRIP_REGISTRY = {
         const curHeld = heldObjectRef.current;
         const curTarget = targetedObjectRef.current;
 
-        // If holding an ingredient and targeting the Mortar: Deposit!
-        if (curHeld?.type === 'ingredient' && (curTarget?.id === 'dhonga_mortar' || curTarget?.id === 'dhonga_pestle')) {
+        // If holding an ingredient and targeting the Mortar (or anything inside mortar): Deposit!
+        const isMortarDepositTarget = curHeld?.type === 'ingredient' && (
+          curTarget?.id === 'dhonga_mortar' ||
+          curTarget?.id === 'dhonga_pestle' ||
+          (curTarget?.type === 'ingredient' && dhongaRef.current.depositedIngredients?.has(curTarget?.id))
+        );
+        if (isMortarDepositTarget) {
           handleDepositHerbs();
           return;
         }
@@ -3492,8 +3571,13 @@ const GRIP_REGISTRY = {
       const curHeld = heldObjectRef.current;
       const curTarget = targetedObjectRef.current;
 
-      // Deposit herbs into mortar
-      if (curHeld?.type === 'ingredient' && (curTarget?.id === 'dhonga_mortar' || curTarget?.id === 'dhonga_pestle')) {
+      // Deposit herbs into mortar (or onto items already inside mortar)
+      const isMortarDepositTarget = curHeld?.type === 'ingredient' && (
+        curTarget?.id === 'dhonga_mortar' ||
+        curTarget?.id === 'dhonga_pestle' ||
+        (curTarget?.type === 'ingredient' && dhongaRef.current.depositedIngredients?.has(curTarget?.id))
+      );
+      if (isMortarDepositTarget) {
         handleDepositHerbs();
         return;
       }
@@ -3739,7 +3823,7 @@ const GRIP_REGISTRY = {
               className="c4-interaction-prompt"
               onClick={(e) => {
                 e.stopPropagation();
-                if (heldObject?.type === 'ingredient' && (targetedObject.id === 'dhonga_mortar' || targetedObject.id === 'dhonga_pestle')) {
+                if (heldObject?.type === 'ingredient' && (targetedObject.id === 'dhonga_mortar' || targetedObject.id === 'dhonga_pestle' || dhongaRef.current.depositedIngredients?.has(targetedObject.id))) {
                   handleDepositHerbs();
                   return;
                 }
@@ -3768,7 +3852,7 @@ const GRIP_REGISTRY = {
             >
               <span className="c4-prompt-key">E</span>
               <span className="c4-prompt-text">
-                {heldObject?.type === 'ingredient' && (targetedObject.id === 'dhonga_mortar' || targetedObject.id === 'dhonga_pestle')
+                {heldObject?.type === 'ingredient' && (targetedObject.id === 'dhonga_mortar' || targetedObject.id === 'dhonga_pestle' || dhongaRef.current.depositedIngredients?.has(targetedObject.id))
                   ? `Deposit ${heldObject.label} into Patila Mortar`
                   : heldObject?.type === 'relic' && targetedObject.type === 'element_plinth'
                     ? `Align ${heldObject.label} on Plinth`
@@ -3777,11 +3861,11 @@ const GRIP_REGISTRY = {
                       : heldObject
                         ? `Put Down ${heldObject.label} [Q]`
                       : targetedObject.id === 'dhonga_pestle'
-                        ? 'Pick Up Pestle & Grind Herbs'
+                        ? (dhongaRef.current.hasHerbs ? 'Pick Up Pestle & Grind Herbs' : 'Pick Up Pestle')
                         : (targetedObject.type === 'ingredient' || targetedObject.type === 'relic')
                           ? `Pick Up ${targetedObject.label}`
                           : targetedObject.id === 'dhonga_mortar'
-                            ? 'Approach Mortar & Pick Up Pestle'
+                            ? (dhongaRef.current.hasHerbs ? 'Approach Mortar & Pick Up Pestle to Grind' : 'Examine Ayurvedic Mortar (Patila)')
                             : (discoveryStates[targetedObject.id] === 'DISCOVERED'
                               ? `Inspect ${targetedObject.label}`
                               : `Discover ${targetedObject.label}`)}
