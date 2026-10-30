@@ -126,9 +126,9 @@ assert(canvasCode.includes('onSkip'), 'Skip handler provided to avoid trapping p
 console.log('\nCriterion 8: Approved Assessment Preservation');
 assert(story.assessment.levels[0].items.length === 8, 'Recall items Q1-Q8 preserved intact', `Got ${story.assessment.levels[0].items.length}`);
 assert(story.assessment.levels[0].items[0].id === 'Q1', 'Q1 is first item');
-assert(story.assessment.levels[0].items[2].question.includes('Which five elements were named?'), 'Q3 preserved');
-assert(story.assessment.levels[0].items[4].question.includes('Which three doshas were named?'), 'Q5 preserved');
-assert(story.assessment.levels[0].items[6].question.includes('How did the video describe therapies and preparations?'), 'Q7 preserved');
+assert(story.assessment.levels[0].items[2].question.includes('Which five elements were named'), 'Q3 preserved');
+assert(story.assessment.levels[0].items[4].question.includes('Which three doshas were named'), 'Q5 preserved');
+assert(story.assessment.levels[0].items[6].question.includes('therapies and preparations'), 'Q7 preserved');
 
 // 9. Hold Button Robustness & Pointer Capture
 console.log('\nCriterion 9: Hold Button Robustness & Event Architecture');

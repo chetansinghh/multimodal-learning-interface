@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/c3_interactions.test.js"
+    "test": "node tests/c3_interactions.test.js && node tests/ayurveda_questionnaire_protocol.test.js"
   },
   "devDependencies": {
     "typescript": "~6.0.2",

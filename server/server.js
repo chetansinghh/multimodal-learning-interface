@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import centralDb from './db/centralDb.js';
+import { scoreQuestionnaireSubmission } from './services/questionnaireScoring.js';
 import { loginRateLimiter, otpVerifyRateLimiter, verifyAdminToken, verifySessionScope } from './middleware/authMiddleware.js';
 
 dotenv.config();
@@ -117,6 +118,117 @@ app.post('/api/db/assessments', verifySessionScope, async (req, res) => {
 app.get('/api/db/assessments', verifyAdminToken, async (req, res) => {
   const assessments = await centralDb.getAssessments();
   res.json(assessments);
+});
+
+// ─── Research Questionnaire Submission (Server-side Protected Scoring) ────
+// NEVER reveals correct answers or scores to participant in response
+app.post('/api/questionnaire/submit', async (req, res) => {
+  try {
+    const rawData = req.body || {};
+    if (!rawData.session_id) {
+      return res.status(400).json({ error: 'Missing session_id in submission payload.' });
+    }
+
+    // 1. Score submission on server using protected researcher rubric
+    const scoredRecord = scoreQuestionnaireSubmission(rawData);
+
+    // 2. Persist consolidated research questionnaire submission
+    await centralDb.saveQuestionnaireSubmission(scoredRecord);
+
+    // 3. For backward compatibility with existing reporting, also store per-question assessments
+    const perQuestionEntries = [];
+    for (let i = 1; i <= 8; i++) {
+      const qId = `Q${i}`;
+      perQuestionEntries.push({
+        session_id: scoredRecord.session_id,
+        participant_id: scoredRecord.participant_id,
+        condition: scoredRecord.condition,
+        story_id: scoredRecord.story_id,
+        question_id: qId,
+        level: 'recall_understand',
+        question_type: 'multiple_choice',
+        measure: 'conceptual',
+        answer: scoredRecord[`${qId}_raw`],
+        selected_position: scoredRecord[`${qId}_raw`],
+        accuracy: scoredRecord[`${qId}_score`],
+        final_answer: scoredRecord[`${qId}_raw`]
+      });
+    }
+
+    // Q9 Open Response
+    perQuestionEntries.push({
+      session_id: scoredRecord.session_id,
+      participant_id: scoredRecord.participant_id,
+      condition: scoredRecord.condition,
+      story_id: scoredRecord.story_id,
+      question_id: 'Q9',
+      level: 'main_message',
+      question_type: 'open_response',
+      measure: 'main_message',
+      answer: scoredRecord.Q9_verbatim,
+      final_answer: scoredRecord.Q9_verbatim
+    });
+
+    // Q10–Q13 Experience Items
+    [10, 11, 12, 13].forEach(num => {
+      const qId = `Q${num}`;
+      if (scoredRecord[qId] !== null && scoredRecord[qId] !== undefined) {
+        perQuestionEntries.push({
+          session_id: scoredRecord.session_id,
+          participant_id: scoredRecord.participant_id,
+          condition: scoredRecord.condition,
+          story_id: scoredRecord.story_id,
+          question_id: qId,
+          level: 'experience_survey',
+          question_type: 'likert_1_5',
+          measure: num === 10 ? 'perceived understanding' : num === 11 ? 'self-reported attention' : num === 12 ? 'perceived clarity/ease of following' : 'perceived recall',
+          answer: scoredRecord[qId],
+          final_answer: scoredRecord[qId]
+        });
+      }
+    });
+
+    // C4 Discomfort
+    if (scoredRecord.condition === 'C4' && scoredRecord.C4_discomfort !== null) {
+      perQuestionEntries.push({
+        session_id: scoredRecord.session_id,
+        participant_id: scoredRecord.participant_id,
+        condition: scoredRecord.condition,
+        story_id: scoredRecord.story_id,
+        question_id: 'C4_discomfort',
+        level: 'c4_discomfort',
+        question_type: 'likert_1_5',
+        measure: 'vr_discomfort',
+        answer: scoredRecord.C4_discomfort,
+        final_answer: scoredRecord.C4_discomfort
+      });
+    }
+
+    await centralDb.saveAssessments(perQuestionEntries);
+
+    // CRITICAL: Respond with ONLY neutral confirmation. Never reveal answers or score.
+    return res.json({
+      success: true,
+      message: 'Your response has been recorded. Thank you.'
+    });
+  } catch (err) {
+    console.error('Questionnaire submission failed:', err);
+    return res.status(500).json({ error: 'Failed to record questionnaire response.' });
+  }
+});
+
+// Researcher-only questionnaire dataset endpoint
+app.get('/api/db/questionnaire-submissions', verifyAdminToken, async (req, res) => {
+  const submissions = await centralDb.getQuestionnaireSubmissions();
+  res.json(submissions);
+});
+
+// Researcher-only Q9 scoring endpoint
+app.post('/api/db/questionnaire-submissions/:sessionId/q9-score', verifyAdminToken, async (req, res) => {
+  const { sessionId } = req.params;
+  const { q9_score } = req.body;
+  const updated = await centralDb.updateQ9Score(sessionId, q9_score);
+  res.json({ success: true, updated });
 });
 
 // Global JSON error handler

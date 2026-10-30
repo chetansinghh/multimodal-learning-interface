@@ -17,7 +17,7 @@ const pool = hasDb ? new Pool({
 }) : null;
 
 // ─── In-Memory Fallback (local dev only) ────
-let memDb = { sessions: [], events: [], assessments: [], participants: [] };
+let memDb = { sessions: [], events: [], assessments: [], participants: [], questionnaire_submissions: [] };
 
 // ─── Schema Bootstrap ────
 let schemaEnsured = false;
@@ -85,6 +85,41 @@ async function ensureSchema() {
       age_group TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS questionnaire_submissions (
+      session_id TEXT PRIMARY KEY,
+      participant_id TEXT,
+      condition TEXT,
+      story_id TEXT,
+      q1_raw TEXT,
+      q2_raw TEXT,
+      q3_raw TEXT,
+      q4_raw TEXT,
+      q5_raw TEXT,
+      q6_raw TEXT,
+      q7_raw TEXT,
+      q8_raw TEXT,
+      q1_score NUMERIC,
+      q2_score NUMERIC,
+      q3_score NUMERIC,
+      q4_score NUMERIC,
+      q5_score NUMERIC,
+      q6_score NUMERIC,
+      q7_score NUMERIC,
+      q8_score NUMERIC,
+      knowledge_total NUMERIC,
+      q9_verbatim TEXT,
+      q9_score NUMERIC,
+      q10 NUMERIC,
+      q11 NUMERIC,
+      q12 NUMERIC,
+      q13 NUMERIC,
+      c4_discomfort NUMERIC,
+      completion_time_seconds NUMERIC,
+      technical_issue TEXT,
+      missing_reason TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
   console.log('✅ Supabase schema ready with canonical event payload and timestamp support');
 }
@@ -140,18 +175,25 @@ export const centralDb = {
 
   async getDashboardData() {
     if (!pool) {
-      return { sessions: memDb.sessions, events: memDb.events.map(normalizeDbEvent), assessments: memDb.assessments };
+      return {
+        sessions: memDb.sessions,
+        events: memDb.events.map(normalizeDbEvent),
+        assessments: memDb.assessments,
+        questionnaire_submissions: memDb.questionnaire_submissions
+      };
     }
     await ensureSchema();
-    const [s, e, a] = await Promise.all([
+    const [s, e, a, q] = await Promise.all([
       pool.query('SELECT * FROM sessions ORDER BY created_at DESC'),
       pool.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 5000'),
       pool.query('SELECT * FROM assessments ORDER BY created_at DESC'),
+      pool.query('SELECT * FROM questionnaire_submissions ORDER BY created_at DESC').catch(() => ({ rows: [] }))
     ]);
     return {
       sessions: s.rows,
       events: e.rows.map(normalizeDbEvent),
-      assessments: a.rows
+      assessments: a.rows,
+      questionnaire_submissions: q.rows
     };
   },
 
@@ -344,6 +386,101 @@ export const centralDb = {
     await ensureSchema();
     const r = await pool.query('SELECT * FROM participants ORDER BY created_at DESC');
     return r.rows;
+  },
+
+  async saveQuestionnaireSubmission(submission) {
+    if (!pool) {
+      const idx = memDb.questionnaire_submissions.findIndex(q => q.session_id === submission.session_id);
+      if (idx >= 0) {
+        memDb.questionnaire_submissions[idx] = { ...memDb.questionnaire_submissions[idx], ...submission };
+      } else {
+        memDb.questionnaire_submissions.push(submission);
+      }
+      return submission;
+    }
+    await ensureSchema();
+    await pool.query(
+      `INSERT INTO questionnaire_submissions (
+         session_id, participant_id, condition, story_id,
+         q1_raw, q2_raw, q3_raw, q4_raw, q5_raw, q6_raw, q7_raw, q8_raw,
+         q1_score, q2_score, q3_score, q4_score, q5_score, q6_score, q7_score, q8_score,
+         knowledge_total, q9_verbatim, q9_score, q10, q11, q12, q13, c4_discomfort,
+         completion_time_seconds, technical_issue, missing_reason
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)
+       ON CONFLICT (session_id) DO UPDATE SET
+         participant_id = EXCLUDED.participant_id,
+         condition = EXCLUDED.condition,
+         story_id = EXCLUDED.story_id,
+         q1_raw = EXCLUDED.q1_raw,
+         q2_raw = EXCLUDED.q2_raw,
+         q3_raw = EXCLUDED.q3_raw,
+         q4_raw = EXCLUDED.q4_raw,
+         q5_raw = EXCLUDED.q5_raw,
+         q6_raw = EXCLUDED.q6_raw,
+         q7_raw = EXCLUDED.q7_raw,
+         q8_raw = EXCLUDED.q8_raw,
+         q1_score = EXCLUDED.q1_score,
+         q2_score = EXCLUDED.q2_score,
+         q3_score = EXCLUDED.q3_score,
+         q4_score = EXCLUDED.q4_score,
+         q5_score = EXCLUDED.q5_score,
+         q6_score = EXCLUDED.q6_score,
+         q7_score = EXCLUDED.q7_score,
+         q8_score = EXCLUDED.q8_score,
+         knowledge_total = EXCLUDED.knowledge_total,
+         q9_verbatim = EXCLUDED.q9_verbatim,
+         q9_score = EXCLUDED.q9_score,
+         q10 = EXCLUDED.q10,
+         q11 = EXCLUDED.q11,
+         q12 = EXCLUDED.q12,
+         q13 = EXCLUDED.q13,
+         c4_discomfort = EXCLUDED.c4_discomfort,
+         completion_time_seconds = EXCLUDED.completion_time_seconds,
+         technical_issue = EXCLUDED.technical_issue,
+         missing_reason = EXCLUDED.missing_reason`,
+      [
+        submission.session_id, submission.participant_id, submission.condition, submission.story_id || 'ayurveda_intro_v1',
+        submission.Q1_raw || submission.q1_raw, submission.Q2_raw || submission.q2_raw,
+        submission.Q3_raw || submission.q3_raw, submission.Q4_raw || submission.q4_raw,
+        submission.Q5_raw || submission.q5_raw, submission.Q6_raw || submission.q6_raw,
+        submission.Q7_raw || submission.q7_raw, submission.Q8_raw || submission.q8_raw,
+        submission.Q1_score ?? submission.q1_score ?? 0, submission.Q2_score ?? submission.q2_score ?? 0,
+        submission.Q3_score ?? submission.q3_score ?? 0, submission.Q4_score ?? submission.q4_score ?? 0,
+        submission.Q5_score ?? submission.q5_score ?? 0, submission.Q6_score ?? submission.q6_score ?? 0,
+        submission.Q7_score ?? submission.q7_score ?? 0, submission.Q8_score ?? submission.q8_score ?? 0,
+        submission.knowledge_total ?? 0, submission.Q9_verbatim || submission.q9_verbatim || '',
+        submission.Q9_score ?? submission.q9_score ?? null,
+        submission.Q10 ?? submission.q10 ?? null, submission.Q11 ?? submission.q11 ?? null,
+        submission.Q12 ?? submission.q12 ?? null, submission.Q13 ?? submission.q13 ?? null,
+        submission.C4_discomfort ?? submission.c4_discomfort ?? null,
+        submission.completion_time_seconds ?? 0,
+        submission.technical_issue || null,
+        submission.missing_reason || null
+      ]
+    );
+    return submission;
+  },
+
+  async getQuestionnaireSubmissions() {
+    if (!pool) return memDb.questionnaire_submissions;
+    await ensureSchema();
+    const r = await pool.query('SELECT * FROM questionnaire_submissions ORDER BY created_at DESC');
+    return r.rows;
+  },
+
+  async updateQ9Score(sessionId, q9Score) {
+    const scoreVal = parseInt(q9Score, 10);
+    if (!pool) {
+      const entry = memDb.questionnaire_submissions.find(q => q.session_id === sessionId);
+      if (entry) entry.Q9_score = scoreVal;
+      return entry;
+    }
+    await ensureSchema();
+    const r = await pool.query(
+      `UPDATE questionnaire_submissions SET q9_score = $1 WHERE session_id = $2 RETURNING *`,
+      [scoreVal, sessionId]
+    );
+    return r.rows[0];
   },
 
   /** Count sessions to generate next participant ID */

@@ -3,6 +3,7 @@ import { eventLogger, getEventCategory } from '../../services/EventLogger';
 import { AVAILABLE_STORIES, CONDITIONS, loadStoryConfig, loadAvailableStories, validateStoryConfig, formatTime } from '../../services/StoryLoader';
 import { computeSessionMeasures } from '../../services/SessionMeasures';
 import authService from '../../services/AuthService';
+import { scoreQuestionnaireSubmission, AYURVEDA_ANSWER_KEY, Q9_RUBRIC, extractOptionLetter } from '../../services/ResearcherScoringService';
 import AdminLoginGate from './AdminLoginGate';
 import './ResearcherDashboard.css';
 
@@ -22,6 +23,7 @@ function ResearcherDashboardContent() {
   const [sessions, setSessions] = useState([]);
   const [events, setEvents] = useState([]);
   const [assessments, setAssessments] = useState([]);
+  const [questionnaireSubmissions, setQuestionnaireSubmissions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [storyConfigs, setStoryConfigs] = useState({});
   const [availableStories, setAvailableStories] = useState(AVAILABLE_STORIES);
@@ -54,6 +56,7 @@ function ResearcherDashboardContent() {
     let localS = await eventLogger.getAllSessions();
     let localE = await eventLogger.getAllEvents();
     let localA = await eventLogger.getAllAssessments();
+    let localQ = await eventLogger.getAllQuestionnaireSubmissions();
 
     // Fetch central multi-device database
     try {
@@ -86,9 +89,39 @@ function ResearcherDashboardContent() {
             }
           });
 
+          const mergedQ = [...(serverData.questionnaire_submissions || [])];
+          localQ.forEach(lq => {
+            if (!mergedQ.some(mq => mq.session_id === lq.session_id)) {
+              mergedQ.push(lq);
+            }
+          });
+
+          // Ensure any historical session with assessments has a reconstructed questionnaire record
+          mergedSessions.forEach(s => {
+            if (!mergedQ.some(mq => mq.session_id === s.session_id)) {
+              const sAssess = mergedAssessments.filter(a => a.session_id === s.session_id);
+              if (sAssess.length > 0) {
+                const ansMap = {};
+                sAssess.forEach(a => {
+                  ansMap[a.question_id] = a.answer ?? a.final_answer ?? a.selected_position;
+                });
+                const rec = scoreQuestionnaireSubmission({
+                  session_id: s.session_id,
+                  participant_id: s.participant_id,
+                  condition: s.condition,
+                  story_id: s.story_id,
+                  answers: ansMap,
+                  created_at: s.created_at || s.start_time
+                });
+                mergedQ.push(rec);
+              }
+            }
+          });
+
           setSessions(mergedSessions);
           setEvents(mergedEvents);
           setAssessments(mergedAssessments);
+          setQuestionnaireSubmissions(mergedQ);
           return;
         }
       }
@@ -96,9 +129,33 @@ function ResearcherDashboardContent() {
       console.warn('Central DB fetch fallback to local:', err);
     }
 
+    // Local fallback
+    const mergedQ = [...localQ];
+    localS.forEach(s => {
+      if (!mergedQ.some(mq => mq.session_id === s.session_id)) {
+        const sAssess = localA.filter(a => a.session_id === s.session_id);
+        if (sAssess.length > 0) {
+          const ansMap = {};
+          sAssess.forEach(a => {
+            ansMap[a.question_id] = a.answer ?? a.final_answer ?? a.selected_position;
+          });
+          const rec = scoreQuestionnaireSubmission({
+            session_id: s.session_id,
+            participant_id: s.participant_id,
+            condition: s.condition,
+            story_id: s.story_id,
+            answers: ansMap,
+            created_at: s.created_at || s.start_time
+          });
+          mergedQ.push(rec);
+        }
+      }
+    });
+
     setSessions(localS);
     setEvents(localE);
     setAssessments(localA);
+    setQuestionnaireSubmissions(mergedQ);
   };
 
   // Delete a session
@@ -263,6 +320,7 @@ function ResearcherDashboardContent() {
 
     const sampleEvents = [];
     const sampleAssessments = [];
+    const sampleQuestionnaires = [];
 
     sampleSessions.forEach(s => {
       const isLantern = s.story_id.includes('lantern');
@@ -300,15 +358,43 @@ function ResearcherDashboardContent() {
           condition: s.condition,
           story_id: s.story_id,
           question_id: `Q${q}`,
-          level: q <= 4 ? 'recall_understand' : q <= 6 ? 'apply' : 'implement',
+          level: 'recall_understand',
           accuracy: q === 5 && s.condition === 'C1' ? 0 : 1,
           response_time_ms: Math.floor(2500 + Math.random() * 4000),
           answer_changes: Math.random() > 0.7 ? 1 : 0
         });
       }
+
+      // Sample standardized questionnaire record according to approved PDF protocol
+      const answersMap = {
+        Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'A',
+        Q5: s.condition === 'C1' ? 'B' : 'A',
+        Q6: 'A', Q7: 'A', Q8: 'A',
+        Q9: 'Ayurveda is a traditional system of health and nature that emphasizes daily routines and mind-body balance.',
+        Q10: s.condition === 'C4' ? 5 : 4,
+        Q11: s.condition === 'C3' || s.condition === 'C4' ? 5 : 4,
+        Q12: 4,
+        Q13: s.condition === 'C1' ? 3 : 5,
+        C4_discomfort: s.condition === 'C4' ? 1 : null
+      };
+      sampleQuestionnaires.push(scoreQuestionnaireSubmission({
+        session_id: s.session_id,
+        participant_id: s.participant_id,
+        condition: s.condition,
+        story_id: s.story_id,
+        answers: answersMap,
+        Q9_score: 2,
+        completion_time_seconds: Math.floor(180 + Math.random() * 60),
+        created_at: s.end_time || s.start_time
+      }));
     });
 
-    await eventLogger.importData({ sessions: sampleSessions, events: sampleEvents, assessments: sampleAssessments });
+    await eventLogger.importData({
+      sessions: sampleSessions,
+      events: sampleEvents,
+      assessments: sampleAssessments,
+      questionnaire_submissions: sampleQuestionnaires
+    });
     alert('Sample research dataset generated with 8 sessions!');
     await loadData();
   };
@@ -1150,10 +1236,96 @@ function ResearcherDashboardContent() {
         data = events;
       } else if (type === 'assessments') {
         data = assessments;
+      } else if (type === 'questionnaires') {
+        data = questionnaireSubmissions;
       } else if (type === 'technical') {
         data = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed');
       }
       downloadFile(`${type}.json`, JSON.stringify(data, null, 2), 'application/json');
+    };
+
+    const exportAyurvedaQuestionnaireCSV = () => {
+      const headers = [
+        'participant_id',
+        'condition',
+        'Q1_raw',
+        'Q2_raw',
+        'Q3_raw',
+        'Q4_raw',
+        'Q5_raw',
+        'Q6_raw',
+        'Q7_raw',
+        'Q8_raw',
+        'Q1_score',
+        'Q2_score',
+        'Q3_score',
+        'Q4_score',
+        'Q5_score',
+        'Q6_score',
+        'Q7_score',
+        'Q8_score',
+        'knowledge_total',
+        'Q9_verbatim',
+        'Q9_score',
+        'Q10',
+        'Q11',
+        'Q12',
+        'Q13',
+        'C4_discomfort',
+        'completion_time_seconds',
+        'technical_issue',
+        'missing_reason'
+      ];
+
+      const escapeCsv = (val) => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const rows = [headers.join(',')];
+
+      questionnaireSubmissions.forEach(q => {
+        const isC4 = q.condition === 'C4';
+        const discVal = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
+        const row = [
+          escapeCsv(q.participant_id),
+          escapeCsv(q.condition),
+          escapeCsv(q.Q1_raw || q.q1_raw || ''),
+          escapeCsv(q.Q2_raw || q.q2_raw || ''),
+          escapeCsv(q.Q3_raw || q.q3_raw || ''),
+          escapeCsv(q.Q4_raw || q.q4_raw || ''),
+          escapeCsv(q.Q5_raw || q.q5_raw || ''),
+          escapeCsv(q.Q6_raw || q.q6_raw || ''),
+          escapeCsv(q.Q7_raw || q.q7_raw || ''),
+          escapeCsv(q.Q8_raw || q.q8_raw || ''),
+          q.Q1_score ?? q.q1_score ?? 0,
+          q.Q2_score ?? q.q2_score ?? 0,
+          q.Q3_score ?? q.q3_score ?? 0,
+          q.Q4_score ?? q.q4_score ?? 0,
+          q.Q5_score ?? q.q5_score ?? 0,
+          q.Q6_score ?? q.q6_score ?? 0,
+          q.Q7_score ?? q.q7_score ?? 0,
+          q.Q8_score ?? q.q8_score ?? 0,
+          q.knowledge_total ?? 0,
+          escapeCsv(q.Q9_verbatim || q.q9_verbatim || ''),
+          q.Q9_score !== null && q.Q9_score !== undefined ? q.Q9_score : (q.q9_score !== null && q.q9_score !== undefined ? q.q9_score : ''),
+          q.Q10 ?? q.q10 ?? '',
+          q.Q11 ?? q.q11 ?? '',
+          q.Q12 ?? q.q12 ?? '',
+          q.Q13 ?? q.q13 ?? '',
+          escapeCsv(discVal),
+          q.completion_time_seconds ?? 0,
+          escapeCsv(q.technical_issue || ''),
+          escapeCsv(q.missing_reason || '')
+        ];
+        rows.push(row.join(','));
+      });
+
+      downloadFile('ayurveda_study_questionnaire_dataset.csv', rows.join('\n'), 'text/csv');
     };
 
     const technicalCount = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed').length;
@@ -1205,6 +1377,25 @@ function ResearcherDashboardContent() {
               <button className="export-btn" onClick={() => exportJSON('technical')}>Export JSON</button>
             </div>
           </div>
+
+          <div className="export-card" style={{ gridColumn: '1 / -1', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(56, 189, 248, 0.04)' }}>
+            <h3>📑 5. Ayurveda Research Questionnaire Dataset (Approved PDF Protocol CSV)</h3>
+            <p>
+              Consolidated research questionnaire dataset adhering strictly to <code>Ayurveda_Study_Questionnaire_Research_Aligned(2).pdf</code>:
+              participant_id, condition (C1–C4), Q1–Q8 raw responses, Q1–Q8 binary scores, knowledge_total (0–8),
+              Q9 verbatim text, Q9_score (0–2), Q10–Q13 (each 1–5), C4_discomfort (1–5 or N/A),
+              completion_time_seconds, technical_issue, and missing_reason.
+            </p>
+            <p className="export-count">{questionnaireSubmissions.length} participant questionnaire records</p>
+            <div className="export-btns">
+              <button className="export-btn" style={{ background: '#0284c7', color: '#fff' }} onClick={exportAyurvedaQuestionnaireCSV}>
+                Export Protocol CSV
+              </button>
+              <button className="export-btn" onClick={() => exportJSON('questionnaires')}>
+                Export Protocol JSON
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="danger-zone">
@@ -1222,6 +1413,262 @@ function ResearcherDashboardContent() {
     );
   };
 
+  const handleRateQ9 = async (sessionId, score) => {
+    try {
+      const token = authService.getToken();
+      if (token) {
+        await fetch(`/api/db/questionnaire-submissions/${sessionId}/q9-score`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ q9_score: score })
+        });
+      }
+    } catch (e) {
+      console.warn('Server Q9 score update warning:', e);
+    }
+    setQuestionnaireSubmissions(prev => prev.map(q => q.session_id === sessionId ? { ...q, Q9_score: score, q9_score: score } : q));
+  };
+
+  const renderQuestionnaireProtocol = () => {
+    const conditions = ['C1', 'C2', 'C3', 'C4'];
+    const byCond = {};
+    conditions.forEach(c => { byCond[c] = []; });
+    questionnaireSubmissions.forEach(q => {
+      const c = (q.condition || '').toUpperCase();
+      if (byCond[c]) byCond[c].push(q);
+    });
+
+    const c4List = byCond['C4'] || [];
+    const discCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    c4List.forEach(q => {
+      const disc = q.C4_discomfort ?? q.c4_discomfort;
+      if (disc && discCounts[disc] !== undefined) discCounts[disc]++;
+    });
+
+    return (
+      <div className="dashboard-content questionnaire-protocol-content">
+        <div className="protocol-header-card" style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', background: '#0284c7', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                RESEARCHER-ONLY PROTOCOL
+              </span>
+              <h2 style={{ margin: '0.5rem 0 0.25rem', color: '#38bdf8' }}>Ayurveda Study — Scoring & Measurement Protocol</h2>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)', fontSize: '0.92rem' }}>
+                Strict implementation of <code>Ayurveda_Study_Questionnaire_Research_Aligned(2).pdf</code>. Answer key and rubrics are exclusively accessible in this protected researcher console.
+              </p>
+            </div>
+            <button className="action-btn-sm" style={{ background: '#10b981', color: '#fff', fontWeight: 600, padding: '8px 16px' }} onClick={exportAyurvedaQuestionnaireCSV}>
+              📥 Export Protocol CSV ({questionnaireSubmissions.length})
+            </button>
+          </div>
+
+          <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.88rem' }}>
+            <strong>Protected Answer Key:</strong> <code style={{ color: '#38bdf8' }}>Q1=A, Q2=A, Q3=A, Q4=A, Q5=A, Q6=A, Q7=A, Q8=A</code>
+          </div>
+        </div>
+
+        {/* 1. Primary Objective Measure: Knowledge */}
+        <div className="protocol-section-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <h3 style={{ color: '#f8fafc', margin: '0 0 0.5rem' }}>1. Primary Objective Measure: Knowledge (Q1–Q8)</h3>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
+            Q1–Q8 each score 1 for the keyed correct answer ('A') and 0 for incorrect, blank, or “Not sure” ('E'). Total knowledge score = sum of Q1–Q8 (range 0–8).
+          </p>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table className="protocol-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
+                  <th style={{ padding: '8px' }}>Condition</th>
+                  <th style={{ padding: '8px' }}>N</th>
+                  <th style={{ padding: '8px' }}>Mean Knowledge Total (0–8)</th>
+                  <th style={{ padding: '8px' }}>Q1 %</th>
+                  <th style={{ padding: '8px' }}>Q2 %</th>
+                  <th style={{ padding: '8px' }}>Q3 %</th>
+                  <th style={{ padding: '8px' }}>Q4 %</th>
+                  <th style={{ padding: '8px' }}>Q5 %</th>
+                  <th style={{ padding: '8px' }}>Q6 %</th>
+                  <th style={{ padding: '8px' }}>Q7 %</th>
+                  <th style={{ padding: '8px' }}>Q8 %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conditions.map(cId => {
+                  const list = byCond[cId] || [];
+                  const n = list.length;
+                  const meanScore = n > 0 ? (list.reduce((sum, q) => sum + (q.knowledge_total ?? 0), 0) / n).toFixed(2) : '—';
+                  const pcts = [];
+                  for (let i = 1; i <= 8; i++) {
+                    const corr = list.filter(q => (q[`Q${i}_score`] === 1 || q[`q${i}_score`] === 1)).length;
+                    pcts.push(n > 0 ? `${Math.round((corr / n) * 100)}%` : '—');
+                  }
+                  return (
+                    <tr key={cId} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <td style={{ padding: '10px 8px', fontWeight: 700, color: '#38bdf8' }}>{cId}</td>
+                      <td style={{ padding: '10px 8px' }}>{n}</td>
+                      <td style={{ padding: '10px 8px', fontWeight: 600 }}>{meanScore} / 8</td>
+                      {pcts.map((pct, idx) => (
+                        <td key={idx} style={{ padding: '10px 8px' }}>{pct}</td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 2. Q9 Open-Response Rubric & Rating */}
+        <div className="protocol-section-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <h3 style={{ color: '#f8fafc', margin: '0 0 0.5rem' }}>2. Q9 Open-Response Scoring (Rubric 0–2)</h3>
+          <div style={{ background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.88rem' }}>
+            <div style={{ marginBottom: '4px' }}><strong>0:</strong> {Q9_RUBRIC[0]}</div>
+            <div style={{ marginBottom: '4px' }}><strong>1:</strong> {Q9_RUBRIC[1]}</div>
+            <div><strong>2:</strong> {Q9_RUBRIC[2]}</div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table className="protocol-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
+                  <th style={{ padding: '8px' }}>Participant ID</th>
+                  <th style={{ padding: '8px' }}>Cond</th>
+                  <th style={{ padding: '8px' }}>Q9 Verbatim Text</th>
+                  <th style={{ padding: '8px' }}>Score</th>
+                  <th style={{ padding: '8px' }}>Assign Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {questionnaireSubmissions.length === 0 ? (
+                  <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>No questionnaire responses yet.</td></tr>
+                ) : (
+                  questionnaireSubmissions.map(q => {
+                    const score = q.Q9_score ?? q.q9_score;
+                    return (
+                      <tr key={q.session_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <td style={{ padding: '10px 8px', fontWeight: 600 }}><code>{q.participant_id}</code></td>
+                        <td style={{ padding: '10px 8px' }}>{q.condition}</td>
+                        <td style={{ padding: '10px 8px', fontStyle: 'italic', maxWidth: '380px' }}>
+                          "{q.Q9_verbatim || q.q9_verbatim || <em>Blank</em>}"
+                        </td>
+                        <td style={{ padding: '10px 8px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontWeight: 700,
+                            background: score === 2 ? '#059669' : score === 1 ? '#d97706' : score === 0 ? '#dc2626' : 'rgba(255,255,255,0.1)',
+                            color: '#fff'
+                          }}>
+                            {score !== null && score !== undefined ? `${score}/2` : 'Unrated'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 8px' }}>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {[0, 1, 2].map(val => (
+                              <button
+                                key={val}
+                                onClick={() => handleRateQ9(q.session_id, val)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  border: score === val ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.2)',
+                                  background: score === val ? '#0284c7' : 'rgba(255,255,255,0.06)',
+                                  color: '#fff',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem',
+                                  fontWeight: score === val ? 700 : 400
+                                }}
+                              >
+                                {val}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 3. Part C: Experience Ratings */}
+        <div className="protocol-section-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <h3 style={{ color: '#f8fafc', margin: '0 0 0.5rem' }}>3. Experience Ratings: Do Not Treat as a Validated Scale</h3>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
+            Record Q10, Q11, Q12 and Q13 separately as integers from 1 to 5. Higher values indicate stronger agreement.
+            <strong> Do not sum these four items into a total score</strong>: they represent distinct constructs (understanding, attention, clarity, and perceived recall).
+          </p>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table className="protocol-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
+                  <th style={{ padding: '8px' }}>Condition</th>
+                  <th style={{ padding: '8px' }}>Q10 (Understanding) Mean</th>
+                  <th style={{ padding: '8px' }}>Q11 (Attention) Mean</th>
+                  <th style={{ padding: '8px' }}>Q12 (Clarity/Ease) Mean</th>
+                  <th style={{ padding: '8px' }}>Q13 (Perceived Recall) Mean</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conditions.map(cId => {
+                  const list = byCond[cId] || [];
+                  const n = list.length;
+                  const calcMean = (key) => {
+                    const valid = list.map(q => q[key] ?? q[key.toLowerCase()]).filter(v => v != null);
+                    return valid.length > 0 ? (valid.reduce((a, b) => a + Number(b), 0) / valid.length).toFixed(2) : '—';
+                  };
+                  return (
+                    <tr key={cId} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <td style={{ padding: '10px 8px', fontWeight: 700, color: '#38bdf8' }}>{cId} (N={n})</td>
+                      <td style={{ padding: '10px 8px' }}>⭐ {calcMean('Q10')} / 5</td>
+                      <td style={{ padding: '10px 8px' }}>⭐ {calcMean('Q11')} / 5</td>
+                      <td style={{ padding: '10px 8px' }}>⭐ {calcMean('Q12')} / 5</td>
+                      <td style={{ padding: '10px 8px' }}>⭐ {calcMean('Q13')} / 5</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 4. C4 Discomfort Check */}
+        <div className="protocol-section-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <h3 style={{ color: '#f8fafc', margin: '0 0 0.5rem' }}>4. C4 Discomfort Check (VR Safety Protocol)</h3>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
+            Reported exclusively by participants in condition C4. Scale: 1=Not at all, 2=Mild, 3=Moderate, 4=Severe, 5=Very severe.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+            {[
+              { val: 1, label: 'Not at all' },
+              { val: 2, label: 'Mild' },
+              { val: 3, label: 'Moderate' },
+              { val: 4, label: 'Severe' },
+              { val: 5, label: 'Very severe' }
+            ].map(lvl => {
+              const count = discCounts[lvl.val];
+              const pct = c4List.length > 0 ? Math.round((count / c4List.length) * 100) : 0;
+              return (
+                <div key={lvl.val} style={{ background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>Level {lvl.val} ({lvl.label})</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: lvl.val >= 4 ? '#ef4444' : '#38bdf8', margin: '4px 0' }}>{count}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{pct}% of C4</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="researcher-dashboard">
       <nav className="researcher-nav">
@@ -1232,6 +1679,9 @@ function ResearcherDashboardContent() {
         <div className="nav-tabs">
           <button className={`nav-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>
             📊 Dashboard
+          </button>
+          <button className={`nav-tab ${tab === 'questionnaire' ? 'active' : ''}`} onClick={() => setTab('questionnaire')}>
+            📋 Questionnaire Protocol
           </button>
           <button className={`nav-tab ${tab === 'stories' ? 'active' : ''}`} onClick={() => setTab('stories')}>
             📖 Stories
@@ -1245,6 +1695,7 @@ function ResearcherDashboardContent() {
 
       <main className="researcher-main">
         {tab === 'dashboard' && renderDashboard()}
+        {tab === 'questionnaire' && renderQuestionnaireProtocol()}
         {tab === 'stories' && renderStoryConfig()}
         {tab === 'export' && renderExport()}
       </main>

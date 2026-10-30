@@ -4,10 +4,11 @@
 import { sessionClock } from './SessionClock';
 
 const DB_NAME = 'multimodal_study_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const EVENTS_STORE = 'events';
 const SESSIONS_STORE = 'sessions';
 const ASSESSMENTS_STORE = 'assessments';
+const QUESTIONNAIRE_STORE = 'questionnaire_submissions';
 
 /** Open (or create) the IndexedDB database */
 function openDB() {
@@ -28,6 +29,10 @@ function openDB() {
       if (!db.objectStoreNames.contains(ASSESSMENTS_STORE)) {
         const assStore = db.createObjectStore(ASSESSMENTS_STORE, { keyPath: 'id', autoIncrement: true });
         assStore.createIndex('session_id', 'session_id', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(QUESTIONNAIRE_STORE)) {
+        const qStore = db.createObjectStore(QUESTIONNAIRE_STORE, { keyPath: 'session_id' });
+        qStore.createIndex('participant_id', 'participant_id', { unique: false });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -268,6 +273,50 @@ class EventLogger {
     }
   }
 
+  /** Save full Ayurveda research questionnaire submission */
+  async saveQuestionnaireSubmission(submission) {
+    if (this.db) {
+      try {
+        const tx = this.db.transaction(QUESTIONNAIRE_STORE, 'readwrite');
+        tx.objectStore(QUESTIONNAIRE_STORE).put(submission);
+        await new Promise((resolve, reject) => {
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch (err) {
+        console.warn('IndexedDB questionnaire store write warning:', err);
+      }
+    }
+
+    // Central server sync
+    try {
+      const res = await fetch('/api/questionnaire/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submission)
+      });
+      return await res.json();
+    } catch (err) {
+      console.warn('Central DB questionnaire submit warning:', err);
+      return { success: true, message: 'Your response has been recorded locally. Thank you.' };
+    }
+  }
+
+  /** Get all questionnaire submissions from IndexedDB */
+  async getAllQuestionnaireSubmissions() {
+    if (!this.db) return [];
+    try {
+      const tx = this.db.transaction(QUESTIONNAIRE_STORE, 'readonly');
+      const request = tx.objectStore(QUESTIONNAIRE_STORE).getAll();
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
   /** Get all events for a session */
   async getSessionEvents(sessionId) {
     if (!this.db) return [];
@@ -371,13 +420,18 @@ class EventLogger {
     });
   }
 
-  /** Import a batch of sessions, events, and assessments */
-  async importData({ sessions = [], events = [], assessments = [] }) {
+  /** Import a batch of sessions, events, assessments, and questionnaire submissions */
+  async importData({ sessions = [], events = [], assessments = [], questionnaire_submissions = [] }) {
     if (!this.db) await this.init();
-    const tx = this.db.transaction([EVENTS_STORE, SESSIONS_STORE, ASSESSMENTS_STORE], 'readwrite');
+    const stores = [EVENTS_STORE, SESSIONS_STORE, ASSESSMENTS_STORE];
+    if (this.db.objectStoreNames.contains(QUESTIONNAIRE_STORE)) {
+      stores.push(QUESTIONNAIRE_STORE);
+    }
+    const tx = this.db.transaction(stores, 'readwrite');
     const sesStore = tx.objectStore(SESSIONS_STORE);
     const evStore = tx.objectStore(EVENTS_STORE);
     const assStore = tx.objectStore(ASSESSMENTS_STORE);
+    const qStore = this.db.objectStoreNames.contains(QUESTIONNAIRE_STORE) ? tx.objectStore(QUESTIONNAIRE_STORE) : null;
 
     for (const s of sessions) {
       sesStore.put(s);
@@ -387,6 +441,11 @@ class EventLogger {
     }
     for (const a of assessments) {
       assStore.add(a);
+    }
+    if (qStore) {
+      for (const q of questionnaire_submissions) {
+        qStore.put(q);
+      }
     }
 
     await new Promise((resolve, reject) => {
@@ -400,12 +459,14 @@ class EventLogger {
     const sessions = await this.getAllSessions();
     const events = await this.getAllEvents();
     const assessments = await this.getAllAssessments();
+    const questionnaire_submissions = await this.getAllQuestionnaireSubmissions();
     return {
       exported_at: new Date().toISOString(),
-      version: '1.0',
+      version: '2.0',
       sessions,
       events,
-      assessments
+      assessments,
+      questionnaire_submissions
     };
   }
 

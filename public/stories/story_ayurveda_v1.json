@@ -307,58 +307,54 @@
     }
   ],
   "assessment": {
-    "instructions": "Choose one answer for each question. Answer what the video said, not whether you agree. Choose 'Not sure' rather than guessing.",
-    "time_limit_per_question_sec": 60,
-    "shuffle_options": true,
-    "allow_not_sure": true,
-    "not_sure_scores": 0,
+    "title": "Ayurveda Study — Post-Experience Questionnaire",
+    "subtitle": "Participant copy • Same questionnaire for C1, C2, C3 and C4",
+    "purpose": "This questionnaire measures what you remember from the Ayurveda presentation and how clear and engaging you found the experience. There are no questions about whether you personally agree with Ayurveda. Please answer based on the content you experienced.",
+    "instructions": "For Q1–Q8, select one answer. Choose “Not sure” if you do not know. For Q9, answer in one or two sentences. For Q10–Q13, circle one number for each statement. Please do not discuss answers with other participants.",
     "levels": [
       {
         "level": "recall_understand",
-        "label": "Recall and Understand",
-        "description": "Items Q1-Q8 from the approved assessment document.",
+        "label": "Part A — What you remember (Q1–Q8)",
+        "description": "Questions Q1–Q8 measuring recall of presentation content.",
         "items": [
           {
             "id": "Q1",
             "segment_id": "seg1",
             "type": "multiple_choice",
-            "question": "According to the video, Ayurveda is a traditional way of understanding...",
+            "question": "According to the presentation, Ayurveda is a traditional way of understanding…",
             "options": [
-              "Space travel and astronomy",
               "Life, health, and our relationship with nature",
+              "Space travel and astronomy",
               "Computer science",
-              "Modern transport"
-            ],
-            "correct_answer": 1,
-            "correct_text": "Life, health, and our relationship with nature"
+              "Modern transport",
+              "Not sure"
+            ]
           },
           {
             "id": "Q2",
             "segment_id": "seg1",
             "type": "multiple_choice",
-            "question": "What did the video say traditions observed or reflected on?",
+            "question": "What did the presentation say Ayurvedic traditions observe or reflect on?",
             "options": [
+              "Nature, everyday rhythms, and connections among body, mind, and environment",
               "Only city traffic",
               "Only weather forecasts",
               "Only sports performance",
-              "Nature and everyday rhythms; connections among body, mind, and environment"
-            ],
-            "correct_answer": 3,
-            "correct_text": "Nature and everyday rhythms; connections among body, mind, and environment"
+              "Not sure"
+            ]
           },
           {
             "id": "Q3",
             "segment_id": "seg2",
             "type": "multiple_choice",
-            "question": "Which five elements were named?",
+            "question": "Which five elements were named in the presentation?",
             "options": [
+              "Earth, water, fire, air, and ether",
               "Earth, metal, wood, ice, and smoke",
               "Water, sand, light, sound, and stone",
-              "Earth, water, fire, air, and ether",
-              "Fire, rain, cloud, snow, and wind"
-            ],
-            "correct_answer": 2,
-            "correct_text": "Earth, water, fire, air, and ether"
+              "Fire, rain, cloud, snow, and wind",
+              "Not sure"
+            ]
           },
           {
             "id": "Q4",
@@ -366,13 +362,12 @@
             "type": "multiple_choice",
             "question": "What did traditional practitioners do with plants and other natural substances?",
             "options": [
-              "Studied only their colours",
               "Studied them and recorded their uses",
               "Used them only as decoration",
-              "Avoided recording information"
-            ],
-            "correct_answer": 1,
-            "correct_text": "Studied them and recorded their uses"
+              "Avoided recording information",
+              "Studied only their colours",
+              "Not sure"
+            ]
           },
           {
             "id": "Q5",
@@ -383,38 +378,35 @@
               "Vata, Pitta, and Kapha",
               "Earth, water, and fire",
               "Body, mind, and nature",
-              "Morning, afternoon, and evening"
-            ],
-            "correct_answer": 0,
-            "correct_text": "Vata, Pitta, and Kapha"
+              "Morning, afternoon, and evening",
+              "Not sure"
+            ]
           },
           {
             "id": "Q6",
             "segment_id": "seg5",
             "type": "multiple_choice",
-            "question": "Which practices did the video say are emphasized in many Ayurvedic traditions?",
+            "question": "Which practices did the presentation say are emphasized in many Ayurvedic traditions?",
             "options": [
+              "Daily routines, mindful eating, and seasonal practices",
               "Gaming and competitive sport",
               "Skipping meals and night work",
               "Shopping and travel",
-              "Daily routines, mindful eating, and seasonal practices"
-            ],
-            "correct_answer": 3,
-            "correct_text": "Daily routines, mindful eating, and seasonal practices"
+              "Not sure"
+            ]
           },
           {
             "id": "Q7",
             "segment_id": "seg6",
             "type": "multiple_choice",
-            "question": "How did the video describe therapies and preparations?",
+            "question": "How did the presentation describe therapies and preparations?",
             "options": [
+              "Intended to support well-being, with practices varying by context",
               "Guaranteed cures for every illness",
               "Identical in every context",
-              "Intended to support well-being, with practices varying by context",
-              "Unrelated to well-being"
-            ],
-            "correct_answer": 2,
-            "correct_text": "Intended to support well-being, with practices varying by context"
+              "Unrelated to well-being",
+              "Not sure"
+            ]
           },
           {
             "id": "Q8",
@@ -422,73 +414,11 @@
             "type": "multiple_choice",
             "question": "How was traditional knowledge described as being preserved and passed on?",
             "options": [
-              "Only through advertisements",
               "Through traditional texts and from teacher to student across generations",
+              "Only through advertisements",
               "Only through video games",
-              "It was not preserved"
-            ],
-            "correct_answer": 1,
-            "correct_text": "Through traditional texts and from teacher to student across generations"
-          }
-        ]
-      },
-      {
-        "level": "apply",
-        "label": "Apply",
-        "description": "Proposed application tasks based on the video's concepts.",
-        "items": [
-          {
-            "id": "A1",
-            "segment_id": "seg6",
-            "type": "multiple_choice",
-            "question": "A friend says a traditional preparation will definitely cure any illness. Based on the video, which reply fits best?",
-            "options": [
-              "Agree: the video said preparations cure every illness",
-              "The video described such therapies as meant to support well-being, varying by context, not as guaranteed cures",
-              "The video said all preparations are identical everywhere",
-              "The video said preparations have nothing to do with well-being"
-            ],
-            "correct_answer": 1,
-            "correct_text": "The video described such therapies as meant to support well-being, varying by context, not as guaranteed cures"
-          },
-          {
-            "id": "A2",
-            "segment_id": "seg5",
-            "type": "multiple_choice",
-            "question": "Ravi wants to follow the kind of everyday practices the video described. Which choice fits best?",
-            "options": [
-              "Skip meals when he is busy",
-              "Stay up late every night",
-              "Eat mindfully, keep a regular daily routine, and adjust habits with the seasons",
-              "Eat as fast as possible"
-            ],
-            "correct_answer": 2,
-            "correct_text": "Eat mindfully, keep a regular daily routine, and adjust habits with the seasons"
-          }
-        ]
-      },
-      {
-        "level": "implement",
-        "label": "Implement",
-        "description": "Sequencing task using the video's presentation order.",
-        "items": [
-          {
-            "id": "I1",
-            "type": "drag_order",
-            "question": "Put these topics in the order the video presented them.",
-            "items_to_order": [
-              { "id": "elements", "label": "The five elements" },
-              { "id": "plants", "label": "Studying and recording plants" },
-              { "id": "doshas", "label": "The three doshas" },
-              { "id": "routines", "label": "Daily routines and mindful eating" },
-              { "id": "teaching", "label": "Passing knowledge from teacher to student" }
-            ],
-            "correct_order": [
-              "elements",
-              "plants",
-              "doshas",
-              "routines",
-              "teaching"
+              "It was not preserved",
+              "Not sure"
             ]
           }
         ]
@@ -496,31 +426,47 @@
     ],
     "open_response": {
       "id": "Q9",
-      "segment_id": "seg7",
-      "type": "short_text",
-      "question": "In one or two sentences, what was the main message of the video?",
-      "scoring": "manual rubric 0-2 by a rater blind to condition",
-      "rubric": {
-        "2": "Accurately says Ayurveda is a traditional knowledge system connected with nature/everyday life AND mentions at least one more idea from the closing lines (well-being, mindful routines, or knowledge continuing across generations)",
-        "1": "Partially captures this",
-        "0": "Incorrect, unrelated, or blank"
-      }
+      "type": "open_response",
+      "question": "In one or two sentences, what was the main message of the presentation?"
     },
     "experience_survey": [
-      { "id": "E1", "prompt": "I understood the main message.", "type": "likert_1_5" },
-      { "id": "E2", "prompt": "The presentation held my attention.", "type": "likert_1_5" },
-      { "id": "E3", "prompt": "The presentation was easy to follow.", "type": "likert_1_5" },
-      { "id": "E4", "prompt": "I can remember the important ideas.", "type": "likert_1_5" },
-      { "id": "E5", "prompt": "This way of watching the video helped me understand it.", "type": "likert_1_5" }
-    ],
-    "vr_safety": {
-      "only_for_condition": "C4",
-      "item": {
-        "id": "V1",
-        "prompt": "Did you feel dizzy, sick, or have eye strain or other discomfort?",
-        "type": "likert_1_5",
-        "scale": "1 = not at all, 5 = severe"
+      {
+        "id": "Q10",
+        "prompt": "I understood the main message of the presentation.",
+        "measure": "perceived understanding",
+        "type": "likert_1_5"
+      },
+      {
+        "id": "Q11",
+        "prompt": "I paid attention to the presentation for most of the session.",
+        "measure": "self-reported attention",
+        "type": "likert_1_5"
+      },
+      {
+        "id": "Q12",
+        "prompt": "The information was presented in a way that was easy for me to follow.",
+        "measure": "perceived clarity/ease of following",
+        "type": "likert_1_5"
+      },
+      {
+        "id": "Q13",
+        "prompt": "I can remember at least two important ideas from the presentation.",
+        "measure": "perceived recall",
+        "type": "likert_1_5"
       }
+    ],
+    "c4_discomfort": {
+      "id": "C4_discomfort",
+      "prompt": "During the VR experience, how severe was any dizziness, nausea, eye strain, or other discomfort you experienced?",
+      "instruction": "If discomfort was present, please tell the researcher. Follow the study’s approved safety procedure.",
+      "type": "likert_1_5",
+      "anchors": [
+        { "val": 1, "label": "Not at all" },
+        { "val": 2, "label": "Mild" },
+        { "val": 3, "label": "Moderate" },
+        { "val": 4, "label": "Severe" },
+        { "val": 5, "label": "Very severe" }
+      ]
     }
   }
 }

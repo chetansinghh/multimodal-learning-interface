@@ -254,11 +254,13 @@ export default function ParticipantFlow() {
       {phase === 'complete' && (
         <div className="complete-screen">
           <div className="complete-card">
-            <div className="complete-icon">✅</div>
-            <h2>Session Complete</h2>
-            <p>Thank you for participating in this study!</p>
+            <div className="complete-icon">📋</div>
+            <h2>Ayurveda Study — Post-Experience Questionnaire</h2>
             <p className="session-info">
               Participant ID: <code>{participantId}</code> • Condition: {condition}
+            </p>
+            <p className="primary-msg" style={{ fontSize: '1.4rem', fontWeight: 700, color: '#10b981', margin: '1rem 0' }}>
+              Your response has been recorded. Thank you.
             </p>
             <p className="complete-note">Your responses have been saved to the research database. You may now close this window.</p>
           </div>

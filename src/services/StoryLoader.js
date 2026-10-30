@@ -25,8 +25,14 @@ export function normalizeAssessment(assessment) {
   // If already in levels array format
   if (Array.isArray(assessment.levels) && assessment.levels.length > 0) {
     return {
+      title: assessment.title,
+      subtitle: assessment.subtitle,
+      purpose: assessment.purpose,
+      instructions: assessment.instructions,
       levels: assessment.levels,
-      experience_survey: assessment.experience_survey || assessment.experience?.questions || []
+      open_response: assessment.open_response,
+      experience_survey: assessment.experience_survey || assessment.experience?.questions || [],
+      c4_discomfort: assessment.c4_discomfort
     };
   }
 
