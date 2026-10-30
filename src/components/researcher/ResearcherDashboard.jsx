@@ -1508,7 +1508,7 @@ function ResearcherDashboardContent() {
           </div>
 
           <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', fontSize: '0.88rem' }}>
-            <strong>Protected Answer Key:</strong> <code style={{ color: '#38bdf8' }}>Q1=A, Q2=A, Q3=A, Q4=A, Q5=A, Q6=A, Q7=A, Q8=A</code>
+            <strong>Protected Answer Key (Randomized Slots):</strong> <code style={{ color: '#38bdf8' }}>Q1=C, Q2=A, Q3=D, Q4=B, Q5=C, Q6=A, Q7=D, Q8=B</code> <span style={{ opacity: 0.7, marginLeft: '8px' }}>(E = Not sure for all)</span>
           </div>
         </div>
 
@@ -1516,7 +1516,7 @@ function ResearcherDashboardContent() {
         <div className="protocol-section-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
           <h3 style={{ color: '#f8fafc', margin: '0 0 0.5rem' }}>1. Primary Objective Measure: Knowledge (Q1–Q8)</h3>
           <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
-            Q1–Q8 each score 1 for the keyed correct answer ('A') and 0 for incorrect, blank, or “Not sure” ('E'). Total knowledge score = sum of Q1–Q8 (range 0–8).
+            Q1–Q8 each score 1 for the keyed correct answer (Q1=C, Q2=A, Q3=D, Q4=B, Q5=C, Q6=A, Q7=D, Q8=B) and 0 for incorrect, blank, or “Not sure” ('E'). Total knowledge score = sum of Q1–Q8 (range 0–8).
           </p>
 
           <div style={{ overflowX: 'auto' }}>

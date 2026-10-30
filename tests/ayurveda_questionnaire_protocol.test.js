@@ -46,109 +46,125 @@ const qItems = assessment.levels[0].items;
 // Read AssessmentEngine.jsx source
 const engineCode = fs.readFileSync(path.join(rootDir, 'src/components/assessment/AssessmentEngine.jsx'), 'utf8');
 
-// 1. All Q1–Q8 questions render with exact wording and options
+// 1. All Q1–Q8 questions render with exact wording and 5 options
 runTest('Requirement 1: Q1 exact wording and 5 options', () => {
   const q1 = qItems.find(q => q.id === 'Q1');
   assert(q1, 'Q1 exists');
   assert(q1.question === 'According to the presentation, Ayurveda is a traditional way of understanding…', 'Q1 wording matches PDF');
-  assert.deepStrictEqual(q1.options, [
-    'Life, health, and our relationship with nature',
-    'Space travel and astronomy',
+  assert.strictEqual(q1.options.length, 5, '5 options');
+  assert.strictEqual(q1.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q1.options].sort(), [
     'Computer science',
+    'Life, health, and our relationship with nature',
     'Modern transport',
-    'Not sure'
-  ], 'Q1 options match PDF');
+    'Not sure',
+    'Space travel and astronomy'
+  ].sort(), 'Q1 options match PDF');
 });
 
 runTest('Requirement 1: Q2 exact wording and 5 options', () => {
   const q2 = qItems.find(q => q.id === 'Q2');
   assert(q2, 'Q2 exists');
   assert(q2.question === 'What did the presentation say Ayurvedic traditions observe or reflect on?', 'Q2 wording matches PDF');
-  assert.deepStrictEqual(q2.options, [
+  assert.strictEqual(q2.options.length, 5, '5 options');
+  assert.strictEqual(q2.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q2.options].sort(), [
     'Nature, everyday rhythms, and connections among body, mind, and environment',
+    'Not sure',
     'Only city traffic',
-    'Only weather forecasts',
     'Only sports performance',
-    'Not sure'
-  ], 'Q2 options match PDF');
+    'Only weather forecasts'
+  ].sort(), 'Q2 options match PDF');
 });
 
 runTest('Requirement 1: Q3 exact wording and 5 options', () => {
   const q3 = qItems.find(q => q.id === 'Q3');
   assert(q3, 'Q3 exists');
   assert(q3.question === 'Which five elements were named in the presentation?', 'Q3 wording matches PDF');
-  assert.deepStrictEqual(q3.options, [
-    'Earth, water, fire, air, and ether',
+  assert.strictEqual(q3.options.length, 5, '5 options');
+  assert.strictEqual(q3.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q3.options].sort(), [
     'Earth, metal, wood, ice, and smoke',
-    'Water, sand, light, sound, and stone',
+    'Earth, water, fire, air, and ether',
     'Fire, rain, cloud, snow, and wind',
-    'Not sure'
-  ], 'Q3 options match PDF');
+    'Not sure',
+    'Water, sand, light, sound, and stone'
+  ].sort(), 'Q3 options match PDF');
 });
 
 runTest('Requirement 1: Q4 exact wording and 5 options', () => {
   const q4 = qItems.find(q => q.id === 'Q4');
   assert(q4, 'Q4 exists');
   assert(q4.question === 'What did traditional practitioners do with plants and other natural substances?', 'Q4 wording matches PDF');
-  assert.deepStrictEqual(q4.options, [
-    'Studied them and recorded their uses',
-    'Used them only as decoration',
+  assert.strictEqual(q4.options.length, 5, '5 options');
+  assert.strictEqual(q4.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q4.options].sort(), [
     'Avoided recording information',
+    'Not sure',
     'Studied only their colours',
-    'Not sure'
-  ], 'Q4 options match PDF');
+    'Studied them and recorded their uses',
+    'Used them only as decoration'
+  ].sort(), 'Q4 options match PDF');
 });
 
 runTest('Requirement 1: Q5 exact wording and 5 options', () => {
   const q5 = qItems.find(q => q.id === 'Q5');
   assert(q5, 'Q5 exists');
   assert(q5.question === 'Which three doshas were named?', 'Q5 wording matches PDF');
-  assert.deepStrictEqual(q5.options, [
-    'Vata, Pitta, and Kapha',
-    'Earth, water, and fire',
+  assert.strictEqual(q5.options.length, 5, '5 options');
+  assert.strictEqual(q5.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q5.options].sort(), [
     'Body, mind, and nature',
+    'Earth, water, and fire',
     'Morning, afternoon, and evening',
-    'Not sure'
-  ], 'Q5 options match PDF');
+    'Not sure',
+    'Vata, Pitta, and Kapha'
+  ].sort(), 'Q5 options match PDF');
 });
 
 runTest('Requirement 1: Q6 exact wording and 5 options', () => {
   const q6 = qItems.find(q => q.id === 'Q6');
   assert(q6, 'Q6 exists');
   assert(q6.question === 'Which practices did the presentation say are emphasized in many Ayurvedic traditions?', 'Q6 wording matches PDF');
-  assert.deepStrictEqual(q6.options, [
+  assert.strictEqual(q6.options.length, 5, '5 options');
+  assert.strictEqual(q6.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q6.options].sort(), [
     'Daily routines, mindful eating, and seasonal practices',
     'Gaming and competitive sport',
-    'Skipping meals and night work',
+    'Not sure',
     'Shopping and travel',
-    'Not sure'
-  ], 'Q6 options match PDF');
+    'Skipping meals and night work'
+  ].sort(), 'Q6 options match PDF');
 });
 
 runTest('Requirement 1: Q7 exact wording and 5 options', () => {
   const q7 = qItems.find(q => q.id === 'Q7');
   assert(q7, 'Q7 exists');
   assert(q7.question === 'How did the presentation describe therapies and preparations?', 'Q7 wording matches PDF');
-  assert.deepStrictEqual(q7.options, [
-    'Intended to support well-being, with practices varying by context',
+  assert.strictEqual(q7.options.length, 5, '5 options');
+  assert.strictEqual(q7.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q7.options].sort(), [
     'Guaranteed cures for every illness',
     'Identical in every context',
-    'Unrelated to well-being',
-    'Not sure'
-  ], 'Q7 options match PDF');
+    'Intended to support well-being, with practices varying by context',
+    'Not sure',
+    'Unrelated to well-being'
+  ].sort(), 'Q7 options match PDF');
 });
 
 runTest('Requirement 1: Q8 exact wording and 5 options', () => {
   const q8 = qItems.find(q => q.id === 'Q8');
   assert(q8, 'Q8 exists');
   assert(q8.question === 'How was traditional knowledge described as being preserved and passed on?', 'Q8 wording matches PDF');
-  assert.deepStrictEqual(q8.options, [
-    'Through traditional texts and from teacher to student across generations',
+  assert.strictEqual(q8.options.length, 5, '5 options');
+  assert.strictEqual(q8.options[4], 'Not sure', 'Option E is Not sure');
+  assert.deepStrictEqual([...q8.options].sort(), [
+    'It was not preserved',
+    'Not sure',
     'Only through advertisements',
     'Only through video games',
-    'It was not preserved',
-    'Not sure'
-  ], 'Q8 options match PDF');
+    'Through traditional texts and from teacher to student across generations'
+  ].sort(), 'Q8 options match PDF');
 });
 
 // 2. Each knowledge question accepts one answer
@@ -210,18 +226,19 @@ runTest('Requirement 11: story_ayurveda_v1.json contains NO answers or correct k
   assert(!jsonStr.includes('"answer_key"'), 'No answer_key in story JSON');
 });
 
-// 12. Researcher scoring works correctly
-runTest('Requirement 12: Answer key Q1–Q8 = A, and scoring logic operates correctly', () => {
+// 12. Researcher scoring works correctly with randomized option slots
+runTest('Requirement 12: Answer key Q1–Q8 randomized across slots, and scoring logic operates correctly', () => {
+  const expectedKey = {
+    Q1: 'C', Q2: 'A', Q3: 'D', Q4: 'B',
+    Q5: 'C', Q6: 'A', Q7: 'D', Q8: 'B'
+  };
+
   for (let i = 1; i <= 8; i++) {
     const qId = `Q${i}`;
-    assert.strictEqual(AYURVEDA_ANSWER_KEY[qId], 'A', `${qId} key is A`);
-    // Correct answer 'A' scores 1
-    assert.strictEqual(scoreKnowledgeQuestion(qId, 'A'), 1, `${qId} A scores 1`);
-    assert.strictEqual(scoreKnowledgeQuestion(qId, 0), 1, `${qId} index 0 scores 1`);
-    // Incorrect choices score 0
-    assert.strictEqual(scoreKnowledgeQuestion(qId, 'B'), 0, `${qId} B scores 0`);
-    assert.strictEqual(scoreKnowledgeQuestion(qId, 'C'), 0, `${qId} C scores 0`);
-    assert.strictEqual(scoreKnowledgeQuestion(qId, 'D'), 0, `${qId} D scores 0`);
+    const correctLetter = expectedKey[qId];
+    assert.strictEqual(AYURVEDA_ANSWER_KEY[qId], correctLetter, `${qId} key is ${correctLetter}`);
+    // Correct answer scores 1
+    assert.strictEqual(scoreKnowledgeQuestion(qId, correctLetter), 1, `${qId} ${correctLetter} scores 1`);
     // Not sure scores 0
     assert.strictEqual(scoreKnowledgeQuestion(qId, 'E'), 0, `${qId} E (Not sure) scores 0`);
     assert.strictEqual(scoreKnowledgeQuestion(qId, 'Not sure'), 0, `${qId} "Not sure" scores 0`);
@@ -237,8 +254,8 @@ runTest('Requirement 13: Knowledge total is strictly sum of Q1–Q8 (0–8)', ()
     condition: 'C1',
     session_id: 'SESS_TEST_1',
     answers: {
-      Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'A',
-      Q5: 'A', Q6: 'A', Q7: 'A', Q8: 'A',
+      Q1: 'C', Q2: 'A', Q3: 'D', Q4: 'B',
+      Q5: 'C', Q6: 'A', Q7: 'D', Q8: 'B',
       Q9: 'Ayurveda connects health and nature.',
       Q10: 5, Q11: 4, Q12: 5, Q13: 4
     }
@@ -248,19 +265,25 @@ runTest('Requirement 13: Knowledge total is strictly sum of Q1–Q8 (0–8)', ()
   assert.strictEqual(scored.Q1_score, 1);
   assert.strictEqual(scored.Q8_score, 1);
 
-  const halfCorrectSubmission = {
+  const partialSubmission = {
     participant_id: 'P_002',
     condition: 'C2',
     session_id: 'SESS_TEST_2',
     answers: {
-      Q1: 'A', Q2: 'A', Q3: 'B', Q4: 'C',
-      Q5: 'E', Q6: 'A', Q7: 'A', Q8: 'E'
+      Q1: 'C', // 1
+      Q2: 'A', // 1
+      Q3: 'A', // 0 (correct is D)
+      Q4: 'B', // 1
+      Q5: 'E', // 0 (Not sure)
+      Q6: 'A', // 1
+      Q7: 'A', // 0 (correct is D)
+      Q8: 'E'  // 0 (Not sure)
     }
   };
-  const scoredHalf = scoreQuestionnaireSubmission(halfCorrectSubmission);
-  assert.strictEqual(scoredHalf.knowledge_total, 4, 'Score is 4 (Q1, Q2, Q6, Q7)');
-  assert.strictEqual(scoredHalf.Q5_score, 0, 'Not sure scored 0');
-  assert.strictEqual(scoredHalf.Q8_score, 0, 'Not sure scored 0');
+  const scoredPartial = scoreQuestionnaireSubmission(partialSubmission);
+  assert.strictEqual(scoredPartial.knowledge_total, 4, 'Partial score is 4 (Q1, Q2, Q4, Q6)');
+  assert.strictEqual(scoredPartial.Q5_score, 0, 'Not sure scored 0');
+  assert.strictEqual(scoredPartial.Q8_score, 0, 'Not sure scored 0');
 });
 
 // 14. Q9 scoring remains separate
@@ -270,7 +293,7 @@ runTest('Requirement 14: Q9 is stored verbatim and scored separately (0–2 rubr
     condition: 'C3',
     session_id: 'SESS_TEST_3',
     answers: {
-      Q1: 'A',
+      Q1: 'C',
       Q9: 'Ayurveda is a traditional science about living in harmony with nature and mindful eating across seasons.'
     },
     Q9_score: 2

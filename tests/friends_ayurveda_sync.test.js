@@ -147,8 +147,8 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
         condition: 'C1',
         story_id: 'ayurveda_intro_v1',
         answers: {
-          Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'A',
-          Q5: 'A', Q6: 'A', Q7: 'A', Q8: 'A',
+          Q1: 'C', Q2: 'A', Q3: 'D', Q4: 'B',
+          Q5: 'C', Q6: 'A', Q7: 'D', Q8: 'B',
           Q9: 'Ayurveda is a traditional wisdom connected with nature and living well.',
           Q10: 5, Q11: 4, Q12: 5, Q13: 4,
           C4_discomfort: null
@@ -161,8 +161,8 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
         condition: 'C2',
         story_id: 'ayurveda_intro_v1',
         answers: {
-          Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'B', // Q4 wrong
-          Q5: 'A', Q6: 'A', Q7: 'A', Q8: 'E', // Q8 not sure
+          Q1: 'C', Q2: 'A', Q3: 'D', Q4: 'A', // Q4 wrong (correct is B)
+          Q5: 'C', Q6: 'A', Q7: 'D', Q8: 'E', // Q8 not sure (correct is B)
           Q9: 'It explained doshas and traditional medicine.',
           Q10: 4, Q11: 5, Q12: 4, Q13: 4,
           C4_discomfort: null
@@ -175,8 +175,8 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
         condition: 'C3',
         story_id: 'ayurveda_intro_v1',
         answers: {
-          Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'A',
-          Q5: 'A', Q6: 'A', Q7: 'A', Q8: 'A',
+          Q1: 'C', Q2: 'A', Q3: 'D', Q4: 'B',
+          Q5: 'C', Q6: 'A', Q7: 'D', Q8: 'B',
           Q9: 'Ayurveda teaches harmony with nature, mindful routines, and balanced doshas passed through generations.',
           Q10: 5, Q11: 5, Q12: 5, Q13: 5,
           C4_discomfort: null
@@ -189,8 +189,8 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
         condition: 'C4',
         story_id: 'ayurveda_intro_v1',
         answers: {
-          Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'A',
-          Q5: 'A', Q6: 'A', Q7: 'A', Q8: 'A',
+          Q1: 'C', Q2: 'A', Q3: 'D', Q4: 'B',
+          Q5: 'C', Q6: 'A', Q7: 'D', Q8: 'B',
           Q9: 'Understanding health and body elements through nature and daily routines.',
           Q10: 5, Q11: 5, Q12: 4, Q13: 5,
           C4_discomfort: 2 // Mild
@@ -289,3 +289,4 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
     assert.strictEqual(somyaQ.Q9_score, 2);
   });
 });
+

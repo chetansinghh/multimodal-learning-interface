@@ -4,14 +4,25 @@
 // NEVER imported by participant components.
 
 export const AYURVEDA_ANSWER_KEY = {
-  Q1: 'A',
+  Q1: 'C',
   Q2: 'A',
-  Q3: 'A',
-  Q4: 'A',
-  Q5: 'A',
+  Q3: 'D',
+  Q4: 'B',
+  Q5: 'C',
   Q6: 'A',
-  Q7: 'A',
-  Q8: 'A'
+  Q7: 'D',
+  Q8: 'B'
+};
+
+export const AYURVEDA_CORRECT_TEXTS = {
+  Q1: 'Life, health, and our relationship with nature',
+  Q2: 'Nature, everyday rhythms, and connections among body, mind, and environment',
+  Q3: 'Earth, water, fire, air, and ether',
+  Q4: 'Studied them and recorded their uses',
+  Q5: 'Vata, Pitta, and Kapha',
+  Q6: 'Daily routines, mindful eating, and seasonal practices',
+  Q7: 'Intended to support well-being, with practices varying by context',
+  Q8: 'Through traditional texts and from teacher to student across generations'
 };
 
 export const Q9_RUBRIC = {
@@ -39,12 +50,31 @@ export function extractOptionLetter(rawAnswer) {
 
 export function scoreKnowledgeQuestion(questionId, rawAnswer) {
   const correctLetter = AYURVEDA_ANSWER_KEY[questionId];
+  const correctText = AYURVEDA_CORRECT_TEXTS[questionId];
   if (!correctLetter) return 0;
-  const letter = extractOptionLetter(rawAnswer);
-  if (!letter || letter === 'E' || letter.toLowerCase().includes('not sure')) {
+
+  if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
     return 0;
   }
-  return letter === correctLetter ? 1 : 0;
+
+  const str = String(rawAnswer).trim();
+  if (str.toUpperCase() === 'E' || str.toLowerCase().includes('not sure')) {
+    return 0;
+  }
+
+  if (typeof rawAnswer === 'number') {
+    const letter = String.fromCharCode(65 + rawAnswer);
+    if (letter === correctLetter) return 1;
+  } else {
+    const letter = extractOptionLetter(rawAnswer);
+    if (letter === correctLetter) return 1;
+  }
+
+  if (correctText && str.toLowerCase() === correctText.toLowerCase()) {
+    return 1;
+  }
+
+  return 0;
 }
 
 export function scoreQuestionnaireSubmission(data = {}) {
@@ -58,7 +88,7 @@ export function scoreQuestionnaireSubmission(data = {}) {
     const qId = `Q${i}`;
     const raw = answers[qId] !== undefined ? answers[qId] : (data[qId] || null);
     const letter = extractOptionLetter(raw);
-    const score = scoreKnowledgeQuestion(qId, letter);
+    const score = scoreKnowledgeQuestion(qId, raw);
 
     qRaw[qId] = letter;
     qScores[`${qId}_score`] = score;
@@ -100,10 +130,14 @@ export function scoreQuestionnaireSubmission(data = {}) {
     }
   }
 
+  const completionTimeSeconds = typeof data.completion_time_seconds === 'number'
+    ? data.completion_time_seconds
+    : (data.completion_time || 0);
+
   return {
-    participant_id: data.participant_id || '',
-    condition: data.condition || '',
-    session_id: data.session_id || '',
+    session_id: data.session_id,
+    participant_id: data.participant_id,
+    condition: data.condition,
     story_id: data.story_id || 'ayurveda_intro_v1',
     Q1_raw: qRaw.Q1,
     Q2_raw: qRaw.Q2,
@@ -123,16 +157,24 @@ export function scoreQuestionnaireSubmission(data = {}) {
     Q8_score: qScores.Q8_score,
     knowledge_total: knowledgeTotal,
     Q9_verbatim: q9Verbatim,
-    Q9_score: q9Score !== null ? parseInt(q9Score, 10) : null,
+    Q9_score: q9Score,
     Q10: q10,
     Q11: q11,
     Q12: q12,
     Q13: q13,
-    C4_discomfort: isC4 ? c4Discomfort : null,
-    completion_time_seconds: Math.round(Number(data.completion_time_seconds || 0)),
+    C4_discomfort: c4Discomfort,
+    completion_time_seconds: completionTimeSeconds,
     technical_issue: data.technical_issue || null,
     missing_reason: missingReason,
     created_at: data.created_at || new Date().toISOString()
   };
 }
 
+export default {
+  AYURVEDA_ANSWER_KEY,
+  AYURVEDA_CORRECT_TEXTS,
+  Q9_RUBRIC,
+  extractOptionLetter,
+  scoreKnowledgeQuestion,
+  scoreQuestionnaireSubmission
+};

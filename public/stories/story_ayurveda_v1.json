@@ -128,11 +128,46 @@
       },
       "config": {
         "hotspots": [
-          { "id": "ether", "label": "Ether", "x": 0.50, "y": 0.16, "icon": "⭕", "color": "#facc15" },
-          { "id": "earth", "label": "Earth", "x": 0.28, "y": 0.36, "icon": "⛰️", "color": "#8b5a2b" },
-          { "id": "fire", "label": "Fire", "x": 0.72, "y": 0.36, "icon": "🔥", "color": "#ef4444" },
-          { "id": "water", "label": "Water", "x": 0.34, "y": 0.84, "icon": "🌊", "color": "#0284c7" },
-          { "id": "air", "label": "Air", "x": 0.67, "y": 0.84, "icon": "💨", "color": "#818cf8" }
+          {
+            "id": "ether",
+            "label": "Ether",
+            "x": 0.50,
+            "y": 0.16,
+            "icon": "⭕",
+            "color": "#facc15"
+          },
+          {
+            "id": "earth",
+            "label": "Earth",
+            "x": 0.28,
+            "y": 0.36,
+            "icon": "⛰️",
+            "color": "#8b5a2b"
+          },
+          {
+            "id": "fire",
+            "label": "Fire",
+            "x": 0.72,
+            "y": 0.36,
+            "icon": "🔥",
+            "color": "#ef4444"
+          },
+          {
+            "id": "water",
+            "label": "Water",
+            "x": 0.34,
+            "y": 0.84,
+            "icon": "🌊",
+            "color": "#0284c7"
+          },
+          {
+            "id": "air",
+            "label": "Air",
+            "x": 0.67,
+            "y": 0.84,
+            "icon": "💨",
+            "color": "#818cf8"
+          }
         ]
       }
     },
@@ -153,7 +188,14 @@
       },
       "config": {
         "hotspots": [
-          { "id": "herb_leaf", "label": "Herb Leaf", "x": 0.50, "y": 0.55, "icon": "🌿", "color": "#10b981" }
+          {
+            "id": "herb_leaf",
+            "label": "Herb Leaf",
+            "x": 0.50,
+            "y": 0.55,
+            "icon": "🌿",
+            "color": "#10b981"
+          }
         ]
       }
     },
@@ -199,9 +241,30 @@
       },
       "config": {
         "hotspots": [
-          { "id": "vata", "label": "Vata", "x": 0.18, "y": 0.52, "icon": "💨", "color": "#38bdf8" },
-          { "id": "pitta", "label": "Pitta", "x": 0.50, "y": 0.52, "icon": "🔥", "color": "#f97316" },
-          { "id": "kapha", "label": "Kapha", "x": 0.82, "y": 0.52, "icon": "🌱", "color": "#10b981" }
+          {
+            "id": "vata",
+            "label": "Vata",
+            "x": 0.18,
+            "y": 0.52,
+            "icon": "💨",
+            "color": "#38bdf8"
+          },
+          {
+            "id": "pitta",
+            "label": "Pitta",
+            "x": 0.50,
+            "y": 0.52,
+            "icon": "🔥",
+            "color": "#f97316"
+          },
+          {
+            "id": "kapha",
+            "label": "Kapha",
+            "x": 0.82,
+            "y": 0.52,
+            "icon": "🌱",
+            "color": "#10b981"
+          }
         ]
       }
     },
@@ -223,7 +286,14 @@
       },
       "config": {
         "hotspots": [
-          { "id": "sunrise", "label": "Sunrise", "x": 0.61, "y": 0.41, "icon": "☀️", "color": "#f59e0b" }
+          {
+            "id": "sunrise",
+            "label": "Sunrise",
+            "x": 0.61,
+            "y": 0.41,
+            "icon": "☀️",
+            "color": "#f59e0b"
+          }
         ]
       }
     },
@@ -244,7 +314,14 @@
       },
       "config": {
         "hotspots": [
-          { "id": "brass_bowl", "label": "Brass Bowl", "x": 0.64, "y": 0.91, "icon": "🥣", "color": "#eab308" }
+          {
+            "id": "brass_bowl",
+            "label": "Brass Bowl",
+            "x": 0.64,
+            "y": 0.91,
+            "icon": "🥣",
+            "color": "#eab308"
+          }
         ]
       }
     },
@@ -265,36 +342,242 @@
         "max_wait_sec": 6
       },
       "config": {
-        "item": { "id": "scroll", "label": "📜 Sacred Scroll", "x": 0.12, "y": 0.88 },
-        "zone": { "id": "student", "label": "Student Reader", "x": 0.75, "y": 0.70, "radius": 0.18 }
+        "item": {
+          "id": "scroll",
+          "label": "📜 Sacred Scroll",
+          "x": 0.12,
+          "y": 0.88
+        },
+        "zone": {
+          "id": "student",
+          "label": "Student Reader",
+          "x": 0.75,
+          "y": 0.70,
+          "radius": 0.18
+        }
       }
     }
   ],
   "audio": {
     "sounds": [
-      { "id": "birds", "type": "loop", "position": [0, 4, 3], "importance": 2 },
-      { "id": "breeze", "type": "loop", "position": [-8, 2, 0], "importance": 2 },
-      { "id": "water_trickle", "type": "loop", "position": [-1.2, 0.3, -2.7], "importance": 3 },
-      { "id": "fire_crackle", "type": "loop", "position": [0, 0.4, -3.0], "importance": 3 },
-      { "id": "air_swirl", "type": "oneshot", "position": [1.5, 1.6, -2.6], "importance": 3 },
-      { "id": "ether_shimmer", "type": "oneshot", "position": [0, 3.2, -1.0], "importance": 3 },
-      { "id": "mortar_grind", "type": "loop", "position": [0, 0.9, -1.0], "importance": 4 },
-      { "id": "soft_chime", "type": "oneshot", "position": [0, 1.5, -2], "importance": 3 },
-      { "id": "bowl_ring", "type": "oneshot", "position": [-1, 0.9, -1.5], "importance": 3 },
-      { "id": "page_rustle", "type": "oneshot", "position": [1, 1, -2], "importance": 3 },
-      { "id": "river_flow", "type": "loop", "position": [-6, 0.2, -4], "importance": 2 },
-      { "id": "leaf_rustle", "type": "oneshot", "position": [0, 1, -1.5], "importance": 2 }
+      {
+        "id": "birds",
+        "type": "loop",
+        "position": [
+          0,
+          4,
+          3
+        ],
+        "importance": 2
+      },
+      {
+        "id": "breeze",
+        "type": "loop",
+        "position": [
+          -8,
+          2,
+          0
+        ],
+        "importance": 2
+      },
+      {
+        "id": "water_trickle",
+        "type": "loop",
+        "position": [
+          -1.2,
+          0.3,
+          -2.7
+        ],
+        "importance": 3
+      },
+      {
+        "id": "fire_crackle",
+        "type": "loop",
+        "position": [
+          0,
+          0.4,
+          -3.0
+        ],
+        "importance": 3
+      },
+      {
+        "id": "air_swirl",
+        "type": "oneshot",
+        "position": [
+          1.5,
+          1.6,
+          -2.6
+        ],
+        "importance": 3
+      },
+      {
+        "id": "ether_shimmer",
+        "type": "oneshot",
+        "position": [
+          0,
+          3.2,
+          -1.0
+        ],
+        "importance": 3
+      },
+      {
+        "id": "mortar_grind",
+        "type": "loop",
+        "position": [
+          0,
+          0.9,
+          -1.0
+        ],
+        "importance": 4
+      },
+      {
+        "id": "soft_chime",
+        "type": "oneshot",
+        "position": [
+          0,
+          1.5,
+          -2
+        ],
+        "importance": 3
+      },
+      {
+        "id": "bowl_ring",
+        "type": "oneshot",
+        "position": [
+          -1,
+          0.9,
+          -1.5
+        ],
+        "importance": 3
+      },
+      {
+        "id": "page_rustle",
+        "type": "oneshot",
+        "position": [
+          1,
+          1,
+          -2
+        ],
+        "importance": 3
+      },
+      {
+        "id": "river_flow",
+        "type": "loop",
+        "position": [
+          -6,
+          0.2,
+          -4
+        ],
+        "importance": 2
+      },
+      {
+        "id": "leaf_rustle",
+        "type": "oneshot",
+        "position": [
+          0,
+          1,
+          -1.5
+        ],
+        "importance": 2
+      }
     ],
     "cues": [
-      { "t_window": ["00:00", "00:26"], "start": ["birds", "breeze", "river_flow"] },
-      { "t_window": ["00:27", "00:34"], "start": ["water_trickle", "fire_crackle"], "stop": ["river_flow"] },
-      { "t_window": ["00:35", "00:43"], "start": ["breeze"], "stop": ["water_trickle", "fire_crackle"] },
-      { "t_window": ["00:44", "00:52"], "start": ["mortar_grind"] },
-      { "t_window": ["00:53", "01:02"], "start": ["soft_chime"], "stop": ["mortar_grind"] },
-      { "t_window": ["01:03", "01:10"], "start": ["river_flow", "birds"] },
-      { "t_window": ["01:11", "01:20"], "start": ["bowl_ring"] },
-      { "t_window": ["01:21", "01:30"], "start": ["page_rustle"] },
-      { "t_window": ["01:31", "01:50"], "start": ["river_flow", "birds"] }
+      {
+        "t_window": [
+          "00:00",
+          "00:26"
+        ],
+        "start": [
+          "birds",
+          "breeze",
+          "river_flow"
+        ]
+      },
+      {
+        "t_window": [
+          "00:27",
+          "00:34"
+        ],
+        "start": [
+          "water_trickle",
+          "fire_crackle"
+        ],
+        "stop": [
+          "river_flow"
+        ]
+      },
+      {
+        "t_window": [
+          "00:35",
+          "00:43"
+        ],
+        "start": [
+          "breeze"
+        ],
+        "stop": [
+          "water_trickle",
+          "fire_crackle"
+        ]
+      },
+      {
+        "t_window": [
+          "00:44",
+          "00:52"
+        ],
+        "start": [
+          "mortar_grind"
+        ]
+      },
+      {
+        "t_window": [
+          "00:53",
+          "01:02"
+        ],
+        "start": [
+          "soft_chime"
+        ],
+        "stop": [
+          "mortar_grind"
+        ]
+      },
+      {
+        "t_window": [
+          "01:03",
+          "01:10"
+        ],
+        "start": [
+          "river_flow",
+          "birds"
+        ]
+      },
+      {
+        "t_window": [
+          "01:11",
+          "01:20"
+        ],
+        "start": [
+          "bowl_ring"
+        ]
+      },
+      {
+        "t_window": [
+          "01:21",
+          "01:30"
+        ],
+        "start": [
+          "page_rustle"
+        ]
+      },
+      {
+        "t_window": [
+          "01:31",
+          "01:50"
+        ],
+        "start": [
+          "river_flow",
+          "birds"
+        ]
+      }
     ]
   },
   "pre_survey": [
@@ -323,10 +606,10 @@
             "type": "multiple_choice",
             "question": "According to the presentation, Ayurveda is a traditional way of understanding…",
             "options": [
-              "Life, health, and our relationship with nature",
               "Space travel and astronomy",
-              "Computer science",
               "Modern transport",
+              "Life, health, and our relationship with nature",
+              "Computer science",
               "Not sure"
             ]
           },
@@ -349,10 +632,10 @@
             "type": "multiple_choice",
             "question": "Which five elements were named in the presentation?",
             "options": [
-              "Earth, water, fire, air, and ether",
               "Earth, metal, wood, ice, and smoke",
-              "Water, sand, light, sound, and stone",
               "Fire, rain, cloud, snow, and wind",
+              "Water, sand, light, sound, and stone",
+              "Earth, water, fire, air, and ether",
               "Not sure"
             ]
           },
@@ -362,8 +645,8 @@
             "type": "multiple_choice",
             "question": "What did traditional practitioners do with plants and other natural substances?",
             "options": [
-              "Studied them and recorded their uses",
               "Used them only as decoration",
+              "Studied them and recorded their uses",
               "Avoided recording information",
               "Studied only their colours",
               "Not sure"
@@ -375,9 +658,9 @@
             "type": "multiple_choice",
             "question": "Which three doshas were named?",
             "options": [
-              "Vata, Pitta, and Kapha",
-              "Earth, water, and fire",
               "Body, mind, and nature",
+              "Earth, water, and fire",
+              "Vata, Pitta, and Kapha",
               "Morning, afternoon, and evening",
               "Not sure"
             ]
@@ -401,10 +684,10 @@
             "type": "multiple_choice",
             "question": "How did the presentation describe therapies and preparations?",
             "options": [
-              "Intended to support well-being, with practices varying by context",
               "Guaranteed cures for every illness",
               "Identical in every context",
               "Unrelated to well-being",
+              "Intended to support well-being, with practices varying by context",
               "Not sure"
             ]
           },
@@ -414,8 +697,8 @@
             "type": "multiple_choice",
             "question": "How was traditional knowledge described as being preserved and passed on?",
             "options": [
-              "Through traditional texts and from teacher to student across generations",
               "Only through advertisements",
+              "Through traditional texts and from teacher to student across generations",
               "Only through video games",
               "It was not preserved",
               "Not sure"
@@ -461,11 +744,26 @@
       "instruction": "If discomfort was present, please tell the researcher. Follow the study’s approved safety procedure.",
       "type": "likert_1_5",
       "anchors": [
-        { "val": 1, "label": "Not at all" },
-        { "val": 2, "label": "Mild" },
-        { "val": 3, "label": "Moderate" },
-        { "val": 4, "label": "Severe" },
-        { "val": 5, "label": "Very severe" }
+        {
+          "val": 1,
+          "label": "Not at all"
+        },
+        {
+          "val": 2,
+          "label": "Mild"
+        },
+        {
+          "val": 3,
+          "label": "Moderate"
+        },
+        {
+          "val": 4,
+          "label": "Severe"
+        },
+        {
+          "val": 5,
+          "label": "Very severe"
+        }
       ]
     }
   }

@@ -3,14 +3,25 @@
 // CRITICAL: NEVER expose answer keys or correctness feedback to participants.
 
 export const AYURVEDA_ANSWER_KEY = {
-  Q1: 'A',
+  Q1: 'C',
   Q2: 'A',
-  Q3: 'A',
-  Q4: 'A',
-  Q5: 'A',
+  Q3: 'D',
+  Q4: 'B',
+  Q5: 'C',
   Q6: 'A',
-  Q7: 'A',
-  Q8: 'A'
+  Q7: 'D',
+  Q8: 'B'
+};
+
+export const AYURVEDA_CORRECT_TEXTS = {
+  Q1: 'Life, health, and our relationship with nature',
+  Q2: 'Nature, everyday rhythms, and connections among body, mind, and environment',
+  Q3: 'Earth, water, fire, air, and ether',
+  Q4: 'Studied them and recorded their uses',
+  Q5: 'Vata, Pitta, and Kapha',
+  Q6: 'Daily routines, mindful eating, and seasonal practices',
+  Q7: 'Intended to support well-being, with practices varying by context',
+  Q8: 'Through traditional texts and from teacher to student across generations'
 };
 
 export const Q9_RUBRIC = {
@@ -41,17 +52,38 @@ export function extractOptionLetter(rawAnswer) {
 
 /**
  * Score Q1–Q8 knowledge question
- * - Keyed answer ('A') = 1
+ * - Keyed answer = 1
  * - Incorrect, blank, or "Not sure" ('E') = 0
  */
 export function scoreKnowledgeQuestion(questionId, rawAnswer) {
   const correctLetter = AYURVEDA_ANSWER_KEY[questionId];
+  const correctText = AYURVEDA_CORRECT_TEXTS[questionId];
   if (!correctLetter) return 0;
-  const letter = extractOptionLetter(rawAnswer);
-  if (!letter || letter === 'E' || letter.toLowerCase().includes('not sure')) {
+
+  if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
     return 0;
   }
-  return letter === correctLetter ? 1 : 0;
+
+  const str = String(rawAnswer).trim();
+  if (str.toUpperCase() === 'E' || str.toLowerCase().includes('not sure')) {
+    return 0;
+  }
+
+  // 1. Match letter or numeric index (e.g. index 2 for Q1 -> 'C')
+  if (typeof rawAnswer === 'number') {
+    const letter = String.fromCharCode(65 + rawAnswer);
+    if (letter === correctLetter) return 1;
+  } else {
+    const letter = extractOptionLetter(rawAnswer);
+    if (letter === correctLetter) return 1;
+  }
+
+  // 2. Match text directly
+  if (correctText && str.toLowerCase() === correctText.toLowerCase()) {
+    return 1;
+  }
+
+  return 0;
 }
 
 /**
@@ -69,7 +101,7 @@ export function scoreQuestionnaireSubmission(data = {}) {
     const qId = `Q${i}`;
     const raw = answers[qId] !== undefined ? answers[qId] : (data[qId] || null);
     const letter = extractOptionLetter(raw);
-    const score = scoreKnowledgeQuestion(qId, letter);
+    const score = scoreKnowledgeQuestion(qId, raw);
 
     qRaw[qId] = letter;
     qScores[`${qId}_score`] = score;
@@ -103,7 +135,7 @@ export function scoreQuestionnaireSubmission(data = {}) {
     for (let i = 1; i <= 8; i++) {
       if (!qRaw[`Q${i}`]) missingItems.push(`Q${i}`);
     }
-    if (!q9Verbatim?.trim()) missingItems.push('Q9');
+    if (!q9Verbatim || !q9Verbatim.trim()) missingItems.push('Q9');
     if (!q10) missingItems.push('Q10');
     if (!q11) missingItems.push('Q11');
     if (!q12) missingItems.push('Q12');
@@ -111,16 +143,19 @@ export function scoreQuestionnaireSubmission(data = {}) {
     if (isC4 && !c4Discomfort) missingItems.push('C4_discomfort');
 
     if (missingItems.length > 0) {
-      missingReason = `Incomplete fields: ${missingItems.join(', ')}`;
+      missingReason = `Missing responses on items: ${missingItems.join(', ')}`;
     }
   }
 
+  const completionTimeSeconds = typeof data.completion_time_seconds === 'number'
+    ? data.completion_time_seconds
+    : (data.completion_time || 0);
+
   return {
-    participant_id: data.participant_id || '',
-    condition: data.condition || '',
-    session_id: data.session_id || '',
+    session_id: data.session_id,
+    participant_id: data.participant_id,
+    condition: data.condition,
     story_id: data.story_id || 'ayurveda_intro_v1',
-    // Raw responses
     Q1_raw: qRaw.Q1,
     Q2_raw: qRaw.Q2,
     Q3_raw: qRaw.Q3,
@@ -129,7 +164,6 @@ export function scoreQuestionnaireSubmission(data = {}) {
     Q6_raw: qRaw.Q6,
     Q7_raw: qRaw.Q7,
     Q8_raw: qRaw.Q8,
-    // Binary scores (0 or 1)
     Q1_score: qScores.Q1_score,
     Q2_score: qScores.Q2_score,
     Q3_score: qScores.Q3_score,
@@ -138,22 +172,26 @@ export function scoreQuestionnaireSubmission(data = {}) {
     Q6_score: qScores.Q6_score,
     Q7_score: qScores.Q7_score,
     Q8_score: qScores.Q8_score,
-    // Total knowledge score (0–8)
     knowledge_total: knowledgeTotal,
-    // Q9 verbatim text & researcher score
     Q9_verbatim: q9Verbatim,
-    Q9_score: q9Score !== null ? parseInt(q9Score, 10) : null,
-    // Q10–Q13 independent experience ratings (1–5)
+    Q9_score: q9Score,
     Q10: q10,
     Q11: q11,
     Q12: q12,
     Q13: q13,
-    // C4 Discomfort
-    C4_discomfort: isC4 ? c4Discomfort : null,
-    completion_time_seconds: Math.round(Number(data.completion_time_seconds || 0)),
+    C4_discomfort: c4Discomfort,
+    completion_time_seconds: completionTimeSeconds,
     technical_issue: data.technical_issue || null,
     missing_reason: missingReason,
     created_at: data.created_at || new Date().toISOString()
   };
 }
 
+export default {
+  AYURVEDA_ANSWER_KEY,
+  AYURVEDA_CORRECT_TEXTS,
+  Q9_RUBRIC,
+  extractOptionLetter,
+  scoreKnowledgeQuestion,
+  scoreQuestionnaireSubmission
+};
