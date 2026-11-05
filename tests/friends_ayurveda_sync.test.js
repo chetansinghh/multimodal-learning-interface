@@ -1,5 +1,6 @@
 // tests/friends_ayurveda_sync.test.js
 // Tests end-to-end synchronization for Arjun, Harshit, Somya, Sukhmani taking the Ayurveda study across C1-C4 conditions
+process.env.NODE_ENV = 'test';
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import http from 'http';

@@ -300,7 +300,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-if (process.env.NODE_ENV !== 'production') {
+const isRunningInTest = process.env.NODE_ENV === 'test' || process.argv.some(arg => arg.includes('test'));
+if (process.env.NODE_ENV !== 'production' && !isRunningInTest) {
   app.listen(PORT, () => {
     console.log(`⚡ Central Study Backend running on http://localhost:${PORT}`);
   });

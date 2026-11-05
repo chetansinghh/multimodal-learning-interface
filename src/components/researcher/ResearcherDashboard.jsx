@@ -61,12 +61,44 @@ function ResearcherDashboardContent() {
     return String(val);
   };
 
+  const isAyurvedaItem = (item) => {
+    if (!item) return false;
+    const sid = (item.story_id || '').toLowerCase();
+    const sessId = (item.session_id || '').toLowerCase();
+    if (sessId.includes('kite') || sessId.includes('lant') || sessId.includes('milo') ||
+        sid.includes('kite') || sid.includes('lantern') || sid.includes('milo')) {
+      return false;
+    }
+    return true;
+  };
+
   const loadData = async () => {
     await eventLogger.init();
     let localS = await eventLogger.getAllSessions();
     let localE = await eventLogger.getAllEvents();
     let localA = await eventLogger.getAllAssessments();
     let localQ = await eventLogger.getAllQuestionnaireSubmissions();
+
+    // Clean up any historical non-Ayurveda sessions from local IndexedDB
+    const nonAyurvedaSessions = localS.filter(s => !isAyurvedaItem(s));
+    for (const s of nonAyurvedaSessions) {
+      try {
+        await eventLogger.deleteSession(s.session_id);
+      } catch (err) {
+        console.warn('Failed to prune legacy session:', err);
+      }
+    }
+    if (nonAyurvedaSessions.length > 0) {
+      localS = await eventLogger.getAllSessions();
+      localE = await eventLogger.getAllEvents();
+      localA = await eventLogger.getAllAssessments();
+      localQ = await eventLogger.getAllQuestionnaireSubmissions();
+    }
+
+    localS = localS.filter(isAyurvedaItem);
+    localE = localE.filter(isAyurvedaItem);
+    localA = localA.filter(isAyurvedaItem);
+    localQ = localQ.filter(isAyurvedaItem);
 
     // Fetch central multi-device database
     try {
@@ -77,29 +109,34 @@ function ResearcherDashboardContent() {
         });
         if (res.ok) {
           const serverData = await res.json();
-          // Merge central & local data
-          const mergedSessions = [...(serverData.sessions || [])];
+          // Merge central & local data (strictly Ayurveda)
+          const serverSessions = (serverData.sessions || []).filter(isAyurvedaItem);
+          const serverEvents = (serverData.events || []).filter(isAyurvedaItem);
+          const serverAssessments = (serverData.assessments || []).filter(isAyurvedaItem);
+          const serverQ = (serverData.questionnaire_submissions || []).filter(isAyurvedaItem);
+
+          const mergedSessions = [...serverSessions];
           localS.forEach(ls => {
             if (!mergedSessions.some(ms => ms.session_id === ls.session_id)) {
               mergedSessions.push(ls);
             }
           });
 
-          const mergedEvents = [...(serverData.events || [])];
+          const mergedEvents = [...serverEvents];
           localE.forEach(le => {
             if (!mergedEvents.some(me => me.event_id === le.event_id || (me.session_id === le.session_id && me.elapsed_ms === le.elapsed_ms))) {
               mergedEvents.push(le);
             }
           });
 
-          const mergedAssessments = [...(serverData.assessments || [])];
+          const mergedAssessments = [...serverAssessments];
           localA.forEach(la => {
             if (!mergedAssessments.some(ma => ma.session_id === la.session_id && (ma.question_id || ma.item_id) === (la.question_id || la.item_id))) {
               mergedAssessments.push(la);
             }
           });
 
-          const mergedQ = [...(serverData.questionnaire_submissions || [])];
+          const mergedQ = [...serverQ];
           localQ.forEach(lq => {
             if (!mergedQ.some(mq => mq.session_id === lq.session_id)) {
               mergedQ.push(lq);
@@ -217,125 +254,66 @@ function ResearcherDashboardContent() {
     downloadFile(`research_study_backup_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), 'application/json');
   };
 
-  // Generate Demo Study Data for both stories
+  // Generate Demo Study Data for Ayurveda research study across C1-C4
   const handleGenerateSampleData = async () => {
-    if (!window.confirm('Generate 8 representative sample research sessions (4 Kite, 4 Lantern across C1-C4) with realistic events, gaze data, and assessment results?')) return;
+    if (!window.confirm('Generate 4 representative sample Ayurveda research sessions across C1–C4 with realistic interaction telemetry, randomized questionnaire answers, and complete assessment data?')) return;
 
     const sampleSessions = [
-      // 🪁 The Missing Kite Sessions
       {
-        session_id: 'SESS_KITE_C1_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Aarav_01',
+        session_id: 'SESS_AYUR_C1_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Aarav_C1',
         participant_name: 'Aarav Sharma',
         participant_email: 'aarav@example.edu',
-        participant_age: '12-13',
+        participant_age: '20-22',
         condition: 'C1',
-        story_id: 'story_missing_kite',
-        story_title: 'The Missing Kite',
+        story_id: 'ayurveda_intro_v1',
+        story_title: 'Introduction to Ayurveda',
         start_time: new Date(Date.now() - 3600000 * 3).toISOString(),
         end_time: new Date(Date.now() - 3600000 * 3 + 195000).toISOString(),
         status: 'complete',
-        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+        version_snapshot: { story_id: 'ayurveda_intro_v1', story_title: 'Introduction to Ayurveda', story_version: '1.0' }
       },
       {
-        session_id: 'SESS_KITE_C2_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Priya_02',
+        session_id: 'SESS_AYUR_C2_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Priya_C2',
         participant_name: 'Priya Nair',
         participant_email: 'priya@example.edu',
-        participant_age: '12-13',
+        participant_age: '20-22',
         condition: 'C2',
-        story_id: 'story_missing_kite',
-        story_title: 'The Missing Kite',
+        story_id: 'ayurveda_intro_v1',
+        story_title: 'Introduction to Ayurveda',
         start_time: new Date(Date.now() - 3600000 * 2.5).toISOString(),
         end_time: new Date(Date.now() - 3600000 * 2.5 + 210000).toISOString(),
         status: 'complete',
-        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+        version_snapshot: { story_id: 'ayurveda_intro_v1', story_title: 'Introduction to Ayurveda', story_version: '1.0' }
       },
       {
-        session_id: 'SESS_KITE_C3_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Rohan_03',
+        session_id: 'SESS_AYUR_C3_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Rohan_C3',
         participant_name: 'Rohan Gupta',
         participant_email: 'rohan@example.edu',
-        participant_age: '12-13',
+        participant_age: '20-22',
         condition: 'C3',
-        story_id: 'story_missing_kite',
-        story_title: 'The Missing Kite',
+        story_id: 'ayurveda_intro_v1',
+        story_title: 'Introduction to Ayurveda',
         start_time: new Date(Date.now() - 3600000 * 2).toISOString(),
         end_time: new Date(Date.now() - 3600000 * 2 + 235000).toISOString(),
         status: 'complete',
-        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
+        version_snapshot: { story_id: 'ayurveda_intro_v1', story_title: 'Introduction to Ayurveda', story_version: '1.0' }
       },
       {
-        session_id: 'SESS_KITE_C4_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Ananya_04',
+        session_id: 'SESS_AYUR_C4_' + Date.now().toString().slice(-4),
+        participant_id: 'P_Ananya_C4',
         participant_name: 'Ananya Verma',
         participant_email: 'ananya@example.edu',
-        participant_age: '12-13',
+        participant_age: '20-22',
         condition: 'C4',
-        story_id: 'story_missing_kite',
-        story_title: 'The Missing Kite',
+        story_id: 'ayurveda_intro_v1',
+        story_title: 'Introduction to Ayurveda',
         start_time: new Date(Date.now() - 3600000 * 1.5).toISOString(),
         end_time: new Date(Date.now() - 3600000 * 1.5 + 260000).toISOString(),
         status: 'complete',
-        version_snapshot: { story_id: 'story_missing_kite', story_title: 'The Missing Kite', story_version: '1.0' }
-      },
-
-      // 🏮 The Lantern in Grandmother's Garden Sessions
-      {
-        session_id: 'SESS_LANT_C1_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Tara_05',
-        participant_name: 'Tara Patel',
-        participant_email: 'tara@example.edu',
-        participant_age: '12-13',
-        condition: 'C1',
-        story_id: 'story_lantern_garden',
-        story_title: "The Lantern in Grandmother's Garden",
-        start_time: new Date(Date.now() - 3600000 * 1.2).toISOString(),
-        end_time: new Date(Date.now() - 3600000 * 1.2 + 310000).toISOString(),
-        status: 'complete',
-        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
-      },
-      {
-        session_id: 'SESS_LANT_C2_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Kabir_06',
-        participant_name: 'Kabir Mehta',
-        participant_email: 'kabir@example.edu',
-        participant_age: '12-13',
-        condition: 'C2',
-        story_id: 'story_lantern_garden',
-        story_title: "The Lantern in Grandmother's Garden",
-        start_time: new Date(Date.now() - 3600000 * 0.9).toISOString(),
-        end_time: new Date(Date.now() - 3600000 * 0.9 + 325000).toISOString(),
-        status: 'complete',
-        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
-      },
-      {
-        session_id: 'SESS_LANT_C3_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Diya_07',
-        participant_name: 'Diya Sen',
-        participant_email: 'diya@example.edu',
-        participant_age: '12-13',
-        condition: 'C3',
-        story_id: 'story_lantern_garden',
-        story_title: "The Lantern in Grandmother's Garden",
-        start_time: new Date(Date.now() - 3600000 * 0.5).toISOString(),
-        end_time: new Date(Date.now() - 3600000 * 0.5 + 350000).toISOString(),
-        status: 'complete',
-        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
-      },
-      {
-        session_id: 'SESS_LANT_C4_' + Date.now().toString().slice(-4),
-        participant_id: 'P_Zaid_08',
-        participant_name: 'Zaid Khan',
-        participant_email: 'zaid@example.edu',
-        participant_age: '12-13',
-        condition: 'C4',
-        story_id: 'story_lantern_garden',
-        story_title: "The Lantern in Grandmother's Garden",
-        start_time: new Date(Date.now() - 3600000 * 0.2).toISOString(),
-        end_time: new Date(Date.now() - 3600000 * 0.2 + 375000).toISOString(),
-        status: 'complete',
-        version_snapshot: { story_id: 'story_lantern_garden', story_title: "The Lantern in Grandmother's Garden", story_version: '1.0' }
+        version_snapshot: { story_id: 'ayurveda_intro_v1', story_title: 'Introduction to Ayurveda', story_version: '1.0' }
       }
     ];
 
@@ -344,60 +322,130 @@ function ResearcherDashboardContent() {
     const sampleQuestionnaires = [];
 
     sampleSessions.forEach(s => {
-      const isLantern = s.story_id.includes('lantern');
       const baseTime = new Date(s.start_time).getTime();
 
       // Standard Video Events
       sampleEvents.push(
         { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime, wall_clock: s.start_time, video_timestamp: 0, event: 'VIDEO_START', action: 'session_begin' },
-        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 45000, wall_clock: new Date(baseTime + 45000).toISOString(), video_timestamp: 45, event: 'SEGMENT_ENTER', action: 'scene_transition' }
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 25000, wall_clock: new Date(baseTime + 25000).toISOString(), video_timestamp: 25, event: 'SEGMENT_ENTER', action: 'scene_transition', object_id: 'origins' },
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 65000, wall_clock: new Date(baseTime + 65000).toISOString(), video_timestamp: 65, event: 'SEGMENT_ENTER', action: 'scene_transition', object_id: 'elements' }
       );
 
-      // Condition-specific events
-      if (s.condition === 'C3') {
+      // Condition-specific interaction telemetry
+      if (s.condition === 'C2') {
         sampleEvents.push(
-          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 75000, wall_clock: new Date(baseTime + 75000).toISOString(), video_timestamp: 75, event: 'CHECKPOINT_HIT', object_id: isLantern ? 'butterflies' : 'tree_branch', action: 'solve_checkpoint', durationMs: 3200, correct: true },
-          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 135000, wall_clock: new Date(baseTime + 135000).toISOString(), video_timestamp: 135, event: 'CHECKPOINT_HIT', object_id: isLantern ? 'repair_lantern' : 'kite_recover', action: 'solve_checkpoint', durationMs: 4100, correct: true }
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 1000, wall_clock: new Date(baseTime + 1000).toISOString(), video_timestamp: 1, event: 'SPATIAL_AUDIO_INIT', action: 'spatial_panner_ready' },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 70000, wall_clock: new Date(baseTime + 70000).toISOString(), video_timestamp: 70, event: 'AUDIO_NODE_UPDATE', action: 'pan_elements', object_id: 'ether_wind' }
+        );
+      } else if (s.condition === 'C3') {
+        sampleEvents.push(
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 30000, wall_clock: new Date(baseTime + 30000).toISOString(), video_timestamp: 30, event: 'C3_GATE_OPEN', object_id: 'banyan_tree_hold', action: 'gate_opened' },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 33500, wall_clock: new Date(baseTime + 33500).toISOString(), video_timestamp: 33, event: 'C3_COMPLETE', object_id: 'banyan_tree_hold', action: 'hold_success', duration_ms: 3500 },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 75000, wall_clock: new Date(baseTime + 75000).toISOString(), video_timestamp: 75, event: 'HOTSPOT_CLICK', object_id: 'five_elements_reveal', action: 'reveal_ether' },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 115000, wall_clock: new Date(baseTime + 115000).toISOString(), video_timestamp: 115, event: 'OBJECT_INTERACT', object_id: 'mortar_pestle_grind', action: 'grind_circle_complete', revolutions: 3 },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 140000, wall_clock: new Date(baseTime + 140000).toISOString(), video_timestamp: 140, event: 'CHECKPOINT_HIT', object_id: 'dosha_balance_interactive', action: 'balance_vata_pitta_kapha', durationMs: 4200, correct: true },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 165000, wall_clock: new Date(baseTime + 165000).toISOString(), video_timestamp: 165, event: 'OBJECT_PLACED', object_id: 'scroll_passing', action: 'teacher_to_student_drop', durationMs: 2800 }
         );
       } else if (s.condition === 'C4') {
         sampleEvents.push(
-          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 30000, wall_clock: new Date(baseTime + 30000).toISOString(), video_timestamp: 30, event: 'VR_ENTER', action: 'webxr_start' },
-          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 85000, wall_clock: new Date(baseTime + 85000).toISOString(), video_timestamp: 85, event: 'OBJECT_INTERACT', object_id: isLantern ? 'wind_chime' : 'flying_kite', action: isLantern ? 'ring_chime' : 'kite_loop' },
-          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 110000, wall_clock: new Date(baseTime + 110000).toISOString(), video_timestamp: 110, event: 'GAZE_DWELL', object_id: isLantern ? 'pond' : 'park_fountain', duration: 1800 }
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 20000, wall_clock: new Date(baseTime + 20000).toISOString(), video_timestamp: 20, event: 'VR_ENTER', action: 'webxr_start' },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 80000, wall_clock: new Date(baseTime + 80000).toISOString(), video_timestamp: 80, event: 'GAZE_DWELL', object_id: 'diya_lamp_mandapa', duration: 2200 },
+          { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 120000, wall_clock: new Date(baseTime + 120000).toISOString(), video_timestamp: 120, event: 'VR_INTERACTION', object_id: 'herb_garden_tulsi', action: 'touch_sphere' }
         );
       }
 
       sampleEvents.push(
-        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 190000, wall_clock: new Date(baseTime + 190000).toISOString(), video_timestamp: 190, event: 'VIDEO_COMPLETE', action: 'experience_end' }
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 180000, wall_clock: new Date(baseTime + 180000).toISOString(), video_timestamp: 180, event: 'VIDEO_COMPLETE', action: 'experience_end' },
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 185000, wall_clock: new Date(baseTime + 185000).toISOString(), video_timestamp: 185, event: 'QUESTIONNAIRE_OPEN', action: 'begin_assessment' },
+        { participant_id: s.participant_id, session_id: s.session_id, condition: s.condition, story_id: s.story_id, timestamp: baseTime + 250000, wall_clock: new Date(baseTime + 250000).toISOString(), video_timestamp: 185, event: 'ASSESSMENT_SUBMIT', action: 'submit_questionnaire' }
       );
 
-      // Assessment Responses (8 questions)
+      // Randomized approved answer key: Q1:C, Q2:A, Q3:D, Q4:B, Q5:C, Q6:A, Q7:D, Q8:B
+      const answersMap = {
+        Q1: 'C',
+        Q2: 'A',
+        Q3: 'D',
+        Q4: 'B',
+        Q5: s.condition === 'C1' ? 'A' : 'C', // C1 gets 1 incorrect (A instead of C), others 8/8
+        Q6: 'A',
+        Q7: 'D',
+        Q8: 'B',
+        Q9: 'Ayurveda is a traditional system of health and nature that emphasizes daily routines, dosha balance, and mind-body harmony.',
+        Q10: s.condition === 'C4' ? 5 : 4,
+        Q11: s.condition === 'C3' || s.condition === 'C4' ? 5 : 4,
+        Q12: 4,
+        Q13: s.condition === 'C1' ? 4 : 5,
+        C4_discomfort: s.condition === 'C4' ? 1 : null
+      };
+
       for (let q = 1; q <= 8; q++) {
+        const qId = `Q${q}`;
+        const given = answersMap[qId];
+        const correct = AYURVEDA_ANSWER_KEY[qId];
+        const isAcc = given === correct ? 1 : 0;
         sampleAssessments.push({
           session_id: s.session_id,
           participant_id: s.participant_id,
           condition: s.condition,
           story_id: s.story_id,
-          question_id: `Q${q}`,
+          question_id: qId,
           level: 'recall_understand',
-          accuracy: q === 5 && s.condition === 'C1' ? 0 : 1,
-          response_time_ms: Math.floor(2500 + Math.random() * 4000),
-          answer_changes: Math.random() > 0.7 ? 1 : 0
+          question_type: 'multiple_choice',
+          measure: 'conceptual',
+          answer: given,
+          final_answer: given,
+          accuracy: isAcc,
+          response_time_ms: Math.floor(2500 + Math.random() * 3000),
+          answer_changes: 0
         });
       }
 
-      // Sample standardized questionnaire record according to approved PDF protocol
-      const answersMap = {
-        Q1: 'A', Q2: 'A', Q3: 'A', Q4: 'A',
-        Q5: s.condition === 'C1' ? 'B' : 'A',
-        Q6: 'A', Q7: 'A', Q8: 'A',
-        Q9: 'Ayurveda is a traditional system of health and nature that emphasizes daily routines and mind-body balance.',
-        Q10: s.condition === 'C4' ? 5 : 4,
-        Q11: s.condition === 'C3' || s.condition === 'C4' ? 5 : 4,
-        Q12: 4,
-        Q13: s.condition === 'C1' ? 3 : 5,
-        C4_discomfort: s.condition === 'C4' ? 1 : null
-      };
+      // Q9 assessment
+      sampleAssessments.push({
+        session_id: s.session_id,
+        participant_id: s.participant_id,
+        condition: s.condition,
+        story_id: s.story_id,
+        question_id: 'Q9',
+        level: 'main_message',
+        question_type: 'open_response',
+        measure: 'main_message',
+        answer: answersMap.Q9,
+        final_answer: answersMap.Q9
+      });
+
+      // Q10-Q13 assessments
+      [10, 11, 12, 13].forEach(num => {
+        const qId = `Q${num}`;
+        sampleAssessments.push({
+          session_id: s.session_id,
+          participant_id: s.participant_id,
+          condition: s.condition,
+          story_id: s.story_id,
+          question_id: qId,
+          level: 'experience_survey',
+          question_type: 'likert_1_5',
+          measure: num === 10 ? 'perceived understanding' : num === 11 ? 'self-reported attention' : num === 12 ? 'perceived clarity/ease of following' : 'perceived recall',
+          answer: answersMap[qId],
+          final_answer: answersMap[qId]
+        });
+      });
+
+      if (s.condition === 'C4') {
+        sampleAssessments.push({
+          session_id: s.session_id,
+          participant_id: s.participant_id,
+          condition: s.condition,
+          story_id: s.story_id,
+          question_id: 'C4_discomfort',
+          level: 'safety_discomfort',
+          question_type: 'likert_1_5',
+          measure: 'cybersickness_discomfort',
+          answer: answersMap.C4_discomfort,
+          final_answer: answersMap.C4_discomfort
+        });
+      }
+
       sampleQuestionnaires.push(scoreQuestionnaireSubmission({
         session_id: s.session_id,
         participant_id: s.participant_id,
@@ -416,7 +464,31 @@ function ResearcherDashboardContent() {
       assessments: sampleAssessments,
       questionnaire_submissions: sampleQuestionnaires
     });
-    alert('Sample research dataset generated with 8 sessions!');
+
+    // Also sync to central server if token present
+    try {
+      const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
+      if (token) {
+        for (const s of sampleSessions) {
+          await fetch('/api/db/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(s)
+          });
+        }
+        for (const q of sampleQuestionnaires) {
+          await fetch('/api/questionnaire/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(q)
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Central DB sample sync warning:', e);
+    }
+
+    alert('Sample Ayurveda study dataset generated with 4 sessions (C1, C2, C3, C4)!');
     await loadData();
   };
 
@@ -531,11 +603,8 @@ function ResearcherDashboardContent() {
               value={storyFilter}
               onChange={(e) => setStoryFilter(e.target.value)}
             >
-              <option value="all">📖 All Stories ({sessions.length})</option>
-              <option value="ayurveda_intro_v1">🌿 Ayurveda</option>
-              <option value="story_missing_kite">🪁 The Missing Kite (Historical)</option>
-              <option value="story_lantern_garden">🏮 Grandmother's Garden (Historical)</option>
-              <option value="unknown">❓ Unrecognized Stories</option>
+              <option value="all">🌿 Ayurveda Study ({sessions.length} sessions)</option>
+              <option value="ayurveda_intro_v1">🌿 Ayurveda (ayurveda_intro_v1)</option>
             </select>
 
             <select
@@ -1019,8 +1088,13 @@ function ResearcherDashboardContent() {
   };
 
   // ─── Export Tab ────
-  // Exact schemas matching §C of Addendum
+  // Exact schemas matching §C of Addendum & Approved PDF Protocol
   const renderExport = () => {
+    const ayurvedaEvents = events.filter(isAyurvedaItem);
+    const ayurvedaAssessments = assessments.filter(isAyurvedaItem);
+    const ayurvedaSessions = sessions.filter(isAyurvedaItem);
+    const ayurvedaQuestionnaires = questionnaireSubmissions.filter(isAyurvedaItem);
+
     const exportRawEvents = () => {
       const headers = [
         'event_id',
@@ -1046,7 +1120,7 @@ function ResearcherDashboardContent() {
         'payload_json'
       ];
       const csv = [headers.join(',')];
-      events.forEach(e => {
+      ayurvedaEvents.forEach(e => {
         const evType = e.event_type || e.event || '';
         const cat = e.category || getEventCategory(evType);
         const safeIsoDate = (val) => {
@@ -1065,7 +1139,7 @@ function ResearcherDashboardContent() {
           e.session_id || '',
           e.participant_id || '',
           e.condition || '',
-          e.story_id || '',
+          e.story_id || 'ayurveda_intro_v1',
           e.story_segment_id || '',
           evType,
           cat,
@@ -1089,7 +1163,7 @@ function ResearcherDashboardContent() {
     };
 
     const exportTechnicalIssues = () => {
-      const techEvents = events.filter(e =>
+      const techEvents = ayurvedaEvents.filter(e =>
         (e.category === 'technical') ||
         (e.event_type || e.event || '').includes('ERROR') ||
         (e.event_type || e.event || '').includes('FAIL') ||
@@ -1120,7 +1194,7 @@ function ResearcherDashboardContent() {
           e.session_id || '',
           e.participant_id || '',
           e.condition || '',
-          e.story_id || '',
+          e.story_id || 'ayurveda_intro_v1',
           e.timestamp_utc || '',
           e.elapsed_ms ?? e.timestamp ?? '',
           e.modality || '',
@@ -1156,14 +1230,14 @@ function ResearcherDashboardContent() {
         'confidence_rating'
       ];
       const csv = [headers.join(',')];
-      assessments.forEach(a => {
+      ayurvedaAssessments.forEach(a => {
         const givenAns = JSON.stringify(a.answer ?? a.final_answer ?? '');
         const correctAns = a.correct_answer != null ? JSON.stringify(a.correct_answer) : '';
         const row = [
           a.session_id || '',
           a.participant_id || '',
           a.condition || '',
-          a.story_id || '',
+          a.story_id || 'ayurveda_intro_v1',
           a.question_id || '',
           a.level || '',
           a.question_type || 'multiple_choice',
@@ -1210,9 +1284,9 @@ function ResearcherDashboardContent() {
 
       const csv = [headers.join(',')];
 
-      sessions.forEach(s => {
-        const sessEvents = events.filter(e => e.session_id === s.session_id);
-        const sessAssess = assessments.filter(a => a.session_id === s.session_id);
+      ayurvedaSessions.forEach(s => {
+        const sessEvents = ayurvedaEvents.filter(e => e.session_id === s.session_id);
+        const sessAssess = ayurvedaAssessments.filter(a => a.session_id === s.session_id);
         const measures = computeSessionMeasures(sessEvents, sessAssess);
 
         const recallAssess = sessAssess.filter(a => a.level === 'recall_understand');
@@ -1222,14 +1296,14 @@ function ResearcherDashboardContent() {
 
         const calcAcc = (arr) => arr.length > 0 ? (arr.reduce((acc, a) => acc + (a.accuracy === 1 ? 1 : 0), 0) / arr.length).toFixed(2) : '';
 
-        const actionCount = sessEvents.filter(e => ['OBJECT_INTERACT', 'OBJECT_GRABBED', 'OBJECT_PLACED', 'SELECT', 'DESELECT', 'HOTSPOT_OPEN', 'VR_INTERACTION'].includes(e.event_type || e.event)).length;
+        const actionCount = sessEvents.filter(e => ['OBJECT_INTERACT', 'OBJECT_GRABBED', 'OBJECT_PLACED', 'SELECT', 'DESELECT', 'HOTSPOT_OPEN', 'HOTSPOT_CLICK', 'VR_INTERACTION', 'C3_COMPLETE'].includes(e.event_type || e.event)).length;
         const actionErrors = sessEvents.filter(e => (e.event_type || e.event)?.includes('ERROR') || e.action === 'action_error' || String(e.response).includes('error') || (e.action === 'assessment_submit' && sessAssess.some(a => a.question_id === e.object_id && a.accuracy === 0))).length;
 
         const row = [
           s.session_id || '',
           s.participant_id || '',
           s.condition || '',
-          s.story_id || '',
+          s.story_id || 'ayurveda_intro_v1',
           s.version_snapshot?.version_hash || s.version_snapshot?.layout_hash || '',
           s.start_time ? new Date(s.start_time).toISOString() : '',
           s.end_time ? new Date(s.end_time).toISOString() : '',
@@ -1240,7 +1314,7 @@ function ResearcherDashboardContent() {
           (Number(measures.interaction_duration_ms || 0) / 1000).toFixed(2),
           sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_REPLAY').length,
           sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_PAUSE').length,
-          sessEvents.filter(e => (e.event_type || e.event) === 'OBJECT_INTERACT' || (e.event_type || e.event) === 'OBJECT_PLACED').length,
+          sessEvents.filter(e => (e.event_type || e.event) === 'OBJECT_INTERACT' || (e.event_type || e.event) === 'OBJECT_PLACED' || (e.event_type || e.event) === 'C3_COMPLETE').length,
           actionCount,
           actionErrors,
           sessEvents.filter(e => (e.event_type || e.event)?.startsWith('GAZE_')).length,
@@ -1256,20 +1330,20 @@ function ResearcherDashboardContent() {
     };
 
     const exportJSON = (type) => {
-      let data = sessions;
+      let data = ayurvedaSessions;
       if (type === 'sessions') {
-        data = sessions.map(s => {
+        data = ayurvedaSessions.map(s => {
           const { participant_name, participant_email, ...safeSession } = s;
           return safeSession;
         });
       } else if (type === 'events') {
-        data = events;
+        data = ayurvedaEvents;
       } else if (type === 'assessments') {
-        data = assessments;
+        data = ayurvedaAssessments;
       } else if (type === 'questionnaires') {
-        data = questionnaireSubmissions;
+        data = ayurvedaQuestionnaires;
       } else if (type === 'technical') {
-        data = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed');
+        data = ayurvedaEvents.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed');
       }
       downloadFile(`${type}.json`, JSON.stringify(data, null, 2), 'application/json');
     };
@@ -1318,7 +1392,7 @@ function ResearcherDashboardContent() {
 
       const rows = [headers.join(',')];
 
-      questionnaireSubmissions.forEach(q => {
+      ayurvedaQuestionnaires.forEach(q => {
         const isC4 = q.condition === 'C4';
         const discVal = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
         const row = [
@@ -1358,7 +1432,7 @@ function ResearcherDashboardContent() {
       downloadFile('ayurveda_study_questionnaire_dataset.csv', rows.join('\n'), 'text/csv');
     };
 
-    const technicalCount = events.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed').length;
+    const technicalCount = ayurvedaEvents.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed').length;
 
     return (
       <div className="dashboard-content">

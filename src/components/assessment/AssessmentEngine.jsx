@@ -137,10 +137,24 @@ export default function AssessmentEngine({
     });
   }, []);
 
+  // Log questionnaire open
+  useEffect(() => {
+    if (!isSubmitted) {
+      eventLogger.log('QUESTIONNAIRE_OPEN', {
+        action: 'questionnaire_begin',
+        storyId: storyId || 'ayurveda_intro_v1',
+        condition
+      });
+    }
+  }, [isSubmitted, storyId, condition]);
+
   // Handlers for Part A
   const handleSelectPartA = (qId, optionIndex) => {
     if (isSubmitted) return;
     const letter = String.fromCharCode(65 + optionIndex);
+    const questionObj = partAQuestions.find(q => q.id === qId);
+    const selectedText = questionObj?.options?.[optionIndex] || '';
+
     setPartAAnswers(prev => ({
       ...prev,
       [qId]: letter
@@ -149,7 +163,12 @@ export default function AssessmentEngine({
     eventLogger.log('OBJECT_INTERACT', {
       objectId: qId,
       action: 'select_option',
-      response: letter
+      response: letter,
+      extra: {
+        question_id: qId,
+        selected_option: letter,
+        selected_text: selectedText
+      }
     });
   };
 
@@ -160,6 +179,41 @@ export default function AssessmentEngine({
       ...prev,
       [qId]: val
     }));
+
+    eventLogger.log('OBJECT_INTERACT', {
+      objectId: qId,
+      action: 'rate_experience',
+      response: val,
+      extra: {
+        question_id: qId,
+        rating: val
+      }
+    });
+  };
+
+  // Handler for C4 discomfort
+  const handleSelectDiscomfort = (val) => {
+    if (isSubmitted) return;
+    setC4Discomfort(val);
+    eventLogger.log('OBJECT_INTERACT', {
+      objectId: 'C4_discomfort',
+      action: 'rate_discomfort',
+      response: val,
+      extra: {
+        discomfort_level: val
+      }
+    });
+  };
+
+  const handleStepTransition = (newStep, stepName) => {
+    eventLogger.log('QUESTIONNAIRE_SECTION_CHANGE', {
+      action: 'navigate_section',
+      from_step: currentStep,
+      to_step: newStep,
+      section_name: stepName
+    });
+    setCurrentStep(newStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Final submission handler
@@ -195,9 +249,84 @@ export default function AssessmentEngine({
       created_at: new Date().toISOString()
     };
 
+    eventLogger.log('ASSESSMENT_SUBMIT', {
+      action: 'submit_questionnaire',
+      completion_time_seconds: completionTimeSeconds,
+      has_q9: !!q9Text.trim(),
+      part_a_answered: Object.keys(partAAnswers).length,
+      exp_answered: Object.keys(experienceRatings).length,
+      c4_discomfort: isC4 ? c4Discomfort : null
+    });
+
     // Save to IndexedDB and sync to central server
     try {
+      // Also persist individual per-question assessments locally
+      for (let i = 1; i <= 8; i++) {
+        const qId = `Q${i}`;
+        const rawAns = partAAnswers[qId] || null;
+        if (rawAns) {
+          eventLogger.saveAssessment({
+            session_id: sessionId,
+            participant_id: participantId,
+            condition: condition,
+            story_id: storyId || 'ayurveda_intro_v1',
+            question_id: qId,
+            level: 'recall_understand',
+            question_type: 'multiple_choice',
+            measure: 'conceptual',
+            answer: rawAns,
+            final_answer: rawAns
+          });
+        }
+      }
+      if (q9Text.trim()) {
+        eventLogger.saveAssessment({
+          session_id: sessionId,
+          participant_id: participantId,
+          condition: condition,
+          story_id: storyId || 'ayurveda_intro_v1',
+          question_id: 'Q9',
+          level: 'main_message',
+          question_type: 'open_response',
+          measure: 'main_message',
+          answer: q9Text.trim(),
+          final_answer: q9Text.trim()
+        });
+      }
+      [10, 11, 12, 13].forEach(num => {
+        const qId = `Q${num}`;
+        if (experienceRatings[qId]) {
+          eventLogger.saveAssessment({
+            session_id: sessionId,
+            participant_id: participantId,
+            condition: condition,
+            story_id: storyId || 'ayurveda_intro_v1',
+            question_id: qId,
+            level: 'experience_survey',
+            question_type: 'likert_1_5',
+            measure: num === 10 ? 'perceived understanding' : num === 11 ? 'self-reported attention' : num === 12 ? 'perceived clarity/ease of following' : 'perceived recall',
+            answer: experienceRatings[qId],
+            final_answer: experienceRatings[qId]
+          });
+        }
+      });
+      if (isC4 && c4Discomfort) {
+        eventLogger.saveAssessment({
+          session_id: sessionId,
+          participant_id: participantId,
+          condition: condition,
+          story_id: storyId || 'ayurveda_intro_v1',
+          question_id: 'C4_discomfort',
+          level: 'safety_discomfort',
+          question_type: 'likert_1_5',
+          measure: 'cybersickness_discomfort',
+          answer: c4Discomfort,
+          final_answer: c4Discomfort
+        });
+      }
+
       await eventLogger.saveQuestionnaireSubmission(submissionPayload);
+      await eventLogger.flush();
       sessionStorage.setItem(`ayurveda_completed_${sessionId}`, 'true');
       setIsSubmitted(true);
       setCurrentStep(5); // Show neutral confirmation
@@ -207,7 +336,6 @@ export default function AssessmentEngine({
       }
     } catch (err) {
       console.error('Submission recording error:', err);
-      // Fallback: mark submitted locally
       sessionStorage.setItem(`ayurveda_completed_${sessionId}`, 'true');
       setIsSubmitted(true);
       setCurrentStep(5);
@@ -539,7 +667,7 @@ export default function AssessmentEngine({
                   role="radio"
                   aria-checked={c4Discomfort === anchor.val}
                   className={`likert-scale-btn ${c4Discomfort === anchor.val ? 'selected' : ''}`}
-                  onClick={() => setC4Discomfort(anchor.val)}
+                  onClick={() => handleSelectDiscomfort(anchor.val)}
                 >
                   <span className="scale-val">{anchor.val}</span>
                   <span className="scale-label">{anchor.label}</span>

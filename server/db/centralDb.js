@@ -31,6 +31,17 @@ let memDb = {
   questionnaire_submissions: []
 };
 
+function isAyurveda(item) {
+  if (!item) return false;
+  const sid = String(item.story_id || item.storyId || '').toLowerCase();
+  const sessId = String(item.session_id || item.sessionId || '').toLowerCase();
+  if (sessId.includes('kite') || sessId.includes('lant') || sessId.includes('milo') ||
+      sid.includes('kite') || sid.includes('lantern') || sid.includes('milo')) {
+    return false;
+  }
+  return true;
+}
+
 // Load existing disk data on startup
 try {
   if (fs.existsSync(DATA_FILE)) {
@@ -38,11 +49,11 @@ try {
     if (raw && raw.trim()) {
       const parsed = JSON.parse(raw);
       memDb = {
-        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-        events: Array.isArray(parsed.events) ? parsed.events : [],
-        assessments: Array.isArray(parsed.assessments) ? parsed.assessments : [],
+        sessions: (Array.isArray(parsed.sessions) ? parsed.sessions : []).filter(isAyurveda),
+        events: (Array.isArray(parsed.events) ? parsed.events : []).filter(isAyurveda),
+        assessments: (Array.isArray(parsed.assessments) ? parsed.assessments : []).filter(isAyurveda),
         participants: Array.isArray(parsed.participants) ? parsed.participants : [],
-        questionnaire_submissions: Array.isArray(parsed.questionnaire_submissions) ? parsed.questionnaire_submissions : []
+        questionnaire_submissions: (Array.isArray(parsed.questionnaire_submissions) ? parsed.questionnaire_submissions : []).filter(isAyurveda)
       };
       console.log(`📁 Loaded local persistent store from disk: ${memDb.sessions.length} sessions, ${memDb.events.length} events, ${memDb.questionnaire_submissions.length} questionnaires.`);
     }
@@ -283,19 +294,19 @@ export const centralDb = {
       });
 
       return {
-        sessions: serverSessions,
-        events: serverEvents,
-        assessments: serverAssessments,
-        questionnaire_submissions: serverQ
+        sessions: serverSessions.filter(isAyurveda),
+        events: serverEvents.filter(isAyurveda),
+        assessments: serverAssessments.filter(isAyurveda),
+        questionnaire_submissions: serverQ.filter(isAyurveda)
       };
     } catch (err) {
       console.warn('⚠️ Supabase getDashboardData failed, falling back to disk store:', err.message);
       dbUnavailable = true;
       return {
-        sessions: memDb.sessions,
-        events: memDb.events.map(normalizeDbEvent),
-        assessments: memDb.assessments,
-        questionnaire_submissions: memDb.questionnaire_submissions
+        sessions: memDb.sessions.filter(isAyurveda),
+        events: memDb.events.map(normalizeDbEvent).filter(isAyurveda),
+        assessments: memDb.assessments.filter(isAyurveda),
+        questionnaire_submissions: memDb.questionnaire_submissions.filter(isAyurveda)
       };
     }
   },
