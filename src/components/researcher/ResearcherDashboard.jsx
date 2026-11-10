@@ -4,6 +4,23 @@ import { AVAILABLE_STORIES, CONDITIONS, loadStoryConfig, loadAvailableStories, v
 import { computeSessionMeasures } from '../../services/SessionMeasures';
 import authService from '../../services/AuthService';
 import { scoreQuestionnaireSubmission, AYURVEDA_ANSWER_KEY, Q9_RUBRIC, extractOptionLetter } from '../../services/ResearcherScoringService';
+import {
+  escapeCsv,
+  filterItems,
+  exportParticipantMasterCSV,
+  exportSessionSummaryCSV,
+  exportRawEventsCSV,
+  exportQuestionnaireResponsesCSV,
+  exportKnowledgeScoresCSV,
+  exportQ9OpenResponsesCSV,
+  exportQ10Q13LikertCSV,
+  exportC4DiscomfortCSV,
+  exportC3InteractionTelemetryCSV,
+  exportC4VRTelemetryCSV,
+  exportTechnicalIssuesCSV,
+  exportDataSyncStatusCSV,
+  exportCombinedResearchDatasetCSV
+} from '../../services/ResearchDataExporter';
 import AdminLoginGate from './AdminLoginGate';
 import './ResearcherDashboard.css';
 
@@ -29,6 +46,13 @@ function ResearcherDashboardContent() {
   const [availableStories, setAvailableStories] = useState(AVAILABLE_STORIES);
   const [uploadResult, setUploadResult] = useState(null);
 
+  // Authoritative Database & Synchronization Status State
+  const [dbHealth, setDbHealth] = useState({ connected: false, authoritative: false, mode: 'checking', database: null, latency_ms: null, error: null });
+  const [totalDbEventsCount, setTotalDbEventsCount] = useState(null);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [syncInfo, setSyncInfo] = useState({ lastSuccessfulSync: null, lastSyncError: null, isSyncing: false });
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
   // Filters
   const [storyFilter, setStoryFilter] = useState('all');
   const [conditionFilter, setConditionFilter] = useState('all');
@@ -41,6 +65,15 @@ function ResearcherDashboardContent() {
   const [timelinePage, setTimelinePage] = useState(1);
   const [timelinePerPage, setTimelinePerPage] = useState(50);
   const [inspectEvent, setInspectEvent] = useState(null);
+
+  // Research Data Export Filtering & Notification State
+  const [exportFilterCondition, setExportFilterCondition] = useState('all');
+  const [exportFilterStory, setExportFilterStory] = useState('all');
+  const [exportFilterSearch, setExportFilterSearch] = useState('');
+  const [exportDateStart, setExportDateStart] = useState('');
+  const [exportDateEnd, setExportDateEnd] = useState('');
+  const [exportStatusMessage, setExportStatusMessage] = useState(null);
+  const [participantsList, setParticipantsList] = useState([]);
 
   const fileInputRef = useRef(null);
   const importInputRef = useRef(null);
@@ -74,33 +107,34 @@ function ResearcherDashboardContent() {
 
   const loadData = async () => {
     await eventLogger.init();
-    let localS = await eventLogger.getAllSessions();
-    let localE = await eventLogger.getAllEvents();
-    let localA = await eventLogger.getAllAssessments();
-    let localQ = await eventLogger.getAllQuestionnaireSubmissions();
+    const localS = await eventLogger.getAllSessions();
+    const localE = await eventLogger.getAllEvents();
+    const localA = await eventLogger.getAllAssessments();
+    const localQ = await eventLogger.getAllQuestionnaireSubmissions();
 
-    // Clean up any historical non-Ayurveda sessions from local IndexedDB
-    const nonAyurvedaSessions = localS.filter(s => !isAyurvedaItem(s));
-    for (const s of nonAyurvedaSessions) {
-      try {
-        await eventLogger.deleteSession(s.session_id);
-      } catch (err) {
-        console.warn('Failed to prune legacy session:', err);
+    // Check pending event synchronization status
+    try {
+      const pCount = await eventLogger.getPendingSyncCount();
+      setPendingSyncCount(pCount);
+      setSyncInfo(eventLogger.getSyncHealth());
+    } catch (e) {
+      console.warn('Pending count check error:', e);
+    }
+
+    // 1. Fetch Central PostgreSQL Health Check
+    try {
+      const hRes = await fetch('/api/db/health');
+      if (hRes.ok) {
+        const hData = await hRes.json();
+        setDbHealth(hData);
+      } else {
+        setDbHealth({ connected: false, authoritative: false, mode: 'error', error: `HTTP ${hRes.status}` });
       }
-    }
-    if (nonAyurvedaSessions.length > 0) {
-      localS = await eventLogger.getAllSessions();
-      localE = await eventLogger.getAllEvents();
-      localA = await eventLogger.getAllAssessments();
-      localQ = await eventLogger.getAllQuestionnaireSubmissions();
+    } catch (hErr) {
+      setDbHealth({ connected: false, authoritative: false, mode: 'offline', error: hErr.message });
     }
 
-    localS = localS.filter(isAyurvedaItem);
-    localE = localE.filter(isAyurvedaItem);
-    localA = localA.filter(isAyurvedaItem);
-    localQ = localQ.filter(isAyurvedaItem);
-
-    // Fetch central multi-device database
+    // 2. Fetch Authoritative Central Multi-Device Database Data
     try {
       const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
       if (token) {
@@ -109,66 +143,28 @@ function ResearcherDashboardContent() {
         });
         if (res.ok) {
           const serverData = await res.json();
-          // Merge central & local data (strictly Ayurveda)
+
+          // Authoritative Cloud Records
           const serverSessions = (serverData.sessions || []).filter(isAyurvedaItem);
           const serverEvents = (serverData.events || []).filter(isAyurvedaItem);
           const serverAssessments = (serverData.assessments || []).filter(isAyurvedaItem);
           const serverQ = (serverData.questionnaire_submissions || []).filter(isAyurvedaItem);
 
-          const mergedSessions = [...serverSessions];
-          localS.forEach(ls => {
-            if (!mergedSessions.some(ms => ms.session_id === ls.session_id)) {
-              mergedSessions.push(ls);
-            }
-          });
+          setSessions(serverSessions);
+          setEvents(serverEvents);
+          setTotalDbEventsCount(serverData.total_events_count != null ? serverData.total_events_count : null);
+          setAssessments(serverAssessments);
+          setQuestionnaireSubmissions(serverQ);
 
-          const mergedEvents = [...serverEvents];
-          localE.forEach(le => {
-            if (!mergedEvents.some(me => me.event_id === le.event_id || (me.session_id === le.session_id && me.elapsed_ms === le.elapsed_ms))) {
-              mergedEvents.push(le);
+          try {
+            const pRes = await fetch('/api/db/participants', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (pRes.ok) {
+              const pData = await pRes.json();
+              if (Array.isArray(pData)) setParticipantsList(pData);
             }
-          });
-
-          const mergedAssessments = [...serverAssessments];
-          localA.forEach(la => {
-            if (!mergedAssessments.some(ma => ma.session_id === la.session_id && (ma.question_id || ma.item_id) === (la.question_id || la.item_id))) {
-              mergedAssessments.push(la);
-            }
-          });
-
-          const mergedQ = [...serverQ];
-          localQ.forEach(lq => {
-            if (!mergedQ.some(mq => mq.session_id === lq.session_id)) {
-              mergedQ.push(lq);
-            }
-          });
-
-          // Ensure any historical session with assessments has a reconstructed questionnaire record
-          mergedSessions.forEach(s => {
-            if (!mergedQ.some(mq => mq.session_id === s.session_id)) {
-              const sAssess = mergedAssessments.filter(a => a.session_id === s.session_id);
-              if (sAssess.length > 0) {
-                const ansMap = {};
-                sAssess.forEach(a => {
-                  ansMap[a.question_id] = a.answer ?? a.final_answer ?? a.selected_position;
-                });
-                const rec = scoreQuestionnaireSubmission({
-                  session_id: s.session_id,
-                  participant_id: s.participant_id,
-                  condition: s.condition,
-                  story_id: s.story_id,
-                  answers: ansMap,
-                  created_at: s.created_at || s.start_time
-                });
-                mergedQ.push(rec);
-              }
-            }
-          });
-
-          setSessions(mergedSessions);
-          setEvents(mergedEvents);
-          setAssessments(mergedAssessments);
-          setQuestionnaireSubmissions(mergedQ);
+          } catch (pErr) {
+            console.warn('Participants fetch warning:', pErr);
+          }
           return;
         }
       }
@@ -176,33 +172,23 @@ function ResearcherDashboardContent() {
       console.warn('Central DB fetch fallback to local:', err);
     }
 
-    // Local fallback
-    const mergedQ = [...localQ];
-    localS.forEach(s => {
-      if (!mergedQ.some(mq => mq.session_id === s.session_id)) {
-        const sAssess = localA.filter(a => a.session_id === s.session_id);
-        if (sAssess.length > 0) {
-          const ansMap = {};
-          sAssess.forEach(a => {
-            ansMap[a.question_id] = a.answer ?? a.final_answer ?? a.selected_position;
-          });
-          const rec = scoreQuestionnaireSubmission({
-            session_id: s.session_id,
-            participant_id: s.participant_id,
-            condition: s.condition,
-            story_id: s.story_id,
-            answers: ansMap,
-            created_at: s.created_at || s.start_time
-          });
-          mergedQ.push(rec);
-        }
-      }
-    });
+    // Local Storage Fallback if Server Unreachable
+    setSessions(localS.filter(isAyurvedaItem));
+    setEvents(localE.filter(isAyurvedaItem));
+    setAssessments(localA.filter(isAyurvedaItem));
+    setQuestionnaireSubmissions(localQ.filter(isAyurvedaItem));
+  };
 
-    setSessions(localS);
-    setEvents(localE);
-    setAssessments(localA);
-    setQuestionnaireSubmissions(mergedQ);
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    try {
+      await eventLogger.syncPendingEvents();
+      await loadData();
+    } catch (err) {
+      alert('Manual sync error: ' + err.message);
+    } finally {
+      setIsManualSyncing(false);
+    }
   };
 
   // Delete a session
@@ -550,7 +536,7 @@ function ResearcherDashboardContent() {
             <div className="card-label">Unique Participants</div>
           </div>
           <div className="summary-card">
-            <div className="card-value">{events.length}</div>
+            <div className="card-value">{totalDbEventsCount != null ? totalDbEventsCount : events.length}</div>
             <div className="card-label">Total Events Logged</div>
           </div>
           <div className="summary-card">
@@ -1087,422 +1073,377 @@ function ResearcherDashboardContent() {
     );
   };
 
-  // ─── Export Tab ────
-  // Exact schemas matching §C of Addendum & Approved PDF Protocol
+  // ─── Export Tab (13 Standardized Research CSV Streams) ────
   const renderExport = () => {
     const ayurvedaEvents = events.filter(isAyurvedaItem);
     const ayurvedaAssessments = assessments.filter(isAyurvedaItem);
     const ayurvedaSessions = sessions.filter(isAyurvedaItem);
     const ayurvedaQuestionnaires = questionnaireSubmissions.filter(isAyurvedaItem);
 
-    const exportRawEvents = () => {
-      const headers = [
-        'event_id',
-        'session_id',
-        'participant_id',
-        'condition',
-        'story_id',
-        'story_segment_id',
-        'event_type',
-        'category',
-        'timestamp_utc',
-        'elapsed_ms',
-        'wall_clock',
-        'video_timestamp_sec',
-        'modality',
-        'source',
-        'target_id',
-        'object_id',
-        'action',
-        'result',
-        'error_code',
-        'error_details',
-        'payload_json'
-      ];
-      const csv = [headers.join(',')];
-      ayurvedaEvents.forEach(e => {
-        const evType = e.event_type || e.event || '';
-        const cat = e.category || getEventCategory(evType);
-        const safeIsoDate = (val) => {
-          if (!val) return '';
-          try {
-            const d = new Date(val);
-            return isNaN(d.getTime()) ? String(val) : d.toISOString();
-          } catch {
-            return String(val);
-          }
-        };
-        const wallIso = e.timestamp_utc || safeIsoDate(e.wall_clock || e.timestamp);
-        const payloadStr = JSON.stringify(e.payload || e.response || {});
-        const row = [
-          e.event_id || '',
-          e.session_id || '',
-          e.participant_id || '',
-          e.condition || '',
-          e.story_id || 'ayurveda_intro_v1',
-          e.story_segment_id || '',
-          evType,
-          cat,
-          wallIso,
-          e.elapsed_ms ?? e.timestamp ?? 0,
-          e.wall_clock ? `"${String(e.wall_clock).replace(/"/g, '""')}"` : '',
-          e.video_timestamp != null ? e.video_timestamp : '',
-          e.modality || '',
-          e.source || '',
-          e.target_id || '',
-          e.object_id || '',
-          e.action || '',
-          e.result || 'completed',
-          e.error_code || '',
-          e.error_details ? `"${String(e.error_details).replace(/"/g, '""')}"` : '',
-          payloadStr ? `"${payloadStr.replace(/"/g, '""')}"` : ''
-        ];
-        csv.push(row.join(','));
-      });
-      downloadFile('raw_event_log.csv', csv.join('\n'), 'text/csv');
+    const exportFilters = {
+      condition: exportFilterCondition,
+      storyId: exportFilterStory,
+      participantId: exportFilterSearch,
+      startDate: exportDateStart,
+      endDate: exportDateEnd
     };
 
-    const exportTechnicalIssues = () => {
-      const techEvents = ayurvedaEvents.filter(e =>
-        (e.category === 'technical') ||
-        (e.event_type || e.event || '').includes('ERROR') ||
-        (e.event_type || e.event || '').includes('FAIL') ||
-        e.result === 'failed' ||
-        e.error_code != null
-      );
-      const headers = [
-        'event_id',
-        'session_id',
-        'participant_id',
-        'condition',
-        'story_id',
-        'timestamp_utc',
-        'elapsed_ms',
-        'modality',
-        'source',
-        'event_type',
-        'error_code',
-        'error_details',
-        'target_id',
-        'payload_json'
-      ];
-      const csv = [headers.join(',')];
-      techEvents.forEach(e => {
-        const payloadStr = JSON.stringify(e.payload || e.response || {});
-        const row = [
-          e.event_id || '',
-          e.session_id || '',
-          e.participant_id || '',
-          e.condition || '',
-          e.story_id || 'ayurveda_intro_v1',
-          e.timestamp_utc || '',
-          e.elapsed_ms ?? e.timestamp ?? '',
-          e.modality || '',
-          e.source || '',
-          e.event_type || e.event || '',
-          e.error_code || '',
-          e.error_details ? `"${String(e.error_details).replace(/"/g, '""')}"` : '',
-          e.target_id || e.object_id || '',
-          payloadStr ? `"${payloadStr.replace(/"/g, '""')}"` : ''
-        ];
-        csv.push(row.join(','));
-      });
-      downloadFile('technical_issues_log.csv', csv.join('\n'), 'text/csv');
+    const triggerDownload = (result) => {
+      downloadFile(result.name, result.csv, 'text/csv');
+      setExportStatusMessage(`✓ Successfully exported ${result.count} records to ${result.name} (Excel-compatible UTF-8 format)`);
+      setTimeout(() => setExportStatusMessage(null), 5000);
     };
 
-    const exportAssessments = () => {
-      const headers = [
-        'session_id',
-        'participant_id',
-        'condition',
-        'story_id',
-        'question_id',
-        'level',
-        'question_type',
-        'measure',
-        'start_time_iso',
-        'end_time_iso',
-        'given_answer_json',
-        'correct_answer_json',
-        'is_correct',
-        'response_time_ms',
-        'answer_change_count',
-        'confidence_rating'
-      ];
-      const csv = [headers.join(',')];
-      ayurvedaAssessments.forEach(a => {
-        const givenAns = JSON.stringify(a.answer ?? a.final_answer ?? '');
-        const correctAns = a.correct_answer != null ? JSON.stringify(a.correct_answer) : '';
-        const row = [
-          a.session_id || '',
-          a.participant_id || '',
-          a.condition || '',
-          a.story_id || 'ayurveda_intro_v1',
-          a.question_id || '',
-          a.level || '',
-          a.question_type || 'multiple_choice',
-          a.measure || (a.level === 'experience_survey' ? 'experience' : 'conceptual'),
-          a.start_time ? new Date(a.start_time).toISOString() : '',
-          a.end_time ? new Date(a.end_time).toISOString() : '',
-          givenAns ? `"${givenAns.replace(/"/g, '""')}"` : '',
-          correctAns ? `"${correctAns.replace(/"/g, '""')}"` : '',
-          a.accuracy === 1 ? 1 : (a.accuracy === 0 ? 0 : ''),
-          Math.round(a.response_time_ms || 0),
-          a.answer_changes || 0,
-          a.confidence_rating != null ? a.confidence_rating : ''
-        ];
-        csv.push(row.join(','));
-      });
-      downloadFile('assessment_data.csv', csv.join('\n'), 'text/csv');
+    const triggerJsonDownload = (filename, data) => {
+      downloadFile(filename, JSON.stringify(data, null, 2), 'application/json');
+      setExportStatusMessage(`✓ Successfully exported ${data.length} records to ${filename}`);
+      setTimeout(() => setExportStatusMessage(null), 5000);
     };
 
-    const exportSessionSummary = () => {
-      const headers = [
-        'session_id',
-        'participant_id',
-        'condition',
-        'story_id',
-        'story_version_hash',
-        'session_start_iso',
-        'session_end_iso',
-        'total_session_duration_sec',
-        'exposure_duration_sec',
-        'active_viewing_duration_sec',
-        'pause_duration_sec',
-        'interaction_duration_sec',
-        'replay_count',
-        'pause_count',
-        'interaction_count',
-        'action_count',
-        'action_errors',
-        'gaze_event_count',
-        'l1_accuracy',
-        'l2_accuracy',
-        'l3_accuracy',
-        'overall_accuracy'
+    const handleExportAll = () => {
+      setExportStatusMessage('Generating and downloading all 13 research datasets...');
+      const allResults = [
+        exportParticipantMasterCSV(participantsList, exportFilters),
+        exportSessionSummaryCSV(ayurvedaSessions, ayurvedaEvents, ayurvedaAssessments, exportFilters),
+        exportRawEventsCSV(ayurvedaEvents, exportFilters),
+        exportQuestionnaireResponsesCSV(ayurvedaQuestionnaires, exportFilters),
+        exportKnowledgeScoresCSV(ayurvedaQuestionnaires, exportFilters),
+        exportQ9OpenResponsesCSV(ayurvedaQuestionnaires, exportFilters),
+        exportQ10Q13LikertCSV(ayurvedaQuestionnaires, exportFilters),
+        exportC4DiscomfortCSV(ayurvedaQuestionnaires, exportFilters),
+        exportC3InteractionTelemetryCSV(ayurvedaEvents, exportFilters),
+        exportC4VRTelemetryCSV(ayurvedaEvents, exportFilters),
+        exportTechnicalIssuesCSV(ayurvedaEvents, exportFilters),
+        exportDataSyncStatusCSV(ayurvedaEvents, exportFilters),
+        exportCombinedResearchDatasetCSV({
+          participants: participantsList,
+          sessions: ayurvedaSessions,
+          events: ayurvedaEvents,
+          questionnaires: ayurvedaQuestionnaires
+        }, exportFilters)
       ];
 
-      const csv = [headers.join(',')];
-
-      ayurvedaSessions.forEach(s => {
-        const sessEvents = ayurvedaEvents.filter(e => e.session_id === s.session_id);
-        const sessAssess = ayurvedaAssessments.filter(a => a.session_id === s.session_id);
-        const measures = computeSessionMeasures(sessEvents, sessAssess);
-
-        const recallAssess = sessAssess.filter(a => a.level === 'recall_understand');
-        const applyAssess = sessAssess.filter(a => a.level === 'apply');
-        const implementAssess = sessAssess.filter(a => a.level === 'implement');
-        const gradedAssess = sessAssess.filter(a => a.accuracy !== null && a.accuracy !== undefined);
-
-        const calcAcc = (arr) => arr.length > 0 ? (arr.reduce((acc, a) => acc + (a.accuracy === 1 ? 1 : 0), 0) / arr.length).toFixed(2) : '';
-
-        const actionCount = sessEvents.filter(e => ['OBJECT_INTERACT', 'OBJECT_GRABBED', 'OBJECT_PLACED', 'SELECT', 'DESELECT', 'HOTSPOT_OPEN', 'HOTSPOT_CLICK', 'VR_INTERACTION', 'C3_COMPLETE'].includes(e.event_type || e.event)).length;
-        const actionErrors = sessEvents.filter(e => (e.event_type || e.event)?.includes('ERROR') || e.action === 'action_error' || String(e.response).includes('error') || (e.action === 'assessment_submit' && sessAssess.some(a => a.question_id === e.object_id && a.accuracy === 0))).length;
-
-        const row = [
-          s.session_id || '',
-          s.participant_id || '',
-          s.condition || '',
-          s.story_id || 'ayurveda_intro_v1',
-          s.version_snapshot?.version_hash || s.version_snapshot?.layout_hash || '',
-          s.start_time ? new Date(s.start_time).toISOString() : '',
-          s.end_time ? new Date(s.end_time).toISOString() : '',
-          (Number(measures.total_session_duration_ms || 0) / 1000).toFixed(2),
-          (Number(measures.exposure_duration_ms || 0) / 1000).toFixed(2),
-          (Number(measures.active_viewing_duration_sec ?? ((measures.active_viewing_duration_ms || 0) / 1000))).toFixed(2),
-          (Number(measures.pause_duration_ms || 0) / 1000).toFixed(2),
-          (Number(measures.interaction_duration_ms || 0) / 1000).toFixed(2),
-          sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_REPLAY').length,
-          sessEvents.filter(e => (e.event_type || e.event) === 'VIDEO_PAUSE').length,
-          sessEvents.filter(e => (e.event_type || e.event) === 'OBJECT_INTERACT' || (e.event_type || e.event) === 'OBJECT_PLACED' || (e.event_type || e.event) === 'C3_COMPLETE').length,
-          actionCount,
-          actionErrors,
-          sessEvents.filter(e => (e.event_type || e.event)?.startsWith('GAZE_')).length,
-          calcAcc(recallAssess),
-          calcAcc(applyAssess),
-          calcAcc(implementAssess),
-          calcAcc(gradedAssess)
-        ];
-        csv.push(row.join(','));
+      allResults.forEach((r, idx) => {
+        setTimeout(() => {
+          downloadFile(r.name, r.csv, 'text/csv');
+        }, idx * 180);
       });
 
-      downloadFile('session_summary.csv', csv.join('\n'), 'text/csv');
+      setExportStatusMessage('✓ All 13 research datasets triggered for download!');
+      setTimeout(() => setExportStatusMessage(null), 6000);
     };
 
-    const exportJSON = (type) => {
-      let data = ayurvedaSessions;
-      if (type === 'sessions') {
-        data = ayurvedaSessions.map(s => {
-          const { participant_name, participant_email, ...safeSession } = s;
-          return safeSession;
-        });
-      } else if (type === 'events') {
-        data = ayurvedaEvents;
-      } else if (type === 'assessments') {
-        data = ayurvedaAssessments;
-      } else if (type === 'questionnaires') {
-        data = ayurvedaQuestionnaires;
-      } else if (type === 'technical') {
-        data = ayurvedaEvents.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed');
-      }
-      downloadFile(`${type}.json`, JSON.stringify(data, null, 2), 'application/json');
-    };
-
-    const exportAyurvedaQuestionnaireCSV = () => {
-      const headers = [
-        'participant_id',
-        'condition',
-        'Q1_raw',
-        'Q2_raw',
-        'Q3_raw',
-        'Q4_raw',
-        'Q5_raw',
-        'Q6_raw',
-        'Q7_raw',
-        'Q8_raw',
-        'Q1_score',
-        'Q2_score',
-        'Q3_score',
-        'Q4_score',
-        'Q5_score',
-        'Q6_score',
-        'Q7_score',
-        'Q8_score',
-        'knowledge_total',
-        'Q9_verbatim',
-        'Q9_score',
-        'Q10',
-        'Q11',
-        'Q12',
-        'Q13',
-        'C4_discomfort',
-        'completion_time_seconds',
-        'technical_issue',
-        'missing_reason'
-      ];
-
-      const escapeCsv = (val) => {
-        if (val === null || val === undefined) return '';
-        const str = String(val);
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-          return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-      };
-
-      const rows = [headers.join(',')];
-
-      ayurvedaQuestionnaires.forEach(q => {
-        const isC4 = q.condition === 'C4';
-        const discVal = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
-        const row = [
-          escapeCsv(q.participant_id),
-          escapeCsv(q.condition),
-          escapeCsv(q.Q1_raw || q.q1_raw || ''),
-          escapeCsv(q.Q2_raw || q.q2_raw || ''),
-          escapeCsv(q.Q3_raw || q.q3_raw || ''),
-          escapeCsv(q.Q4_raw || q.q4_raw || ''),
-          escapeCsv(q.Q5_raw || q.q5_raw || ''),
-          escapeCsv(q.Q6_raw || q.q6_raw || ''),
-          escapeCsv(q.Q7_raw || q.q7_raw || ''),
-          escapeCsv(q.Q8_raw || q.q8_raw || ''),
-          q.Q1_score ?? q.q1_score ?? 0,
-          q.Q2_score ?? q.q2_score ?? 0,
-          q.Q3_score ?? q.q3_score ?? 0,
-          q.Q4_score ?? q.q4_score ?? 0,
-          q.Q5_score ?? q.q5_score ?? 0,
-          q.Q6_score ?? q.q6_score ?? 0,
-          q.Q7_score ?? q.q7_score ?? 0,
-          q.Q8_score ?? q.q8_score ?? 0,
-          q.knowledge_total ?? 0,
-          escapeCsv(q.Q9_verbatim || q.q9_verbatim || ''),
-          q.Q9_score !== null && q.Q9_score !== undefined ? q.Q9_score : (q.q9_score !== null && q.q9_score !== undefined ? q.q9_score : ''),
-          q.Q10 ?? q.q10 ?? '',
-          q.Q11 ?? q.q11 ?? '',
-          q.Q12 ?? q.q12 ?? '',
-          q.Q13 ?? q.q13 ?? '',
-          escapeCsv(discVal),
-          q.completion_time_seconds ?? 0,
-          escapeCsv(q.technical_issue || ''),
-          escapeCsv(q.missing_reason || '')
-        ];
-        rows.push(row.join(','));
-      });
-
-      downloadFile('ayurveda_study_questionnaire_dataset.csv', rows.join('\n'), 'text/csv');
-    };
-
-    const technicalCount = ayurvedaEvents.filter(e => (e.category === 'technical') || (e.event_type || e.event || '').includes('ERROR') || e.result === 'failed').length;
+    // Calculate dynamic counts based on active filters
+    const countParticipants = filterItems(participantsList, exportFilters).length;
+    const countSessions = filterItems(ayurvedaSessions, exportFilters).length;
+    const countEvents = filterItems(ayurvedaEvents, exportFilters).length;
+    const countQuestionnaires = filterItems(ayurvedaQuestionnaires, exportFilters).length;
+    const countC4Discomfort = filterItems(ayurvedaQuestionnaires, exportFilters).filter(q => (q.condition || '').toUpperCase() === 'C4').length;
+    const countC3Interactions = filterItems(ayurvedaEvents, exportFilters).filter(e => (e.condition || '').toUpperCase() === 'C3' || (e.event_type || e.event || '').startsWith('C3_') || ['HOTSPOT_CLICK', 'OBJECT_INTERACT', 'OBJECT_PLACED', 'CHECKPOINT_HIT'].includes(e.event_type || e.event)).length;
+    const countC4VR = filterItems(ayurvedaEvents, exportFilters).filter(e => (e.condition || '').toUpperCase() === 'C4' || (e.event_type || e.event || '').startsWith('VR_') || e.event_type === 'GAZE_DWELL').length;
+    const countTechnical = filterItems(ayurvedaEvents, exportFilters).filter(e => e.category === 'technical' || (e.event_type || e.event || '').includes('ERROR') || (e.event_type || e.event || '').includes('FAIL') || e.result === 'failed').length;
 
     return (
       <div className="dashboard-content">
-        <h2>Research Telemetry Exports</h2>
-        <p className="export-desc">
-          Four standardized research data streams derived directly from the immutable raw telemetry log. Compliant with Research Protocol v2.0.
-        </p>
-
-        <div className="export-grid">
-          <div className="export-card">
-            <h3>📊 1. Raw Event Log</h3>
-            <p>Complete timestamped event sequence with structured JSON payloads, millisecond clocks, and modality metadata.</p>
-            <p className="export-count">{events.length} telemetry records</p>
-            <div className="export-btns">
-              <button className="export-btn" onClick={exportRawEvents}>Export CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('events')}>Export JSON</button>
-            </div>
-          </div>
-
-          <div className="export-card">
-            <h3>📝 2. Assessment Data</h3>
-            <p>Per-question responses across cognitive levels with response times, correctness, and revision counts.</p>
-            <p className="export-count">{assessments.length} responses</p>
-            <div className="export-btns">
-              <button className="export-btn" onClick={exportAssessments}>Export CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('assessments')}>Export JSON</button>
-            </div>
-          </div>
-
-          <div className="export-card">
-            <h3>📋 3. Session Summary</h3>
-            <p>Derived participant metrics: total duration, active viewing, pauses, replays, interactions, and cognitive accuracy.</p>
-            <p className="export-count">{sessions.length} sessions</p>
-            <div className="export-btns">
-              <button className="export-btn" onClick={exportSessionSummary}>Export CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('sessions')}>Export JSON</button>
-            </div>
-          </div>
-
-          <div className="export-card">
-            <h3>🛠 4. Technical Issues & Errors</h3>
-            <p>Isolated log of all WebXR connection drops, media failures, tracking interruptions, and application errors.</p>
-            <p className="export-count" style={{ color: technicalCount > 0 ? '#ef4444' : undefined }}>{technicalCount} technical issues</p>
-            <div className="export-btns">
-              <button className="export-btn" onClick={exportTechnicalIssues}>Export CSV</button>
-              <button className="export-btn" onClick={() => exportJSON('technical')}>Export JSON</button>
-            </div>
-          </div>
-
-          <div className="export-card" style={{ gridColumn: '1 / -1', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(56, 189, 248, 0.04)' }}>
-            <h3>📑 5. Ayurveda Research Questionnaire Dataset (Approved PDF Protocol CSV)</h3>
-            <p>
-              Consolidated research questionnaire dataset adhering strictly to <code>Ayurveda_Study_Questionnaire_Research_Aligned(2).pdf</code>:
-              participant_id, condition (C1–C4), Q1–Q8 raw responses, Q1–Q8 binary scores, knowledge_total (0–8),
-              Q9 verbatim text, Q9_score (0–2), Q10–Q13 (each 1–5), C4_discomfort (1–5 or N/A),
-              completion_time_seconds, technical_issue, and missing_reason.
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2>Research Data Exports</h2>
+            <p className="export-desc" style={{ margin: '4px 0 0 0' }}>
+              Standardized CSV exports for all 13 research dimensions. Excel UTF-8 formatted with stable IDs, un-truncated event streams, and research condition separation.
             </p>
-            <p className="export-count">{questionnaireSubmissions.length} participant questionnaire records</p>
+          </div>
+          <button
+            onClick={handleExportAll}
+            style={{
+              background: '#0284c7',
+              color: '#ffffff',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: '8px',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 10px rgba(2, 132, 199, 0.3)'
+            }}
+          >
+            📦 Export All 13 Research Datasets (CSV)
+          </button>
+        </div>
+
+        {/* Filter Bar */}
+        <div style={{
+          margin: '1.25rem 0',
+          padding: '1rem',
+          borderRadius: '10px',
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>CONDITION</label>
+            <select
+              value={exportFilterCondition}
+              onChange={(e) => setExportFilterCondition(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+            >
+              <option value="all">All Conditions (C1–C4)</option>
+              <option value="C1">C1 — Video Only</option>
+              <option value="C2">C2 — Spatial Audio</option>
+              <option value="C3">C3 — Interactive Video</option>
+              <option value="C4">C4 — Immersive VR</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>STORY</label>
+            <select
+              value={exportFilterStory}
+              onChange={(e) => setExportFilterStory(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+            >
+              <option value="all">All Stories</option>
+              <option value="ayurveda_intro_v1">Ayurveda Intro v1</option>
+              <option value="missing_kite_v1">Missing Kite v1</option>
+              <option value="lantern_garden_v1">Lantern Garden v1</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '180px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>PARTICIPANT / SESSION ID</label>
+            <input
+              type="text"
+              placeholder="Search by ID or name..."
+              value={exportFilterSearch}
+              onChange={(e) => setExportFilterSearch(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>DATE START</label>
+            <input
+              type="date"
+              value={exportDateStart}
+              onChange={(e) => setExportDateStart(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>DATE END</label>
+            <input
+              type="date"
+              value={exportDateEnd}
+              onChange={(e) => setExportDateEnd(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.4)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', borderRadius: '6px', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          {(exportFilterCondition !== 'all' || exportFilterStory !== 'all' || exportFilterSearch || exportDateStart || exportDateEnd) && (
+            <button
+              onClick={() => {
+                setExportFilterCondition('all');
+                setExportFilterStory('all');
+                setExportFilterSearch('');
+                setExportDateStart('');
+                setExportDateEnd('');
+              }}
+              style={{
+                alignSelf: 'flex-end',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#f87171',
+                padding: '7px 12px',
+                borderRadius: '6px',
+                fontSize: '0.82rem',
+                cursor: 'pointer'
+              }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+
+        {/* Status Notification */}
+        {exportStatusMessage && (
+          <div style={{
+            margin: '0 0 1.25rem 0',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(16, 185, 129, 0.4)',
+            color: '#34d399',
+            fontSize: '0.9rem',
+            fontWeight: 600
+          }}>
+            {exportStatusMessage}
+          </div>
+        )}
+
+        {/* 13 Standardized Datasets Grid */}
+        <div className="export-grid">
+          {/* 1. Participant Master Data */}
+          <div className="export-card">
+            <h3>👤 1. Participant Master Data</h3>
+            <p>Participant demographics, assigned condition, name, email, and registration timestamps.</p>
+            <p className="export-count">{countParticipants} participant records</p>
             <div className="export-btns">
-              <button className="export-btn" style={{ background: '#0284c7', color: '#fff' }} onClick={exportAyurvedaQuestionnaireCSV}>
-                Export Protocol CSV
+              <button className="export-btn" onClick={() => triggerDownload(exportParticipantMasterCSV(participantsList, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('participant_master_data.json', filterItems(participantsList, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 2. Session Summary Data */}
+          <div className="export-card">
+            <h3>📋 2. Session Summary Data</h3>
+            <p>Session-level metadata: start, end, duration, condition assignment, and total events logged.</p>
+            <p className="export-count">{countSessions} sessions</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportSessionSummaryCSV(ayurvedaSessions, ayurvedaEvents, ayurvedaAssessments, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('session_summary_data.json', filterItems(ayurvedaSessions, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 3. Complete Raw Event Logs */}
+          <div className="export-card">
+            <h3>📊 3. Complete Raw Event Logs</h3>
+            <p>Complete timestamped event sequence with structured JSON payloads, millisecond clocks, and modality metadata.</p>
+            <p className="export-count">{countEvents} telemetry records</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportRawEventsCSV(ayurvedaEvents, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('raw_event_logs.json', filterItems(ayurvedaEvents, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 4. Questionnaire Responses (Q1–Q13) */}
+          <div className="export-card">
+            <h3>📑 4. Questionnaire Responses (Q1–Q13)</h3>
+            <p>Raw response selections for Q1–Q8, verbatim Q9 text, Q10–Q13 Likert ratings, and C4 discomfort.</p>
+            <p className="export-count">{countQuestionnaires} questionnaire records</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportQuestionnaireResponsesCSV(ayurvedaQuestionnaires, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('questionnaire_responses_q1_q13.json', filterItems(ayurvedaQuestionnaires, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 5. Knowledge Assessment Scores (0–8) */}
+          <div className="export-card">
+            <h3>🎯 5. Knowledge Scores (Q1–Q8 & Total)</h3>
+            <p>Binary scored knowledge questions (0 or 1 for keyed answers) and overall knowledge score (0–8).</p>
+            <p className="export-count">{countQuestionnaires} scored records</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportKnowledgeScoresCSV(ayurvedaQuestionnaires, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('knowledge_assessment_scores.json', filterItems(ayurvedaQuestionnaires, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 6. Q9 Open-Ended Responses */}
+          <div className="export-card">
+            <h3>✍️ 6. Q9 Open-Ended Responses</h3>
+            <p>Verbatim participant synthesis text, Q9 rubric score (0–2), and completion times.</p>
+            <p className="export-count">{countQuestionnaires} open responses</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportQ9OpenResponsesCSV(ayurvedaQuestionnaires, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('q9_open_ended_responses.json', filterItems(ayurvedaQuestionnaires, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 7. Individual Q10–Q13 Likert Ratings */}
+          <div className="export-card">
+            <h3>📈 7. Experience Ratings (Q10–Q13)</h3>
+            <p>Discrete 1–5 ratings: Q10 (understanding), Q11 (attention), Q12 (clarity), Q13 (recall). Never summed.</p>
+            <p className="export-count">{countQuestionnaires} rating sets</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportQ10Q13LikertCSV(ayurvedaQuestionnaires, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('q10_q13_experience_ratings.json', filterItems(ayurvedaQuestionnaires, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 8. C4 VR Discomfort Responses */}
+          <div className="export-card">
+            <h3>🥽 8. C4 VR Discomfort Responses</h3>
+            <p>Condition C4 simulator sickness ratings (1=Not at all, 5=Very severe). Excluded from C1–C3.</p>
+            <p className="export-count">{countC4Discomfort} C4 records</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportC4DiscomfortCSV(ayurvedaQuestionnaires, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('c4_vr_discomfort_responses.json', filterItems(ayurvedaQuestionnaires, exportFilters).filter(q => (q.condition || '').toUpperCase() === 'C4'))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 9. C3 Interaction Telemetry */}
+          <div className="export-card">
+            <h3>🖱️ 9. C3 Interaction Telemetry</h3>
+            <p>Gate openings, hold completion durations, herb grinding rotations, and dosha balance checkpoints.</p>
+            <p className="export-count">{countC3Interactions} C3 interaction events</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportC3InteractionTelemetryCSV(ayurvedaEvents, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('c3_interaction_telemetry.json', filterItems(ayurvedaEvents, exportFilters).filter(e => (e.condition || '').toUpperCase() === 'C3'))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 10. C4 VR Telemetry & Gaze */}
+          <div className="export-card">
+            <h3>🕶️ 10. C4 VR Telemetry & Gaze</h3>
+            <p>WebXR session lifecycle, gaze dwell durations, and immersive VR controller/touch interaction events.</p>
+            <p className="export-count">{countC4VR} C4 VR events</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportC4VRTelemetryCSV(ayurvedaEvents, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('c4_vr_telemetry.json', filterItems(ayurvedaEvents, exportFilters).filter(e => (e.condition || '').toUpperCase() === 'C4'))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 11. Technical Issues & Errors */}
+          <div className="export-card">
+            <h3>🛠 11. Technical Issues & Errors</h3>
+            <p>Isolated log of media failures, connection timeouts, WebXR errors, and failed action results.</p>
+            <p className="export-count" style={{ color: countTechnical > 0 ? '#ef4444' : undefined }}>{countTechnical} technical issues</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportTechnicalIssuesCSV(ayurvedaEvents, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('technical_issues_log.json', filterItems(ayurvedaEvents, exportFilters).filter(e => e.category === 'technical' || e.result === 'failed'))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 12. Data Sync Status & Queue */}
+          <div className="export-card">
+            <h3>🔄 12. Data Sync Status & Queue</h3>
+            <p>Verification of local IndexedDB versus central PostgreSQL synchronization state and pending retry events.</p>
+            <p className="export-count">{countEvents} sync status records</p>
+            <div className="export-btns">
+              <button className="export-btn" onClick={() => triggerDownload(exportDataSyncStatusCSV(ayurvedaEvents, exportFilters))}>Export CSV</button>
+              <button className="export-btn" onClick={() => triggerJsonDownload('data_sync_status.json', filterItems(ayurvedaEvents, exportFilters))}>Export JSON</button>
+            </div>
+          </div>
+
+          {/* 13. Combined Research Master Dataset */}
+          <div className="export-card" style={{ gridColumn: '1 / -1', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(56, 189, 248, 0.05)' }}>
+            <h3>🌐 13. Combined Research Master Dataset (Joined Relational Table)</h3>
+            <p>
+              Complete integrated research table joining participants, sessions, conditions, telemetry event totals,
+              and scored questionnaire submissions using stable identifiers (<code>participant_id</code> and <code>session_id</code>).
+              Ready for SPSS, R, Python (Pandas), and direct Excel analysis.
+            </p>
+            <p className="export-count" style={{ color: '#38bdf8', fontWeight: 700 }}>
+              {countSessions} integrated participant sessions
+            </p>
+            <div className="export-btns">
+              <button className="export-btn" style={{ background: '#0284c7', color: '#fff', fontWeight: 700, padding: '8px 18px' }} onClick={() => triggerDownload(exportCombinedResearchDatasetCSV({ participants: participantsList, sessions: ayurvedaSessions, events: ayurvedaEvents, questionnaires: ayurvedaQuestionnaires }, exportFilters))}>
+                Export Combined CSV
               </button>
-              <button className="export-btn" onClick={() => exportJSON('questionnaires')}>
-                Export Protocol JSON
+              <button className="export-btn" onClick={() => triggerJsonDownload('combined_research_dataset.json', filterItems(ayurvedaSessions, exportFilters))}>
+                Export Combined JSON
               </button>
             </div>
           </div>
         </div>
 
-        <div className="danger-zone">
+        {/* Danger Zone */}
+        <div className="danger-zone" style={{ marginTop: '2.5rem' }}>
           <h3>⚠️ Danger Zone</h3>
           <button className="danger-btn" onClick={async () => {
             if (window.confirm('This will permanently delete ALL study data across local storage and the central server. Are you sure?')) {
@@ -1784,6 +1725,132 @@ function ResearcherDashboardContent() {
     );
   };
 
+  const renderDatabaseStatusBar = () => {
+    const isConnected = dbHealth && dbHealth.connected;
+    const modeText = isConnected ? 'Central PostgreSQL Connected' : 'Central Database Offline / Local Fallback';
+    const hasPending = pendingSyncCount > 0;
+
+    return (
+      <div style={{
+        margin: '0 0 1.5rem 0',
+        padding: '1rem 1.25rem',
+        borderRadius: '10px',
+        background: isConnected ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+        border: `1px solid ${isConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        color: '#e2e8f0'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{
+              display: 'inline-block',
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              backgroundColor: isConnected ? '#10b981' : '#ef4444',
+              boxShadow: isConnected ? '0 0 8px #10b981' : '0 0 8px #ef4444'
+            }}></span>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isConnected ? '#34d399' : '#f87171' }}>
+              {modeText}
+            </span>
+            {isConnected && dbHealth.database && (
+              <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)' }}>
+                db: {dbHealth.database} {dbHealth.latency_ms != null ? `(${dbHealth.latency_ms}ms)` : ''}
+              </span>
+            )}
+            {!isConnected && dbHealth.error && (
+              <span style={{ fontSize: '0.8rem', color: '#fca5a5' }}>
+                Reason: {String(dbHealth.error)}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {hasPending ? (
+              <span style={{
+                background: 'rgba(245, 158, 11, 0.2)',
+                color: '#fbbf24',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.82rem',
+                fontWeight: 600
+              }}>
+                ⚠️ {pendingSyncCount} unsynchronized event{pendingSyncCount > 1 ? 's' : ''} waiting
+              </span>
+            ) : (
+              <span style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#34d399',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.82rem'
+              }}>
+                ✓ All local events synchronized
+              </span>
+            )}
+            <button
+              onClick={handleManualSync}
+              disabled={isManualSyncing || !isConnected}
+              style={{
+                background: isConnected ? '#2563eb' : '#475569',
+                color: '#ffffff',
+                border: 'none',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                cursor: isConnected && !isManualSyncing ? 'pointer' : 'not-allowed',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                transition: 'all 0.2s'
+              }}
+              title={isConnected ? 'Push pending local events to central database' : 'Central database must be reachable to sync'}
+            >
+              {isManualSyncing ? '🔄 Syncing...' : '⚡ Sync Now'}
+            </button>
+          </div>
+        </div>
+
+        {/* Cross-device explanation & Sync status details */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '8px',
+          fontSize: '0.8rem',
+          color: 'rgba(255, 255, 255, 0.65)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          paddingTop: '6px'
+        }}>
+          <div>
+            {isConnected ? (
+              <span>
+                🌐 <strong>Authoritative Multi-Device Mode:</strong> Showing collective research data from all connected sessions and devices.
+              </span>
+            ) : (
+              <span style={{ color: '#fca5a5' }}>
+                ⚠️ <strong>Local Storage Mode:</strong> Showing data from this device only. Local records must be synchronized to appear on other researchers' laptops.
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '14px' }}>
+            <span>
+              Last Synced: {syncInfo?.lastSuccessfulSync ? new Date(syncInfo.lastSuccessfulSync).toLocaleTimeString() : 'Not yet synced'}
+            </span>
+            {syncInfo?.lastSyncError && (
+              <span style={{ color: '#f87171' }}>
+                Sync Error: {syncInfo.lastSyncError}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="researcher-dashboard">
       <nav className="researcher-nav">
@@ -1809,6 +1876,7 @@ function ResearcherDashboardContent() {
       </nav>
 
       <main className="researcher-main">
+        {renderDatabaseStatusBar()}
         {tab === 'dashboard' && renderDashboard()}
         {tab === 'questionnaire' && renderQuestionnaireProtocol()}
         {tab === 'stories' && renderStoryConfig()}

@@ -13,6 +13,10 @@ dist-ssr
 # Database & Data Exports
 server/data/*.json
 server/data/*.db
+server/data/backups/
+server/data/backups/**
+server/data/**
+!server/data/.gitkeep
 *.sqlite
 *.sqlite3
 

@@ -332,7 +332,8 @@ runTest('Requirement 16 & 17: Local progress saving and submission persistence',
 
 // 18. Researcher exports contain the correct fields
 runTest('Requirement 18: Research export contains all recommended fields from Section 8', () => {
-  const dashCode = fs.readFileSync(path.join(rootDir, 'src/components/researcher/ResearcherDashboard.jsx'), 'utf8');
+  const dashCode = fs.readFileSync(path.join(rootDir, 'src/components/researcher/ResearcherDashboard.jsx'), 'utf8') +
+    fs.readFileSync(path.join(rootDir, 'src/services/ResearchDataExporter.js'), 'utf8');
   const requiredFields = [
     'participant_id', 'condition',
     'Q1_raw', 'Q2_raw', 'Q3_raw', 'Q4_raw', 'Q5_raw', 'Q6_raw', 'Q7_raw', 'Q8_raw',

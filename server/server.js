@@ -21,6 +21,14 @@ const EMAIL_MODE = (process.env.VITE_EMAIL_MODE || process.env.EMAIL_MODE || 'li
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// URL normalization for Vercel Serverless Function compatibility
+app.use((req, res, next) => {
+  if (!req.url.startsWith('/api') && !req.url.startsWith('/stories') && !req.url.startsWith('/assets')) {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  }
+  next();
+});
+
 /** HMAC-SHA256 hash of OTP code — secret never leaves server */
 function hashCode(code) {
   return createHmac('sha256', OTP_HASH_SECRET).update(String(code)).digest('hex');
@@ -34,9 +42,18 @@ function resolveRole(email) {
   return allAdmins.includes(email.toLowerCase()) ? 'admin' : 'participant';
 }
 
-// ─── Health Check ────
+// ─── Health Check & Database Status ────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', server_time: new Date().toISOString(), mode: EMAIL_MODE });
+});
+
+app.get('/api/db/health', async (req, res) => {
+  try {
+    const health = await centralDb.healthCheck();
+    res.json(health);
+  } catch (err) {
+    res.status(500).json({ connected: false, error: err.message });
+  }
 });
 
 // ─── Participant Session Creation ────
@@ -122,7 +139,16 @@ app.get('/api/db/dashboard-data', verifyAdminToken, async (req, res) => {
   }
 });
 
-// ─── Sessions Sync ────
+// ─── Sessions Sync & Query ────
+app.get('/api/db/sessions', verifyAdminToken, async (req, res) => {
+  try {
+    const sessions = await centralDb.getSessions();
+    res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch sessions', details: err.message });
+  }
+});
+
 app.post('/api/db/sessions', verifySessionScope, async (req, res) => {
   try {
     const session = await centralDb.saveSession(req.body);
@@ -156,14 +182,66 @@ app.post('/api/db/clear-all', verifyAdminToken, async (req, res) => {
   }
 });
 
-// ─── Events Sync ────
+// ─── Events Sync (Idempotent Ingestion with ID Acknowledgment) ────
 app.post('/api/db/events', verifySessionScope, async (req, res) => {
   try {
-    const count = await centralDb.saveEvents(req.body);
-    res.json({ success: true, count });
+    const result = await centralDb.saveEvents(req.body);
+    res.json({
+      success: true,
+      count: result.count,
+      saved_event_ids: result.saved_event_ids
+    });
   } catch (err) {
     console.error('Save events error:', err);
-    res.status(500).json({ error: 'Failed to save events' });
+    res.status(500).json({ error: 'Failed to save events', details: err.message });
+  }
+});
+
+// ─── Paginated Events Query (Admin Only) ────
+app.get('/api/db/events/paginated', verifyAdminToken, async (req, res) => {
+  try {
+    const { limit, offset, sessionId, condition, storyId } = req.query;
+    const result = await centralDb.getEventsPaginated({
+      limit: limit ? parseInt(limit, 10) : 1000,
+      offset: offset ? parseInt(offset, 10) : 0,
+      sessionId: sessionId || null,
+      condition: condition || null,
+      storyId: storyId || null
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('Paginated events error:', err);
+    res.status(500).json({ error: 'Failed to fetch paginated events', details: err.message });
+  }
+});
+
+// ─── Combined Research Dataset Export (Admin Only) ────
+app.get('/api/db/export/combined', verifyAdminToken, async (req, res) => {
+  try {
+    const { condition, storyId, participantId } = req.query;
+    const data = await centralDb.getCombinedResearchData({
+      condition: condition || null,
+      storyId: storyId || null,
+      participantId: participantId || null
+    });
+    res.json({ success: true, count: data.length, data });
+  } catch (err) {
+    console.error('Combined research export error:', err);
+    res.status(500).json({ error: 'Failed to fetch combined research data', details: err.message });
+  }
+});
+app.get('/api/db/events/all', verifyAdminToken, async (req, res) => {
+  try {
+    const { sessionId, condition, storyId } = req.query;
+    const events = await centralDb.getAllEvents({
+      sessionId: sessionId || null,
+      condition: condition || null,
+      storyId: storyId || null
+    });
+    res.json({ success: true, count: events.length, events });
+  } catch (err) {
+    console.error('All events export error:', err);
+    res.status(500).json({ error: 'Failed to fetch all events', details: err.message });
   }
 });
 
@@ -301,7 +379,7 @@ app.use((err, req, res, next) => {
 });
 
 const isRunningInTest = process.env.NODE_ENV === 'test' || process.argv.some(arg => arg.includes('test'));
-if (process.env.NODE_ENV !== 'production' && !isRunningInTest) {
+if (process.env.NODE_ENV !== 'production' && !isRunningInTest && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`⚡ Central Study Backend running on http://localhost:${PORT}`);
   });

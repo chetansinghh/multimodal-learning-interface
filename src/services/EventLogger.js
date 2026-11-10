@@ -4,7 +4,7 @@
 import { sessionClock } from './SessionClock';
 
 const DB_NAME = 'multimodal_study_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const EVENTS_STORE = 'events';
 const SESSIONS_STORE = 'sessions';
 const ASSESSMENTS_STORE = 'assessments';
@@ -16,12 +16,22 @@ function openDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
+      let evStore;
       if (!db.objectStoreNames.contains(EVENTS_STORE)) {
-        const evStore = db.createObjectStore(EVENTS_STORE, { keyPath: 'id', autoIncrement: true });
+        evStore = db.createObjectStore(EVENTS_STORE, { keyPath: 'id', autoIncrement: true });
         evStore.createIndex('session_id', 'session_id', { unique: false });
         evStore.createIndex('participant_id', 'participant_id', { unique: false });
         evStore.createIndex('event', 'event', { unique: false });
+      } else {
+        evStore = e.target.transaction.objectStore(EVENTS_STORE);
       }
+      if (!evStore.indexNames.contains('sync_status')) {
+        evStore.createIndex('sync_status', 'sync_status', { unique: false });
+      }
+      if (!evStore.indexNames.contains('event_id')) {
+        evStore.createIndex('event_id', 'event_id', { unique: false });
+      }
+
       if (!db.objectStoreNames.contains(SESSIONS_STORE)) {
         const sesStore = db.createObjectStore(SESSIONS_STORE, { keyPath: 'session_id' });
         sesStore.createIndex('participant_id', 'participant_id', { unique: false });
@@ -71,6 +81,16 @@ class EventLogger {
     this.eventBuffer = [];
     this.flushInterval = null;
     this.isInitialized = false;
+    this.lastSuccessfulSync = null;
+    this.lastSyncError = null;
+    this.isSyncing = false;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        console.log('Network online reconnected — triggering pending event sync');
+        this.syncPendingEvents().catch(e => console.warn('Online sync attempt warning:', e));
+      });
+    }
   }
 
   async init() {
@@ -154,6 +174,7 @@ class EventLogger {
       elapsed_ms: now,
       wall_clock: sessionClock.wallClock(),
       timestamp_utc: utcIso,
+      created_at_utc: utcIso,
       video_timestamp: params.videoTimestamp ?? params.video_timestamp ?? 0,
       modality,
       source,
@@ -167,6 +188,7 @@ class EventLogger {
       payload,
       response: params.response || null,
       schema_version: '2.0',
+      sync_status: 'pending',
       ...(params.extra || {})
     };
 
@@ -197,12 +219,16 @@ class EventLogger {
     return sessionStorage.getItem('agy_session_token') ||
            sessionStorage.getItem('agy_participant_token') ||
            sessionStorage.getItem('agy_admin_session_token') ||
-           (this.currentSession?.participant_id ? `pt_token_${this.currentSession.participant_id}` : 'pt_token_anon');
+           (this.participantId ? `pt_token_${this.participantId}` : 'pt_token_anon');
   }
 
-  /** Flush buffered events to IndexedDB & sync to central backend server */
+  /** Flush buffered events to IndexedDB & initiate synchronization */
   async flush() {
-    if (!this.db || this.eventBuffer.length === 0) return;
+    if (!this.db || this.eventBuffer.length === 0) {
+      // Still attempt to sync any existing pending events in queue
+      this.syncPendingEvents().catch(() => {});
+      return;
+    }
     const events = [...this.eventBuffer];
     this.eventBuffer = [];
     try {
@@ -216,22 +242,125 @@ class EventLogger {
         tx.onerror = () => reject(tx.error);
       });
 
-      // Sync to central backend API
+      // Synchronize pending events to authoritative central backend
+      await this.syncPendingEvents();
+    } catch (err) {
+      this.eventBuffer.unshift(...events);
+      console.error('EventLogger flush to local IndexedDB failed:', err);
+    }
+  }
+
+  /** Authoritative queue-driven event synchronization with server confirmation */
+  async syncPendingEvents() {
+    if (!this.db || this.isSyncing) return;
+    this.isSyncing = true;
+
+    try {
       const token = this.getToken();
-      if (token) {
-        fetch('/api/db/events', {
+      if (!token) {
+        this.isSyncing = false;
+        return;
+      }
+
+      // Fetch pending events from IndexedDB
+      const tx = this.db.transaction(EVENTS_STORE, 'readonly');
+      const store = tx.objectStore(EVENTS_STORE);
+      let pendingEvents = [];
+
+      if (store.indexNames.contains('sync_status')) {
+        const index = store.index('sync_status');
+        const req = index.getAll('pending');
+        pendingEvents = await new Promise((resolve) => {
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+      } else {
+        const allReq = store.getAll();
+        const all = await new Promise((resolve) => {
+          allReq.onsuccess = () => resolve(allReq.result || []);
+          allReq.onerror = () => resolve([]);
+        });
+        pendingEvents = all.filter(e => e.sync_status !== 'synced');
+      }
+
+      if (pendingEvents.length === 0) {
+        this.isSyncing = false;
+        return;
+      }
+
+      // Synchronize in batches of 200
+      const batchSize = 200;
+      for (let i = 0; i < pendingEvents.length; i += batchSize) {
+        const batch = pendingEvents.slice(i, i + batchSize);
+        const res = await fetch('/api/db/events', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(events)
-        }).catch(err => console.warn('Central DB event sync warning:', err));
+          body: JSON.stringify(batch)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        const acknowledgedIds = new Set(data.saved_event_ids || batch.map(e => e.event_id));
+
+        // Update local IndexedDB records to 'synced' ONLY upon verified server confirmation
+        const updateTx = this.db.transaction(EVENTS_STORE, 'readwrite');
+        const updateStore = updateTx.objectStore(EVENTS_STORE);
+        for (const ev of batch) {
+          if (acknowledgedIds.has(ev.event_id)) {
+            ev.sync_status = 'synced';
+            ev.synced_at = new Date().toISOString();
+            updateStore.put(ev);
+          }
+        }
+        await new Promise((resolve, reject) => {
+          updateTx.oncomplete = resolve;
+          updateTx.onerror = () => reject(updateTx.error);
+        });
+
+        this.lastSuccessfulSync = new Date().toISOString();
+        this.lastSyncError = null;
       }
     } catch (err) {
-      this.eventBuffer.unshift(...events);
-      console.error('EventLogger flush failed:', err);
+      this.lastSyncError = err.message;
+      console.warn('Central DB event sync pending (will retry):', err.message);
+    } finally {
+      this.isSyncing = false;
     }
+  }
+
+  /** Count pending events awaiting central synchronization */
+  async getPendingSyncCount() {
+    if (!this.db) return 0;
+    try {
+      const tx = this.db.transaction(EVENTS_STORE, 'readonly');
+      const store = tx.objectStore(EVENTS_STORE);
+      if (store.indexNames.contains('sync_status')) {
+        const index = store.index('sync_status');
+        const countReq = index.count('pending');
+        return new Promise((resolve) => {
+          countReq.onsuccess = () => resolve(countReq.result || 0);
+          countReq.onerror = () => resolve(0);
+        });
+      }
+      const all = await this.getAllEvents();
+      return all.filter(e => e.sync_status === 'pending').length;
+    } catch {
+      return 0;
+    }
+  }
+
+  getSyncHealth() {
+    return {
+      lastSuccessfulSync: this.lastSuccessfulSync,
+      lastSyncError: this.lastSyncError,
+      isSyncing: this.isSyncing
+    };
   }
 
   /** Save/update session metadata locally & sync centrally */
