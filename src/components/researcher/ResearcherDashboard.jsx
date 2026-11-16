@@ -76,6 +76,29 @@ function ResearcherDashboardContent() {
   const [exportStatusMessage, setExportStatusMessage] = useState(null);
   const [participantsList, setParticipantsList] = useState([]);
 
+  // Add Participant Record Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRecord, setNewRecord] = useState({
+    name: '',
+    ageGroup: '12-13',
+    condition: 'C1',
+    q1: 'C',
+    q2: 'A',
+    q3: 'D',
+    q4: 'B',
+    q5: 'C',
+    q6: 'A',
+    q7: 'D',
+    q8: 'B',
+    q9: '',
+    q10: 5,
+    q11: 5,
+    q12: 5,
+    q13: 5,
+    c4Discomfort: 1
+  });
+  const [isSubmittingRecord, setIsSubmittingRecord] = useState(false);
+
   const fileInputRef = useRef(null);
   const importInputRef = useRef(null);
 
@@ -596,6 +619,111 @@ function ResearcherDashboardContent() {
     await loadData();
   };
 
+  // Add Participant & Session Record Manually
+  const handleSaveNewRecord = async (e) => {
+    e.preventDefault();
+    if (!newRecord.name.trim() || isSubmittingRecord) return;
+    setIsSubmittingRecord(true);
+    try {
+      const cleanName = newRecord.name.trim();
+      const pid = `P_${cleanName.replace(/\s+/g, '')}_${Date.now().toString().slice(-4)}`;
+      const sid = `SESS_${pid}_${Date.now().toString().slice(-4)}`;
+      const token = sessionStorage.getItem('agy_admin_session_token') || authService.getToken() || sessionStorage.getItem('agy_session_token');
+
+      // 1. Save participant
+      await fetch('/api/db/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ participant_id: pid, name: cleanName, age_group: newRecord.ageGroup })
+      }).catch(err => console.warn('Save participant warning:', err));
+
+      // 2. Save session
+      await fetch('/api/db/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          session_id: sid,
+          participant_id: pid,
+          participant_name: cleanName,
+          participant_age: newRecord.ageGroup,
+          condition: newRecord.condition,
+          story_id: 'ayurveda_intro_v1',
+          story_title: 'Introduction to Ayurveda',
+          status: 'complete',
+          start_time: new Date().toISOString(),
+          end_time: new Date().toISOString()
+        })
+      });
+
+      // 3. Save scored questionnaire submission
+      const qPayload = {
+        session_id: sid,
+        participant_id: pid,
+        condition: newRecord.condition,
+        story_id: 'ayurveda_intro_v1',
+        answers: {
+          Q1: newRecord.q1,
+          Q2: newRecord.q2,
+          Q3: newRecord.q3,
+          Q4: newRecord.q4,
+          Q5: newRecord.q5,
+          Q6: newRecord.q6,
+          Q7: newRecord.q7,
+          Q8: newRecord.q8,
+          Q9: newRecord.q9.trim(),
+          Q10: Number(newRecord.q10),
+          Q11: Number(newRecord.q11),
+          Q12: Number(newRecord.q12),
+          Q13: Number(newRecord.q13),
+          C4_discomfort: newRecord.condition === 'C4' ? Number(newRecord.c4Discomfort) : null
+        },
+        experience_ratings: {
+          Q10: Number(newRecord.q10),
+          Q11: Number(newRecord.q11),
+          Q12: Number(newRecord.q12),
+          Q13: Number(newRecord.q13)
+        },
+        c4_discomfort: newRecord.condition === 'C4' ? Number(newRecord.c4Discomfort) : null,
+        created_at: new Date().toISOString()
+      };
+
+      await fetch('/api/questionnaire/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(qPayload)
+      });
+
+      await eventLogger.saveQuestionnaireSubmission(qPayload);
+
+      setShowAddModal(false);
+      setNewRecord({
+        name: '',
+        ageGroup: '12-13',
+        condition: 'C1',
+        q1: 'C',
+        q2: 'A',
+        q3: 'D',
+        q4: 'B',
+        q5: 'C',
+        q6: 'A',
+        q7: 'D',
+        q8: 'B',
+        q9: '',
+        q10: 5,
+        q11: 5,
+        q12: 5,
+        q13: 5,
+        c4Discomfort: 1
+      });
+      await loadData();
+      alert(`Participant ${cleanName} added and scored successfully!`);
+    } catch (err) {
+      alert('Failed to add participant record: ' + err.message);
+    } finally {
+      setIsSubmittingRecord(false);
+    }
+  };
+
   // ─── Filtered Sessions ────
   const filteredSessions = sessions.filter(s => {
     const info = getStoryInfo(s);
@@ -631,6 +759,9 @@ function ResearcherDashboardContent() {
               onChange={handleImportJSON}
               style={{ display: 'none' }}
             />
+            <button className="action-btn-sm" style={{ background: '#0284c7', color: '#fff', fontWeight: 600 }} onClick={() => setShowAddModal(true)} title="Add a participant session with questionnaire responses">
+              ➕ Add Participant
+            </button>
             <button className="action-btn-sm" onClick={() => importInputRef.current?.click()} title="Import JSON backup from localhost or another device">
               📥 Import JSON
             </button>
@@ -1093,7 +1224,168 @@ function ResearcherDashboardContent() {
           </>
         )}
 
-        {/* JSON Payload Inspector Modal */}
+        {/* Add Participant Record Modal */}
+        {showAddModal && (
+          <div className="json-inspect-modal-overlay" onClick={() => setShowAddModal(false)}>
+            <div className="json-inspect-modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+              <div className="json-modal-header">
+                <h4>➕ Add Participant Record & Responses</h4>
+                <button className="close-btn" onClick={() => setShowAddModal(false)}>✕</button>
+              </div>
+              <form onSubmit={handleSaveNewRecord} style={{ padding: '1.25rem', overflowY: 'auto', maxHeight: '75vh' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Participant Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Daksh Saini"
+                      value={newRecord.name}
+                      onChange={e => setNewRecord(prev => ({ ...prev, name: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Age Group</label>
+                    <select
+                      value={newRecord.ageGroup}
+                      onChange={e => setNewRecord(prev => ({ ...prev, ageGroup: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                      <option value="10-11">10-11</option>
+                      <option value="12-13">12-13</option>
+                      <option value="14-15">14-15</option>
+                      <option value="16-17">16-17</option>
+                      <option value="18+">18+</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>Condition *</label>
+                    <select
+                      value={newRecord.condition}
+                      onChange={e => setNewRecord(prev => ({ ...prev, condition: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                      <option value="C1">C1 – Simple Video</option>
+                      <option value="C2">C2 – Spatial Audio</option>
+                      <option value="C3">C3 – Interactive</option>
+                      <option value="C4">C4 – VR Immersive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '14px', borderTop: '1px solid #1e293b', paddingTop: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                    Part A: Knowledge Recall (Q1–Q8)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                    {['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8'].map((qk, idx) => (
+                      <div key={qk} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Q{idx + 1}:</span>
+                        <select
+                          value={newRecord[qk]}
+                          onChange={e => setNewRecord(prev => ({ ...prev, [qk]: e.target.value }))}
+                          style={{ flex: 1, padding: '4px 6px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                        >
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                          <option value="D">D</option>
+                          <option value="E">E (Not sure)</option>
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '14px', borderTop: '1px solid #1e293b', paddingTop: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8', marginBottom: '6px' }}>
+                    Part B: Synthesis Text (Q9)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Participant open response about Ayurveda..."
+                    value={newRecord.q9}
+                    onChange={e => setNewRecord(prev => ({ ...prev, q9: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem', resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '14px', borderTop: '1px solid #1e293b', paddingTop: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                    Part C: Experience Ratings (1 to 5)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Q10 Understanding</span>
+                      <select
+                        value={newRecord.q10}
+                        onChange={e => setNewRecord(prev => ({ ...prev, q10: e.target.value }))}
+                        style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                      >
+                        {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Q11 Attention</span>
+                      <select
+                        value={newRecord.q11}
+                        onChange={e => setNewRecord(prev => ({ ...prev, q11: e.target.value }))}
+                        style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                      >
+                        {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Q12 Clarity</span>
+                      <select
+                        value={newRecord.q12}
+                        onChange={e => setNewRecord(prev => ({ ...prev, q12: e.target.value }))}
+                        style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                      >
+                        {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Q13 Recall</span>
+                      <select
+                        value={newRecord.q13}
+                        onChange={e => setNewRecord(prev => ({ ...prev, q13: e.target.value }))}
+                        style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                      >
+                        {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {newRecord.condition === 'C4' && (
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#f87171', marginBottom: '4px' }}>C4 VR Discomfort (1=None, 5=Severe)</label>
+                    <select
+                      value={newRecord.c4Discomfort}
+                      onChange={e => setNewRecord(prev => ({ ...prev, c4Discomfort: e.target.value }))}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                      <option value={1}>1 - Not at all</option>
+                      <option value={2}>2 - Mild</option>
+                      <option value={3}>3 - Moderate</option>
+                      <option value={4}>4 - Severe</option>
+                      <option value={5}>5 - Very severe</option>
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+                  <button type="button" className="table-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
+                  <button type="submit" disabled={isSubmittingRecord} style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>
+                    {isSubmittingRecord ? 'Saving...' : '💾 Save & Score Record'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
         {inspectEvent && (
           <div className="json-inspect-modal-overlay" onClick={() => setInspectEvent(null)}>
             <div className="json-inspect-modal" onClick={e => e.stopPropagation()}>

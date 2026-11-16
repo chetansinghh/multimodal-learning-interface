@@ -151,6 +151,15 @@ app.get('/api/db/participants', verifyAdminToken, async (req, res) => {
   res.json(participants);
 });
 
+app.post('/api/db/participants', verifyAdminToken, async (req, res) => {
+  try {
+    const participant = await centralDb.saveParticipant(req.body);
+    res.json({ success: true, participant });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save participant', details: err.message });
+  }
+});
+
 // ─── Dashboard Data (Admin Only) ────
 app.get('/api/db/dashboard-data', verifyAdminToken, async (req, res) => {
   try {

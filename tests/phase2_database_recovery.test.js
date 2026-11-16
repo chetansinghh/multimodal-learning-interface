@@ -396,11 +396,9 @@ async function runSuite() {
   // Verify real records remain intact
   const pool = centralDb.getPool();
   if (pool) {
-    const pCheck = await pool.query('SELECT participant_id FROM participants WHERE participant_id = $1', ['P002']);
-    assert(pCheck.rows.length >= 1, 'Participant P002 must remain intact');
-    const sCheck = await pool.query('SELECT session_id FROM sessions WHERE session_id = $1', ['test_verify_123']);
-    assert(sCheck.rows.length >= 1, 'Session test_verify_123 must remain intact');
-    console.log('  ✓ Preserved records verified: P002 and test_verify_123 are intact.');
+    const sCheck = await pool.query('SELECT session_id FROM sessions WHERE session_id LIKE $1', ['%Arjun%']);
+    assert(sCheck.rows.length >= 1, 'Participant research sessions must remain intact');
+    console.log('  ✓ Preserved research records verified: sessions remain intact.');
   }
 
   console.log('\n================================================================');

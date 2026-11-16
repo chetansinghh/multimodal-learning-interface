@@ -9,6 +9,8 @@ import centralDb from '../server/db/centralDb.js';
 
 let server;
 let baseUrl;
+const testPids = [];
+const testSids = [];
 
 before(async () => {
   await new Promise((resolve) => {
@@ -22,6 +24,18 @@ before(async () => {
 });
 
 after(async () => {
+  try {
+    const pool = centralDb.getPool();
+    if (pool && (testPids.length > 0 || testSids.length > 0)) {
+      await pool.query('DELETE FROM events WHERE participant_id = ANY($1::text[]) OR session_id = ANY($2::text[])', [testPids, testSids]);
+      await pool.query('DELETE FROM questionnaire_submissions WHERE participant_id = ANY($1::text[]) OR session_id = ANY($2::text[])', [testPids, testSids]);
+      await pool.query('DELETE FROM assessments WHERE participant_id = ANY($1::text[]) OR session_id = ANY($2::text[])', [testPids, testSids]);
+      await pool.query('DELETE FROM sessions WHERE participant_id = ANY($1::text[]) OR session_id = ANY($2::text[])', [testPids, testSids]);
+      await pool.query('DELETE FROM participants WHERE participant_id = ANY($1::text[])', [testPids]);
+    }
+  } catch (e) {
+    console.warn('Test cleanup warning:', e.message);
+  }
   if (server) {
     await new Promise((resolve) => server.close(resolve));
   }
@@ -53,6 +67,8 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
       assert.strictEqual(data.success, true);
       assert.ok(data.token, 'Participant token must be returned');
       assert.ok(data.participant_id.includes(p.name), 'Participant ID must contain name');
+      testPids.push(data.participant_id);
+      if (data.session_id) testSids.push(data.session_id);
       p.token = data.token;
       p.participant_id = data.participant_id;
       p.session_id = data.session_id;
@@ -68,6 +84,8 @@ describe('Friends Study Multi-Device Sync & Admin Portal Verification', () => {
     ];
 
     for (const p of participants) {
+      testPids.push(p.pid);
+      testSids.push(p.sid);
       // 1. Session creation
       const sessRes = await fetch(`${baseUrl}/api/db/sessions`, {
         method: 'POST',
