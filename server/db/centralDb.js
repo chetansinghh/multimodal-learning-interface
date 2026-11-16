@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { runMigrations } from './migrations/migrate.js';
-import { scoreQuestionnaireSubmission } from '../services/questionnaireScoring.js';
+import { scoreQuestionnaireSubmission, scoreKnowledgeQuestion, extractOptionLetter } from '../services/questionnaireScoring.js';
 
 dotenv.config();
 
@@ -305,6 +305,59 @@ export const centralDb = {
               end_time: q.created_at,
               created_at: q.created_at
             });
+          }
+        }
+
+        // Telemetry fallback: If a session lacks a questionnaire submission, synthesize from events
+        for (const [sessId, s] of sessionMap.entries()) {
+          if (!s.has_questionnaire) {
+            const sEvs = dbEvents.filter(e => e.session_id === sessId || (s.participant_id && e.participant_id === s.participant_id));
+            const fromEvents = {};
+            const fromRatings = {};
+            let fromC4 = null;
+            for (const e of sEvs) {
+              const p = e.payload || e.data || {};
+              const target = (e.target_id || p.target_id || p.question_id || p.objectId || e.object_id || '').trim();
+              for (let i = 1; i <= 8; i++) {
+                const qKey = `Q${i}`;
+                if (target === qKey || target.startsWith(`${qKey} `) || target.startsWith(`${qKey}_`) || p.question_id === qKey) {
+                  const val = p.response ?? p.selected_option ?? p.selectedOption ?? p.answer;
+                  if (val) fromEvents[qKey] = extractOptionLetter(val);
+                }
+              }
+              if (target === 'Q9' || p.question_id === 'Q9') {
+                const val = p.response ?? p.verbatim ?? p.answer ?? p.text;
+                if (val) fromEvents.Q9 = String(val).trim();
+              }
+              for (let i = 10; i <= 13; i++) {
+                const qKey = `Q${i}`;
+                if (target === qKey || target.startsWith(`${qKey} `) || p.question_id === qKey) {
+                  const val = p.response ?? p.rating ?? p.answer;
+                  if (val != null) fromRatings[qKey] = parseInt(val, 10);
+                }
+              }
+              if (target.includes('discomfort') || target.includes('C4') || p.question_id === 'C4_discomfort') {
+                const val = p.response ?? p.discomfort_level ?? p.rating ?? p.answer;
+                if (val != null) fromC4 = parseInt(val, 10);
+              }
+            }
+
+            if (Object.keys(fromEvents).length > 0 || Object.keys(fromRatings).length > 0) {
+              const synth = scoreQuestionnaireSubmission({
+                session_id: sessId,
+                participant_id: s.participant_id,
+                condition: s.condition || 'C1',
+                story_id: s.story_id || 'ayurveda_intro_v1',
+                answers: fromEvents,
+                experience_ratings: fromRatings,
+                c4_discomfort: fromC4,
+                created_at: s.end_time || s.start_time || new Date().toISOString()
+              });
+              s.status = 'complete';
+              s.has_questionnaire = true;
+              s.knowledge_total = synth.knowledge_total;
+              normalizedQ.push(normalizeDbQuestionnaire(synth));
+            }
           }
         }
 

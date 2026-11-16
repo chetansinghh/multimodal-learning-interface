@@ -2,6 +2,13 @@
 // Standardized CSV Research Data Exporter for Ayurveda Multimodal Study (C1–C4)
 // Compliant with Section 8 & Critical Addition requirements
 
+import {
+  AYURVEDA_ANSWER_KEY,
+  extractOptionLetter,
+  scoreKnowledgeQuestion,
+  scoreQuestionnaireSubmission
+} from './ResearcherScoringService.js';
+
 export function escapeCsv(val) {
   if (val === null || val === undefined) return '';
   const str = String(val);
@@ -9,6 +16,192 @@ export function escapeCsv(val) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
+}
+
+/**
+ * Robustly resolve, normalize, score, and synthesize questionnaire data.
+ * Merges top-level keys, nested IndexedDB responses (.answers), and raw event telemetry.
+ */
+export function resolveQuestionnaireData(sessionOrQ = {}, questionnaires = [], events = []) {
+  const sessId = sessionOrQ.session_id || sessionOrQ.sessionId;
+  const partId = sessionOrQ.participant_id || sessionOrQ.participantId;
+
+  // 1. Try to find existing submission
+  let q = null;
+  if (sessionOrQ.Q1_raw || sessionOrQ.q1_raw || sessionOrQ.answers) {
+    q = { ...sessionOrQ };
+  } else {
+    q = questionnaires.find(sub =>
+      (sessId && sub.session_id === sessId) ||
+      (partId && sub.participant_id === partId)
+    );
+    if (q) q = { ...q };
+  }
+
+  // 2. Normalize submission if it has nested .answers or missing scores
+  if (q) {
+    const rawA = q.answers || {};
+    const rawExp = q.experience_ratings || {};
+
+    const raw1 = q.Q1_raw || q.q1_raw || rawA.Q1 || rawA.q1;
+    const raw2 = q.Q2_raw || q.q2_raw || rawA.Q2 || rawA.q2;
+    const raw3 = q.Q3_raw || q.q3_raw || rawA.Q3 || rawA.q3;
+    const raw4 = q.Q4_raw || q.q4_raw || rawA.Q4 || rawA.q4;
+    const raw5 = q.Q5_raw || q.q5_raw || rawA.Q5 || rawA.q5;
+    const raw6 = q.Q6_raw || q.q6_raw || rawA.Q6 || rawA.q6;
+    const raw7 = q.Q7_raw || q.q7_raw || rawA.Q7 || rawA.q7;
+    const raw8 = q.Q8_raw || q.q8_raw || rawA.Q8 || rawA.q8;
+
+    q.Q1_raw = extractOptionLetter(raw1);
+    q.Q2_raw = extractOptionLetter(raw2);
+    q.Q3_raw = extractOptionLetter(raw3);
+    q.Q4_raw = extractOptionLetter(raw4);
+    q.Q5_raw = extractOptionLetter(raw5);
+    q.Q6_raw = extractOptionLetter(raw6);
+    q.Q7_raw = extractOptionLetter(raw7);
+    q.Q8_raw = extractOptionLetter(raw8);
+
+    q.Q1_score = q.Q1_score ?? q.q1_score ?? (q.Q1_raw ? scoreKnowledgeQuestion('Q1', q.Q1_raw) : null);
+    q.Q2_score = q.Q2_score ?? q.q2_score ?? (q.Q2_raw ? scoreKnowledgeQuestion('Q2', q.Q2_raw) : null);
+    q.Q3_score = q.Q3_score ?? q.q3_score ?? (q.Q3_raw ? scoreKnowledgeQuestion('Q3', q.Q3_raw) : null);
+    q.Q4_score = q.Q4_score ?? q.q4_score ?? (q.Q4_raw ? scoreKnowledgeQuestion('Q4', q.Q4_raw) : null);
+    q.Q5_score = q.Q5_score ?? q.q5_score ?? (q.Q5_raw ? scoreKnowledgeQuestion('Q5', q.Q5_raw) : null);
+    q.Q6_score = q.Q6_score ?? q.q6_score ?? (q.Q6_raw ? scoreKnowledgeQuestion('Q6', q.Q6_raw) : null);
+    q.Q7_score = q.Q7_score ?? q.q7_score ?? (q.Q7_raw ? scoreKnowledgeQuestion('Q7', q.Q7_raw) : null);
+    q.Q8_score = q.Q8_score ?? q.q8_score ?? (q.Q8_raw ? scoreKnowledgeQuestion('Q8', q.Q8_raw) : null);
+
+    const hasAnyScore = [q.Q1_score, q.Q2_score, q.Q3_score, q.Q4_score, q.Q5_score, q.Q6_score, q.Q7_score, q.Q8_score].some(s => s !== null && s !== undefined);
+    if (q.knowledge_total == null && hasAnyScore) {
+      q.knowledge_total = (q.Q1_score || 0) + (q.Q2_score || 0) + (q.Q3_score || 0) + (q.Q4_score || 0) +
+                          (q.Q5_score || 0) + (q.Q6_score || 0) + (q.Q7_score || 0) + (q.Q8_score || 0);
+    } else if (q.knowledge_total != null) {
+      q.knowledge_total = Number(q.knowledge_total);
+    }
+
+    q.Q9_verbatim = q.Q9_verbatim || q.q9_verbatim || rawA.Q9 || rawA.q9 || '';
+    q.Q9_score = q.Q9_score ?? q.q9_score ?? null;
+
+    q.Q10 = q.Q10 ?? q.q10 ?? q.q10_understanding ?? rawExp.Q10 ?? rawA.Q10 ?? null;
+    q.Q11 = q.Q11 ?? q.q11 ?? q.q11_attention ?? rawExp.Q11 ?? rawA.Q11 ?? null;
+    q.Q12 = q.Q12 ?? q.q12 ?? q.q12_clarity ?? rawExp.Q12 ?? rawA.Q12 ?? null;
+    q.Q13 = q.Q13 ?? q.q13 ?? q.q13_recall ?? rawExp.Q13 ?? rawA.Q13 ?? null;
+
+    q.C4_discomfort = q.C4_discomfort ?? q.c4_discomfort ?? rawExp.C4_discomfort ?? rawA.C4_discomfort ?? null;
+  }
+
+  // 3. Fallback to event telemetry extraction if q is missing or incomplete
+  const sEvents = events.filter(e =>
+    (sessId && e.session_id === sessId) ||
+    (partId && e.participant_id === partId)
+  );
+
+  if (sEvents.length > 0) {
+    const fromEvents = {};
+    const fromRatings = {};
+    let fromC4 = null;
+
+    // Scan chronological events to extract latest participant choices
+    for (const e of sEvents) {
+      const p = e.payload || e.data || {};
+      const target = (e.target_id || p.target_id || p.question_id || p.objectId || e.object_id || '').trim();
+      const action = (e.action || p.action || '').trim();
+
+      for (let i = 1; i <= 8; i++) {
+        const qKey = `Q${i}`;
+        if (target === qKey || target.startsWith(`${qKey} `) || target.startsWith(`${qKey}_`) || p.question_id === qKey) {
+          const val = p.response ?? p.selected_option ?? p.selectedOption ?? p.answer ?? p.choice;
+          if (val) fromEvents[qKey] = extractOptionLetter(val);
+        }
+      }
+
+      if (target === 'Q9' || p.question_id === 'Q9' || action === 'submit_q9') {
+        const val = p.response ?? p.verbatim ?? p.answer ?? p.text;
+        if (val) fromEvents.Q9 = String(val).trim();
+      }
+
+      for (let i = 10; i <= 13; i++) {
+        const qKey = `Q${i}`;
+        if (target === qKey || target.startsWith(`${qKey} `) || target.startsWith(`${qKey}_`) || p.question_id === qKey) {
+          const val = p.response ?? p.rating ?? p.answer;
+          if (val != null) fromRatings[qKey] = parseInt(val, 10);
+        }
+      }
+
+      if (target.includes('discomfort') || target.includes('C4') || p.question_id === 'C4_discomfort') {
+        const val = p.response ?? p.discomfort_level ?? p.rating ?? p.answer;
+        if (val != null) fromC4 = parseInt(val, 10);
+      }
+    }
+
+    if (!q) {
+      q = {
+        session_id: sessId,
+        participant_id: partId,
+        condition: sessionOrQ.condition || 'C1',
+        story_id: sessionOrQ.story_id || 'ayurveda_intro_v1',
+        Q1_raw: fromEvents.Q1 || null,
+        Q2_raw: fromEvents.Q2 || null,
+        Q3_raw: fromEvents.Q3 || null,
+        Q4_raw: fromEvents.Q4 || null,
+        Q5_raw: fromEvents.Q5 || null,
+        Q6_raw: fromEvents.Q6 || null,
+        Q7_raw: fromEvents.Q7 || null,
+        Q8_raw: fromEvents.Q8 || null,
+        Q9_verbatim: fromEvents.Q9 || '',
+        Q9_score: null,
+        Q10: fromRatings.Q10 || null,
+        Q11: fromRatings.Q11 || null,
+        Q12: fromRatings.Q12 || null,
+        Q13: fromRatings.Q13 || null,
+        C4_discomfort: fromC4,
+        completion_time_seconds: null,
+        created_at: sessionOrQ.end_time || sessionOrQ.start_time || new Date().toISOString()
+      };
+      // Score Q1–Q8
+      let tot = 0;
+      let scoredCount = 0;
+      for (let i = 1; i <= 8; i++) {
+        const raw = q[`Q${i}_raw`];
+        const sc = raw ? scoreKnowledgeQuestion(`Q${i}`, raw) : null;
+        q[`Q${i}_score`] = sc;
+        if (sc !== null) {
+          tot += sc;
+          scoredCount++;
+        }
+      }
+      q.knowledge_total = scoredCount > 0 ? tot : null;
+    } else {
+      // Patch any blanks in existing q from events
+      let patched = false;
+      for (let i = 1; i <= 8; i++) {
+        const k = `Q${i}_raw`;
+        if (!q[k] && fromEvents[`Q${i}`]) {
+          q[k] = fromEvents[`Q${i}`];
+          q[`Q${i}_score`] = scoreKnowledgeQuestion(`Q${i}`, q[k]);
+          patched = true;
+        }
+      }
+      if (patched || q.knowledge_total == null) {
+        let tot = 0;
+        let scoredCount = 0;
+        for (let i = 1; i <= 8; i++) {
+          if (q[`Q${i}_score`] != null) {
+            tot += q[`Q${i}_score`];
+            scoredCount++;
+          }
+        }
+        if (scoredCount > 0) q.knowledge_total = tot;
+      }
+      if (!q.Q9_verbatim && fromEvents.Q9) q.Q9_verbatim = fromEvents.Q9;
+      if (q.Q10 == null && fromRatings.Q10 != null) q.Q10 = fromRatings.Q10;
+      if (q.Q11 == null && fromRatings.Q11 != null) q.Q11 = fromRatings.Q11;
+      if (q.Q12 == null && fromRatings.Q12 != null) q.Q12 = fromRatings.Q12;
+      if (q.Q13 == null && fromRatings.Q13 != null) q.Q13 = fromRatings.Q13;
+      if (q.C4_discomfort == null && fromC4 != null) q.C4_discomfort = fromC4;
+    }
+  }
+
+  return q || {};
 }
 
 export function filterItems(items = [], { condition = 'all', storyId = 'all', participantId = '', startDate = '', endDate = '' } = {}) {
@@ -155,7 +348,8 @@ export function exportQuestionnaireResponsesCSV(questionnaires = [], filters = {
     'Q9_verbatim', 'Q10', 'Q11', 'Q12', 'Q13', 'C4_discomfort', 'completion_time_seconds', 'created_at'
   ];
   const rows = [headers.join(',')];
-  filtered.forEach(q => {
+  filtered.forEach(rawQ => {
+    const q = resolveQuestionnaireData(rawQ, [rawQ], []);
     const isC4 = (q.condition || '').toUpperCase() === 'C4';
     const disc = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
     rows.push([
@@ -193,7 +387,8 @@ export function exportKnowledgeScoresCSV(questionnaires = [], filters = {}) {
     'knowledge_total'
   ];
   const rows = [headers.join(',')];
-  filtered.forEach(q => {
+  filtered.forEach(rawQ => {
+    const q = resolveQuestionnaireData(rawQ, [rawQ], []);
     rows.push([
       escapeCsv(q.participant_id),
       escapeCsv(q.session_id),
@@ -220,7 +415,8 @@ export function exportQ9OpenResponsesCSV(questionnaires = [], filters = {}) {
     'Q9_verbatim', 'Q9_score', 'completion_time_seconds', 'created_at'
   ];
   const rows = [headers.join(',')];
-  filtered.forEach(q => {
+  filtered.forEach(rawQ => {
+    const q = resolveQuestionnaireData(rawQ, [rawQ], []);
     rows.push([
       escapeCsv(q.participant_id),
       escapeCsv(q.session_id),
@@ -243,7 +439,8 @@ export function exportQ10Q13LikertCSV(questionnaires = [], filters = {}) {
     'Q10_understanding', 'Q11_attention', 'Q12_clarity', 'Q13_recall'
   ];
   const rows = [headers.join(',')];
-  filtered.forEach(q => {
+  filtered.forEach(rawQ => {
+    const q = resolveQuestionnaireData(rawQ, [rawQ], []);
     rows.push([
       escapeCsv(q.participant_id),
       escapeCsv(q.session_id),
@@ -263,7 +460,8 @@ export function exportC4DiscomfortCSV(questionnaires = [], filters = {}) {
   const headers = ['participant_id', 'session_id', 'condition', 'c4_discomfort', 'discomfort_label', 'created_at'];
   const labels = { 1: 'Not at all', 2: 'Mild', 3: 'Moderate', 4: 'Severe', 5: 'Very severe' };
   const rows = [headers.join(',')];
-  filtered.forEach(q => {
+  filtered.forEach(rawQ => {
+    const q = resolveQuestionnaireData(rawQ, [rawQ], []);
     const val = q.C4_discomfort ?? q.c4_discomfort ?? '';
     rows.push([
       escapeCsv(q.participant_id),
@@ -414,8 +612,8 @@ export function exportCombinedResearchDatasetCSV({ participants = [], sessions =
 
   filteredSessions.forEach(s => {
     const p = participants.find(part => part.participant_id === s.participant_id) || {};
-    const q = questionnaires.find(sub => sub.session_id === s.session_id || (s.participant_id && sub.participant_id === s.participant_id)) || {};
     const sEvents = events.filter(e => e.session_id === s.session_id || (s.participant_id && e.participant_id === s.participant_id));
+    const q = resolveQuestionnaireData(s, questionnaires, sEvents);
     const isC4 = (s.condition || '').toUpperCase() === 'C4';
     const disc = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
 

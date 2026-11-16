@@ -1,7 +1,8 @@
 // EventLogger — raw timestamped event stream, persisted to IndexedDB with autosave.
 // Never stores summary stats — only raw events. Summaries are derived at query time.
 
-import { sessionClock } from './SessionClock';
+import { sessionClock } from './SessionClock.js';
+import { scoreQuestionnaireSubmission } from './ResearcherScoringService.js';
 
 const DB_NAME = 'multimodal_study_db';
 const DB_VERSION = 3;
@@ -411,10 +412,17 @@ class EventLogger {
 
   /** Save full Ayurveda research questionnaire submission */
   async saveQuestionnaireSubmission(submission) {
+    let scored = submission;
+    try {
+      scored = scoreQuestionnaireSubmission(submission);
+    } catch (e) {
+      console.warn('Local questionnaire scoring warning:', e);
+    }
+
     if (this.db) {
       try {
         const tx = this.db.transaction(QUESTIONNAIRE_STORE, 'readwrite');
-        tx.objectStore(QUESTIONNAIRE_STORE).put(submission);
+        tx.objectStore(QUESTIONNAIRE_STORE).put(scored);
         await new Promise((resolve, reject) => {
           tx.oncomplete = resolve;
           tx.onerror = () => reject(tx.error);

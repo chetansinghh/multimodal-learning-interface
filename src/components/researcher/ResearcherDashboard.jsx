@@ -19,7 +19,8 @@ import {
   exportC4VRTelemetryCSV,
   exportTechnicalIssuesCSV,
   exportDataSyncStatusCSV,
-  exportCombinedResearchDatasetCSV
+  exportCombinedResearchDatasetCSV,
+  resolveQuestionnaireData
 } from '../../services/ResearchDataExporter';
 import AdminLoginGate from './AdminLoginGate';
 import './ResearcherDashboard.css';
@@ -136,19 +137,22 @@ function ResearcherDashboardContent() {
 
     // 2. Fetch Authoritative Central Multi-Device Database Data
     try {
-      const token = authService.getToken() || sessionStorage.getItem('agy_session_token') || sessionStorage.getItem('agy_admin_session_token');
-      if (token) {
+      const adminToken = sessionStorage.getItem('agy_admin_session_token') || authService.getToken() || sessionStorage.getItem('agy_session_token');
+      if (adminToken) {
         const res = await fetch('/api/db/dashboard-data', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${adminToken}` }
         });
         if (res.ok) {
           const serverData = await res.json();
 
           // Authoritative Cloud Records
-          const serverQ = (serverData.questionnaire_submissions || []).filter(isAyurvedaItem);
+          const rawQ = (serverData.questionnaire_submissions || []).filter(isAyurvedaItem);
           const rawSessions = (serverData.sessions || []).filter(isAyurvedaItem);
           const serverEvents = (serverData.events || []).filter(isAyurvedaItem);
           const serverAssessments = (serverData.assessments || []).filter(isAyurvedaItem);
+
+          // Normalize and score cloud questionnaires
+          const serverQ = rawQ.map(q => resolveQuestionnaireData(q, [q], serverEvents));
 
           // Reconcile: every questionnaire submission MUST have a visible session in the list
           const sMap = new Map();
@@ -188,6 +192,22 @@ function ResearcherDashboardContent() {
               });
             }
           });
+
+          // Telemetry fallback: ensure sessions with events have resolved questionnaires
+          sMap.forEach(s => {
+            if (!s.has_questionnaire) {
+              const resolved = resolveQuestionnaireData(s, serverQ, serverEvents);
+              if (resolved && (resolved.Q1_raw || resolved.knowledge_total != null)) {
+                s.status = 'complete';
+                s.has_questionnaire = true;
+                s.knowledge_total = resolved.knowledge_total;
+                if (!serverQ.some(item => item.session_id === s.session_id)) {
+                  serverQ.push(resolved);
+                }
+              }
+            }
+          });
+
           const serverSessions = Array.from(sMap.values()).sort(
             (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
           );
@@ -199,7 +219,7 @@ function ResearcherDashboardContent() {
           setQuestionnaireSubmissions(serverQ);
 
           try {
-            const pRes = await fetch('/api/db/participants', { headers: { 'Authorization': `Bearer ${token}` } });
+            const pRes = await fetch('/api/db/participants', { headers: { 'Authorization': `Bearer ${adminToken}` } });
             if (pRes.ok) {
               const pData = await pRes.json();
               if (Array.isArray(pData)) setParticipantsList(pData);
@@ -208,6 +228,13 @@ function ResearcherDashboardContent() {
             console.warn('Participants fetch warning:', pErr);
           }
           return;
+        } else if (res.status === 401 || res.status === 403) {
+          console.warn('Dashboard data 401/403: Admin privileges required.');
+          setDbHealth(prev => ({
+            ...prev,
+            mode: 'auth_required',
+            error: 'Admin session expired or privileges required. Please sign in to view collective cloud data.'
+          }));
         }
       }
     } catch (err) {
@@ -215,7 +242,7 @@ function ResearcherDashboardContent() {
     }
 
     // Local Storage Fallback if Server Unreachable
-    const localQFiltered = localQ.filter(isAyurvedaItem);
+    const localQFiltered = localQ.filter(isAyurvedaItem).map(q => resolveQuestionnaireData(q, [q], localE));
     const localSMap = new Map();
     localS.filter(isAyurvedaItem).forEach(s => localSMap.set(s.session_id, { ...s }));
     localQFiltered.forEach(q => {
@@ -248,6 +275,22 @@ function ResearcherDashboardContent() {
         });
       }
     });
+
+    // Also check local events for unsubmitted questionnaires
+    localSMap.forEach(s => {
+      if (!s.has_questionnaire) {
+        const resolved = resolveQuestionnaireData(s, localQFiltered, localE);
+        if (resolved && (resolved.Q1_raw || resolved.knowledge_total != null)) {
+          s.status = 'complete';
+          s.has_questionnaire = true;
+          s.knowledge_total = resolved.knowledge_total;
+          if (!localQFiltered.some(item => item.session_id === s.session_id)) {
+            localQFiltered.push(resolved);
+          }
+        }
+      }
+    });
+
     setSessions(Array.from(localSMap.values()));
     setEvents(localE.filter(isAyurvedaItem));
     setAssessments(localA.filter(isAyurvedaItem));
