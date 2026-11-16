@@ -62,11 +62,29 @@ app.get('/api/db/health', async (req, res) => {
 });
 
 // ─── Participant Session Creation ────
-app.post('/api/auth/participant-session', (req, res) => {
+app.post('/api/auth/participant-session', async (req, res) => {
   const { participant_id, name, age_group, condition, story_id, session_id } = req.body || {};
   const pid = participant_id || `P_${(name || 'User').replace(/\s+/g, '')}_${Date.now().toString().slice(-4)}`;
   const sid = session_id || `SESS_${pid}_${Date.now().toString().slice(-4)}`;
   
+  // Persist participant and initial session immediately so they exist in central DB
+  await centralDb.saveParticipant({
+    participant_id: pid,
+    name: name || 'Participant',
+    age_group: age_group || '12-13'
+  }).catch(e => console.warn('saveParticipant on auth warning:', e.message));
+
+  await centralDb.saveSession({
+    session_id: sid,
+    participant_id: pid,
+    participant_name: name || 'Participant',
+    participant_age: age_group || '12-13',
+    condition: condition || 'C1',
+    story_id: story_id || 'ayurveda_intro_v1',
+    status: 'in_progress',
+    start_time: new Date().toISOString()
+  }).catch(e => console.warn('saveSession on auth warning:', e.message));
+
   const token = jwt.sign(
     { 
       participantId: pid, 

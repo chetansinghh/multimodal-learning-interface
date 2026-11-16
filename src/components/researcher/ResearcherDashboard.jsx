@@ -154,13 +154,20 @@ function ResearcherDashboardContent() {
           const sMap = new Map();
           rawSessions.forEach(s => sMap.set(s.session_id, { ...s }));
           serverQ.forEach(q => {
+            let s = null;
             if (sMap.has(q.session_id)) {
-              const s = sMap.get(q.session_id);
+              s = sMap.get(q.session_id);
+            } else if (q.participant_id) {
+              s = Array.from(sMap.values()).find(item => item.participant_id === q.participant_id);
+            }
+
+            if (s) {
               s.status = 'complete';
               s.has_questionnaire = true;
               s.knowledge_total = q.knowledge_total;
               s.condition = q.condition || s.condition;
               s.participant_id = q.participant_id || s.participant_id;
+              if (!s.end_time) s.end_time = q.created_at;
             } else {
               const pName = (q.participant_id ? q.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
               sMap.set(q.session_id, {
@@ -212,8 +219,14 @@ function ResearcherDashboardContent() {
     const localSMap = new Map();
     localS.filter(isAyurvedaItem).forEach(s => localSMap.set(s.session_id, { ...s }));
     localQFiltered.forEach(q => {
+      let s = null;
       if (localSMap.has(q.session_id)) {
-        const s = localSMap.get(q.session_id);
+        s = localSMap.get(q.session_id);
+      } else if (q.participant_id) {
+        s = Array.from(localSMap.values()).find(item => item.participant_id === q.participant_id);
+      }
+
+      if (s) {
         s.status = 'complete';
         s.has_questionnaire = true;
         s.knowledge_total = q.knowledge_total;

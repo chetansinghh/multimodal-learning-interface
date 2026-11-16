@@ -909,7 +909,7 @@ export const centralDb = {
             COALESCE(s.session_id, q.session_id) AS session_id,
             COALESCE(s.participant_id, q.participant_id) AS participant_id,
             COALESCE(p.name, s.participant_name, q.participant_id) AS participant_name,
-            p.age_group AS age_range,
+            COALESCE(p.age_group, s.participant_age, '12-13') AS age_range,
             p.email AS participant_email,
             COALESCE(s.condition, q.condition) AS condition,
             COALESCE(s.story_id, q.story_id, 'ayurveda_intro_v1') AS story_id,

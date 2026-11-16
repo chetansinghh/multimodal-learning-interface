@@ -314,7 +314,7 @@ export function exportC4VRTelemetryCSV(events = [], filters = {}) {
   const filtered = filterItems(events, filters).filter(e => {
     const cond = (e.condition || '').toUpperCase();
     const ev = (e.event_type || e.event || '');
-    return cond === 'C4' || ev.startsWith('VR_') || ev === 'GAZE_DWELL';
+    return cond === 'C4' || ev.startsWith('VR_') || ev.startsWith('GAZE_') || ev.startsWith('HEAD_') || ev === 'OBJECT_LOOKED_AT' || ev === 'GAZE_DWELL';
   });
 
   const headers = [
@@ -414,15 +414,15 @@ export function exportCombinedResearchDatasetCSV({ participants = [], sessions =
 
   filteredSessions.forEach(s => {
     const p = participants.find(part => part.participant_id === s.participant_id) || {};
-    const q = questionnaires.find(sub => sub.session_id === s.session_id) || {};
-    const sEvents = events.filter(e => e.session_id === s.session_id);
+    const q = questionnaires.find(sub => sub.session_id === s.session_id || (s.participant_id && sub.participant_id === s.participant_id)) || {};
+    const sEvents = events.filter(e => e.session_id === s.session_id || (s.participant_id && e.participant_id === s.participant_id));
     const isC4 = (s.condition || '').toUpperCase() === 'C4';
     const disc = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
 
     rows.push([
       escapeCsv(s.participant_id),
       escapeCsv(p.name || s.participant_name || ''),
-      escapeCsv(p.age_range || s.participant_age || ''),
+      escapeCsv(p.age_range || p.age_group || s.participant_age || '12-13'),
       escapeCsv(s.session_id),
       escapeCsv(s.condition),
       escapeCsv(s.story_id || 'ayurveda_intro_v1'),
