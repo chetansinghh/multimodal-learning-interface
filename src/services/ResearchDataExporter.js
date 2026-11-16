@@ -254,13 +254,12 @@ export function filterItems(items = [], { condition = 'all', storyId = 'all', pa
 // 1. Participant Master Data CSV
 export function exportParticipantMasterCSV(participants = [], filters = {}) {
   const filtered = filterItems(participants, filters);
-  const headers = ['participant_id', 'name', 'email', 'age_range', 'created_at'];
+  const headers = ['participant_id', 'name', 'age_range', 'created_at'];
   const rows = [headers.join(',')];
   filtered.forEach(p => {
     rows.push([
       escapeCsv(p.participant_id),
       escapeCsv(p.name || ''),
-      escapeCsv(p.email || ''),
       escapeCsv(p.age_range || p.age_group || ''),
       escapeCsv(p.created_at || '')
     ].join(','));

@@ -141,8 +141,8 @@ runTest('2. Export 1: Participant Master Data CSV', () => {
   assert.strictEqual(result.count, 4);
   assert.strictEqual(result.name, 'participant_master_data.csv');
   const lines = result.csv.split('\n');
-  assert.strictEqual(lines[0], 'participant_id,name,email,age_range,created_at');
-  assert(lines[1].includes('P001,Arjun Sharma,arjun@example.com'));
+  assert.strictEqual(lines[0], 'participant_id,name,age_range,created_at');
+  assert(lines[1].includes('P001,Arjun Sharma,20-22'));
 });
 
 // ─── 3. Session Summary Data CSV ────

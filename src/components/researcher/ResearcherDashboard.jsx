@@ -390,7 +390,7 @@ function ResearcherDashboardContent() {
         session_id: 'SESS_AYUR_C1_' + Date.now().toString().slice(-4),
         participant_id: 'P_Aarav_C1',
         participant_name: 'Aarav Sharma',
-        participant_email: 'aarav@example.edu',
+        participant_email: null,
         participant_age: '20-22',
         condition: 'C1',
         story_id: 'ayurveda_intro_v1',
@@ -404,7 +404,7 @@ function ResearcherDashboardContent() {
         session_id: 'SESS_AYUR_C2_' + Date.now().toString().slice(-4),
         participant_id: 'P_Priya_C2',
         participant_name: 'Priya Nair',
-        participant_email: 'priya@example.edu',
+        participant_email: null,
         participant_age: '20-22',
         condition: 'C2',
         story_id: 'ayurveda_intro_v1',
@@ -418,7 +418,7 @@ function ResearcherDashboardContent() {
         session_id: 'SESS_AYUR_C3_' + Date.now().toString().slice(-4),
         participant_id: 'P_Rohan_C3',
         participant_name: 'Rohan Gupta',
-        participant_email: 'rohan@example.edu',
+        participant_email: null,
         participant_age: '20-22',
         condition: 'C3',
         story_id: 'ayurveda_intro_v1',
@@ -432,7 +432,7 @@ function ResearcherDashboardContent() {
         session_id: 'SESS_AYUR_C4_' + Date.now().toString().slice(-4),
         participant_id: 'P_Ananya_C4',
         participant_name: 'Ananya Verma',
-        participant_email: 'ananya@example.edu',
+        participant_email: null,
         participant_age: '20-22',
         condition: 'C4',
         story_id: 'ayurveda_intro_v1',
@@ -733,8 +733,7 @@ function ResearcherDashboardContent() {
       const q = searchQuery.toLowerCase();
       const matchPid = (s.participant_id || '').toLowerCase().includes(q);
       const matchName = (s.participant_name || '').toLowerCase().includes(q);
-      const matchEmail = (s.participant_email || '').toLowerCase().includes(q);
-      if (!matchPid && !matchName && !matchEmail) return false;
+      if (!matchPid && !matchName) return false;
     }
     return true;
   });
@@ -828,7 +827,7 @@ function ResearcherDashboardContent() {
             <input
               type="text"
               className="dashboard-search-input"
-              placeholder="🔍 Search participant, ID, email…"
+              placeholder="🔍 Search participant name or ID…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -873,7 +872,7 @@ function ResearcherDashboardContent() {
                 <tr>
                   <th>Story</th>
                   <th>Participant ID</th>
-                  <th>Name & Email</th>
+                  <th>Participant Name</th>
                   <th>Condition</th>
                   <th>Status</th>
                   <th>Events</th>
@@ -902,8 +901,7 @@ function ResearcherDashboardContent() {
                       <td><code>{s.participant_id}</code></td>
                       <td>
                         <div className="participant-identity-cell">
-                          <strong>{s.participant_name || 'Anonymous'}</strong>
-                          <small>{s.participant_email || 'No email registered'}</small>
+                          <strong style={{ fontSize: '0.95rem' }}>{s.participant_name || 'Anonymous'}</strong>
                         </div>
                       </td>
                       <td><span className="condition-tag">{s.condition}</span></td>
@@ -1701,7 +1699,7 @@ function ResearcherDashboardContent() {
           {/* 1. Participant Master Data */}
           <div className="export-card">
             <h3>👤 1. Participant Master Data</h3>
-            <p>Participant demographics, assigned condition, name, email, and registration timestamps.</p>
+            <p>Participant demographics, assigned condition, name, and registration timestamps.</p>
             <p className="export-count">{countParticipants} participant records</p>
             <div className="export-btns">
               <button className="export-btn" onClick={() => triggerDownload(exportParticipantMasterCSV(participantsList, exportFilters))}>Export CSV</button>

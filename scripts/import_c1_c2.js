@@ -70,11 +70,21 @@ async function importC1C2() {
 
   console.log(`Processing ${rows.length} records for C1 and C2...`);
 
+  // First clean up previous C1/C2 import with old format
+  await pool.query("DELETE FROM events WHERE session_id LIKE 'SESS_C1_%' OR session_id LIKE 'SESS_C2_%' OR participant_id LIKE 'C1_%' OR participant_id LIKE 'C2_%'");
+  await pool.query("DELETE FROM questionnaire_submissions WHERE session_id LIKE 'SESS_C1_%' OR session_id LIKE 'SESS_C2_%' OR participant_id LIKE 'C1_%' OR participant_id LIKE 'C2_%'");
+  await pool.query("DELETE FROM sessions WHERE session_id LIKE 'SESS_C1_%' OR session_id LIKE 'SESS_C2_%' OR participant_id LIKE 'C1_%' OR participant_id LIKE 'C2_%'");
+  await pool.query("DELETE FROM participants WHERE participant_id LIKE 'C1_%' OR participant_id LIKE 'C2_%'");
+
+  // Also remove emails across all participants and sessions
+  await pool.query("UPDATE participants SET email = NULL WHERE email IS NOT NULL");
+  await pool.query("UPDATE sessions SET participant_email = NULL WHERE participant_email IS NOT NULL");
+
   const baseTime = new Date('2026-11-16T10:00:00.000Z').getTime();
 
   for (let idx = 0; idx < rows.length; idx++) {
     const r = rows[idx];
-    const pid = r[0]; // e.g. C1_P01
+    const rawId = r[0]; // e.g. C1_P01
     const name = r[1]; // e.g. Arjun
     const cond = r[4]; // C1 or C2
     const q1 = r[7], q2 = r[8], q3 = r[9], q4 = r[10];
@@ -89,34 +99,39 @@ async function importC1C2() {
     const q13 = Number(r[28]);
     const comment = r[29] || '';
 
-    const sid = `SESS_${cond}_${name}_${pid}`;
+    // Canonical format: P_<Name>_<ID> (e.g. P_Arjun_C1_P01)
+    const pid = `P_${name}_${rawId}`;
+    const sid = `SESS_${pid}`;
     const startTime = new Date(baseTime + idx * 1800000).toISOString();
     const endTime = new Date(baseTime + idx * 1800000 + 215000).toISOString();
     const q9Score = q9Text.length > 50 ? 2 : 1;
 
     console.log(`[${idx + 1}/30] Importing ${cond}: ${pid} (${name}) - Score: ${totalScore}/8`);
 
-    // 1. Participant
+    // 1. Participant (NO email)
     await pool.query(
       `INSERT INTO participants (participant_id, name, age_group, email)
-       VALUES ($1, $2, $3, $4)
+       VALUES ($1, $2, $3, NULL)
        ON CONFLICT (participant_id) DO UPDATE SET
          name = EXCLUDED.name,
-         age_group = EXCLUDED.age_group`,
-      [pid, name, '14-15', `${name.toLowerCase()}@example.edu`]
+         age_group = EXCLUDED.age_group,
+         email = NULL`,
+      [pid, name, '14-15']
     );
 
-    // 2. Session
+    // 2. Session (NO email)
     await pool.query(
       `INSERT INTO sessions (
          session_id, participant_id, participant_name, participant_email, participant_age,
          condition, story_id, status, start_time, end_time, created_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ) VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (session_id) DO UPDATE SET
+         participant_name = EXCLUDED.participant_name,
+         participant_email = NULL,
          status = 'complete',
          end_time = EXCLUDED.end_time`,
       [
-        sid, pid, name, `${name.toLowerCase()}@example.edu`, '14-15',
+        sid, pid, name, '14-15',
         cond, 'ayurveda_intro_v1', 'complete',
         startTime, endTime, startTime
       ]
