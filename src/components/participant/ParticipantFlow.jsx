@@ -20,7 +20,7 @@ export default function ParticipantFlow() {
   const [phase, setPhase] = useState('instructions');
   const [participantId, setParticipantId] = useState(user?.participant_id || '');
   const [participantIdentity, setParticipantIdentity] = useState(user || null);
-  const [sessionId] = useState(() => user?.sessionId || uuidv4());
+  const [sessionId] = useState(() => user?.sessionId || user?.session_id || uuidv4());
   const [condition, setCondition] = useState(user?.condition || 'C1');
   const [storyUrl, setStoryUrl] = useState(user?.storyUrl || '/stories/story_ayurveda_v1.json');
   const [availableStories, setAvailableStories] = useState([]);

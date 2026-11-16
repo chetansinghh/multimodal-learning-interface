@@ -145,10 +145,45 @@ function ResearcherDashboardContent() {
           const serverData = await res.json();
 
           // Authoritative Cloud Records
-          const serverSessions = (serverData.sessions || []).filter(isAyurvedaItem);
+          const serverQ = (serverData.questionnaire_submissions || []).filter(isAyurvedaItem);
+          const rawSessions = (serverData.sessions || []).filter(isAyurvedaItem);
           const serverEvents = (serverData.events || []).filter(isAyurvedaItem);
           const serverAssessments = (serverData.assessments || []).filter(isAyurvedaItem);
-          const serverQ = (serverData.questionnaire_submissions || []).filter(isAyurvedaItem);
+
+          // Reconcile: every questionnaire submission MUST have a visible session in the list
+          const sMap = new Map();
+          rawSessions.forEach(s => sMap.set(s.session_id, { ...s }));
+          serverQ.forEach(q => {
+            if (sMap.has(q.session_id)) {
+              const s = sMap.get(q.session_id);
+              s.status = 'complete';
+              s.has_questionnaire = true;
+              s.knowledge_total = q.knowledge_total;
+              s.condition = q.condition || s.condition;
+              s.participant_id = q.participant_id || s.participant_id;
+            } else {
+              const pName = (q.participant_id ? q.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+              sMap.set(q.session_id, {
+                session_id: q.session_id,
+                participant_id: q.participant_id,
+                participant_name: pName,
+                participant_email: null,
+                participant_age: null,
+                condition: q.condition || 'C1',
+                story_id: q.story_id || 'ayurveda_intro_v1',
+                story_title: 'Introduction to Ayurveda',
+                status: 'complete',
+                has_questionnaire: true,
+                knowledge_total: q.knowledge_total,
+                start_time: q.created_at,
+                end_time: q.created_at,
+                created_at: q.created_at
+              });
+            }
+          });
+          const serverSessions = Array.from(sMap.values()).sort(
+            (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+          );
 
           setSessions(serverSessions);
           setEvents(serverEvents);
@@ -173,10 +208,37 @@ function ResearcherDashboardContent() {
     }
 
     // Local Storage Fallback if Server Unreachable
-    setSessions(localS.filter(isAyurvedaItem));
+    const localQFiltered = localQ.filter(isAyurvedaItem);
+    const localSMap = new Map();
+    localS.filter(isAyurvedaItem).forEach(s => localSMap.set(s.session_id, { ...s }));
+    localQFiltered.forEach(q => {
+      if (localSMap.has(q.session_id)) {
+        const s = localSMap.get(q.session_id);
+        s.status = 'complete';
+        s.has_questionnaire = true;
+        s.knowledge_total = q.knowledge_total;
+      } else {
+        const pName = (q.participant_id ? q.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+        localSMap.set(q.session_id, {
+          session_id: q.session_id,
+          participant_id: q.participant_id,
+          participant_name: pName,
+          condition: q.condition || 'C1',
+          story_id: q.story_id || 'ayurveda_intro_v1',
+          story_title: 'Introduction to Ayurveda',
+          status: 'complete',
+          has_questionnaire: true,
+          knowledge_total: q.knowledge_total,
+          start_time: q.created_at,
+          end_time: q.created_at,
+          created_at: q.created_at
+        });
+      }
+    });
+    setSessions(Array.from(localSMap.values()));
     setEvents(localE.filter(isAyurvedaItem));
     setAssessments(localA.filter(isAyurvedaItem));
-    setQuestionnaireSubmissions(localQ.filter(isAyurvedaItem));
+    setQuestionnaireSubmissions(localQFiltered);
   };
 
   const handleManualSync = async () => {
@@ -540,8 +602,8 @@ function ResearcherDashboardContent() {
             <div className="card-label">Total Events Logged</div>
           </div>
           <div className="summary-card">
-            <div className="card-value">{assessments.length}</div>
-            <div className="card-label">Assessment Responses</div>
+            <div className="card-value">{questionnaireSubmissions.length}</div>
+            <div className="card-label">Completed Questionnaires</div>
           </div>
         </div>
 
@@ -659,12 +721,12 @@ function ResearcherDashboardContent() {
                       </td>
                       <td><span className="condition-tag">{s.condition}</span></td>
                       <td>
-                        <span className={`status-badge ${s.status}`}>
-                          {s.status || 'unknown'}
+                        <span className={`status-badge ${s.status === 'complete' || s.has_questionnaire ? 'complete' : (s.status || 'in_progress')}`}>
+                          {s.status === 'complete' || s.has_questionnaire ? '✓ Completed' : (s.status || 'in_progress')}
                         </span>
                       </td>
                       <td>{sessEvents.length}</td>
-                      <td>{acc !== '-' ? `${acc}%` : '-'}</td>
+                      <td>{s.knowledge_total != null ? `${s.knowledge_total}/8 Score` : (acc !== '-' ? `${acc}%` : '-')}</td>
                       <td>{s.start_time ? new Date(s.start_time).toLocaleString() : '-'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>

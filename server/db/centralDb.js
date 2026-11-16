@@ -271,16 +271,56 @@ export const centralDb = {
         // Fetch up to 10,000 most recent events for live dashboard view
         const eRes = await pool.query('SELECT * FROM events ORDER BY created_at DESC LIMIT 10000');
         const dbEvents = eRes.rows.map(normalizeDbEvent);
+        const normalizedQ = qRes.rows.map(normalizeDbQuestionnaire);
+
+        // Reconcile sessions: Ensure every questionnaire submission is present as a complete session
+        const sessionMap = new Map();
+        for (const s of sRes.rows) {
+          sessionMap.set(s.session_id, { ...s });
+        }
+        for (const q of normalizedQ) {
+          if (sessionMap.has(q.session_id)) {
+            const existing = sessionMap.get(q.session_id);
+            existing.status = 'complete';
+            existing.has_questionnaire = true;
+            existing.knowledge_total = q.knowledge_total;
+            existing.condition = q.condition || existing.condition;
+            existing.participant_id = q.participant_id || existing.participant_id;
+            if (!existing.end_time) existing.end_time = q.created_at;
+          } else {
+            const pName = (q.participant_id ? q.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+            sessionMap.set(q.session_id, {
+              session_id: q.session_id,
+              participant_id: q.participant_id,
+              participant_name: pName,
+              participant_email: null,
+              participant_age: null,
+              condition: q.condition || 'C1',
+              story_id: q.story_id || 'ayurveda_intro_v1',
+              story_title: 'Introduction to Ayurveda',
+              status: 'complete',
+              has_questionnaire: true,
+              knowledge_total: q.knowledge_total,
+              start_time: q.created_at,
+              end_time: q.created_at,
+              created_at: q.created_at
+            });
+          }
+        }
+
+        const reconciledSessions = Array.from(sessionMap.values()).sort(
+          (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+        );
 
         return {
           connected: true,
           authoritative: true,
           mode: 'postgresql',
-          sessions: sRes.rows,
+          sessions: reconciledSessions,
           events: dbEvents,
           total_events_count: totalEventsCount,
           assessments: aRes.rows,
-          questionnaire_submissions: qRes.rows.map(normalizeDbQuestionnaire)
+          questionnaire_submissions: normalizedQ
         };
       } catch (err) {
         lastDbError = err.message;
@@ -776,6 +816,51 @@ export const centralDb = {
           item.missing_reason || null
         ]
       );
+
+      // Ensure the session is recorded and marked as 'complete' in sessions table
+      const pName = (item.participant_id ? item.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+      await pool.query(
+        `INSERT INTO sessions (
+           session_id, participant_id, participant_name, condition, story_id, status, end_time, created_at
+         ) VALUES ($1, $2, $3, $4, $5, 'complete', NOW(), NOW())
+         ON CONFLICT (session_id) DO UPDATE SET
+           status = 'complete',
+           end_time = COALESCE(sessions.end_time, NOW()),
+           condition = COALESCE(EXCLUDED.condition, sessions.condition),
+           participant_id = COALESCE(EXCLUDED.participant_id, sessions.participant_id),
+           participant_name = COALESCE(sessions.participant_name, EXCLUDED.participant_name)`,
+        [
+          item.session_id,
+          item.participant_id || null,
+          pName,
+          item.condition || 'C1',
+          item.story_id || 'ayurveda_intro_v1'
+        ]
+      ).catch(e => console.warn('Session complete upsert warning:', e.message));
+    }
+
+    // Backup session in local memory store
+    const pNameMem = (item.participant_id ? item.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+    const sIdx = memDb.sessions.findIndex(s => s.session_id === item.session_id);
+    if (sIdx >= 0) {
+      memDb.sessions[sIdx] = {
+        ...memDb.sessions[sIdx],
+        status: 'complete',
+        end_time: new Date().toISOString()
+      };
+    } else {
+      memDb.sessions.unshift({
+        session_id: item.session_id,
+        participant_id: item.participant_id || null,
+        participant_name: pNameMem,
+        condition: item.condition || 'C1',
+        story_id: item.story_id || 'ayurveda_intro_v1',
+        story_title: 'Introduction to Ayurveda',
+        status: 'complete',
+        start_time: new Date().toISOString(),
+        end_time: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      });
     }
 
     return item;
@@ -821,17 +906,17 @@ export const centralDb = {
         await ensureSchema();
         const query = `
           SELECT 
-            s.session_id,
-            s.participant_id,
-            p.name AS participant_name,
-            p.age_range,
+            COALESCE(s.session_id, q.session_id) AS session_id,
+            COALESCE(s.participant_id, q.participant_id) AS participant_id,
+            COALESCE(p.name, s.participant_name, q.participant_id) AS participant_name,
+            p.age_group AS age_range,
             p.email AS participant_email,
-            s.condition,
-            s.story_id,
-            s.story_title,
-            s.status AS session_status,
-            s.start_time AS session_start,
-            s.end_time AS session_end,
+            COALESCE(s.condition, q.condition) AS condition,
+            COALESCE(s.story_id, q.story_id, 'ayurveda_intro_v1') AS story_id,
+            'Introduction to Ayurveda' AS story_title,
+            COALESCE(s.status, 'complete') AS session_status,
+            COALESCE(s.start_time, q.created_at) AS session_start,
+            COALESCE(s.end_time, q.created_at) AS session_end,
             q.q1_raw, q.q2_raw, q.q3_raw, q.q4_raw, q.q5_raw, q.q6_raw, q.q7_raw, q.q8_raw,
             q.q1_score, q.q2_score, q.q3_score, q.q4_score, q.q5_score, q.q6_score, q.q7_score, q.q8_score,
             q.knowledge_total,
@@ -842,14 +927,14 @@ export const centralDb = {
             q.completion_time_seconds,
             q.technical_issue,
             q.missing_reason,
-            (SELECT COUNT(*) FROM events e WHERE e.session_id = s.session_id) AS total_events_count
-          FROM sessions s
-          LEFT JOIN participants p ON p.participant_id = s.participant_id
-          LEFT JOIN questionnaire_submissions q ON q.session_id = s.session_id
-          WHERE ($1::text IS NULL OR s.condition = $1)
-            AND ($2::text IS NULL OR s.story_id = $2)
-            AND ($3::text IS NULL OR s.participant_id = $3)
-          ORDER BY s.created_at DESC
+            (SELECT COUNT(*) FROM events e WHERE e.session_id = COALESCE(s.session_id, q.session_id)) AS total_events_count
+          FROM questionnaire_submissions q
+          FULL OUTER JOIN sessions s ON s.session_id = q.session_id
+          LEFT JOIN participants p ON p.participant_id = COALESCE(s.participant_id, q.participant_id)
+          WHERE ($1::text IS NULL OR COALESCE(s.condition, q.condition) = $1)
+            AND ($2::text IS NULL OR COALESCE(s.story_id, q.story_id) = $2)
+            AND ($3::text IS NULL OR COALESCE(s.participant_id, q.participant_id) = $3)
+          ORDER BY COALESCE(s.created_at, q.created_at) DESC
         `;
         const res = await pool.query(query, [condition, storyId, participantId]);
         return res.rows;
@@ -858,7 +943,30 @@ export const centralDb = {
       }
     }
 
-    return memDb.sessions.map(s => {
+    // Memory fallback reconciliation
+    const sMap = new Map();
+    memDb.sessions.forEach(s => sMap.set(s.session_id, { ...s }));
+    memDb.questionnaire_submissions.forEach(q => {
+      if (sMap.has(q.session_id)) {
+        sMap.get(q.session_id).status = 'complete';
+      } else {
+        const pName = (q.participant_id ? q.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+        sMap.set(q.session_id, {
+          session_id: q.session_id,
+          participant_id: q.participant_id,
+          participant_name: pName,
+          condition: q.condition || 'C1',
+          story_id: q.story_id || 'ayurveda_intro_v1',
+          story_title: 'Introduction to Ayurveda',
+          status: 'complete',
+          start_time: q.created_at,
+          end_time: q.created_at,
+          created_at: q.created_at
+        });
+      }
+    });
+
+    return Array.from(sMap.values()).map(s => {
       const p = memDb.participants.find(part => part.participant_id === s.participant_id) || {};
       const q = memDb.questionnaire_submissions.find(sub => sub.session_id === s.session_id) || {};
       const evCount = memDb.events.filter(e => e.session_id === s.session_id).length;

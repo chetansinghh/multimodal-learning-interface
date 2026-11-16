@@ -352,6 +352,19 @@ app.post('/api/questionnaire/submit', async (req, res) => {
 
     await centralDb.saveAssessments(perQuestionEntries);
 
+    // Ensure session is marked complete in central database
+    const pName = scoredRecord.participant_name || (scoredRecord.participant_id ? scoredRecord.participant_id.replace(/^P_/, '').replace(/_\d+$/, '') : 'Participant');
+    await centralDb.saveSession({
+      session_id: scoredRecord.session_id,
+      participant_id: scoredRecord.participant_id || null,
+      participant_name: pName,
+      condition: scoredRecord.condition || 'C1',
+      story_id: scoredRecord.story_id || 'ayurveda_intro_v1',
+      story_title: 'Introduction to Ayurveda',
+      status: 'complete',
+      end_time: scoredRecord.created_at || new Date().toISOString()
+    }).catch(e => console.warn('centralDb.saveSession on submit warning:', e.message));
+
     // CRITICAL: Respond with ONLY neutral confirmation. Never reveal answers or score.
     return res.json({
       success: true,

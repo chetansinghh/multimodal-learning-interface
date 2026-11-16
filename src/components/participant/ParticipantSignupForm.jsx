@@ -40,6 +40,10 @@ export default function ParticipantSignupForm() {
         if (data.token) {
           token = data.token;
         }
+        if (data.session_id) {
+          user.sessionId = data.session_id;
+          user.session_id = data.session_id;
+        }
       }
     } catch (err) {
       console.warn('Participant session sync auth warning:', err);

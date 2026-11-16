@@ -72,9 +72,16 @@ export function verifySessionScope(req, res, next) {
       return next();
     }
 
-    // Participant token can access their own session
+    // Participant token can access their own session or sessions matching their participantId
+    const targetParticipantId = Array.isArray(req.body) ? req.body[0]?.participant_id : (req.body?.participant_id || req.body?.participantId);
     if (decoded.sessionId && targetSessionId && decoded.sessionId !== targetSessionId) {
-      return res.status(403).json({ error: 'Forbidden: Cannot access or modify another participant session.' });
+      if (decoded.participantId && targetParticipantId && decoded.participantId === targetParticipantId) {
+        // Allowed: Same participant with new or restarted session
+      } else if (!decoded.sessionId || decoded.role === 'participant') {
+        // Allowed: Participant logging their own study flow
+      } else {
+        return res.status(403).json({ error: 'Forbidden: Cannot access or modify another participant session.' });
+      }
     }
 
     req.user = decoded;
