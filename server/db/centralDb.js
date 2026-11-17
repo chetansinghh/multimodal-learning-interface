@@ -947,6 +947,10 @@ export const centralDb = {
         `UPDATE questionnaire_submissions SET q9_score = $1 WHERE session_id = $2 RETURNING *`,
         [scoreVal, sessionId]
       );
+      await pool.query(
+        `UPDATE assessments SET accuracy = $1, score = $1 WHERE session_id = $2 AND question_id = 'Q9'`,
+        [scoreVal, sessionId]
+      ).catch(() => {});
       return normalizeDbQuestionnaire(r.rows[0]) || entry;
     }
     return entry;

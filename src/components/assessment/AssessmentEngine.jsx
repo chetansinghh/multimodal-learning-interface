@@ -112,7 +112,26 @@ export default function AssessmentEngine({
     try {
       sessionStorage.setItem(`ayurveda_q9_${sessionId}`, q9Text);
     } catch {}
-  }, [q9Text, sessionId]);
+
+    if (!q9Text || !q9Text.trim() || isSubmitted) return;
+
+    // Debounced real-time telemetry auto-save (800ms of inactivity saves to log)
+    const timer = setTimeout(() => {
+      const trimmed = q9Text.trim();
+      eventLogger.log('OBJECT_INTERACT', {
+        objectId: 'Q9',
+        action: 'input_text',
+        response: trimmed,
+        extra: {
+          question_id: 'Q9',
+          text: trimmed,
+          verbatim: trimmed
+        }
+      });
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [q9Text, sessionId, isSubmitted]);
 
   useEffect(() => {
     try {

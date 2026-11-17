@@ -605,6 +605,7 @@ export function exportCombinedResearchDatasetCSV({ participants = [], sessions =
     'Q1_raw', 'Q2_raw', 'Q3_raw', 'Q4_raw', 'Q5_raw', 'Q6_raw', 'Q7_raw', 'Q8_raw',
     'Q1_score', 'Q2_score', 'Q3_score', 'Q4_score', 'Q5_score', 'Q6_score', 'Q7_score', 'Q8_score',
     'knowledge_total', 'Q9_verbatim', 'Q9_score', 'Q10', 'Q11', 'Q12', 'Q13', 'C4_discomfort',
+    'vr_concepts_explored', 'vr_head_movement_sd', 'vr_task_success',
     'completion_time_seconds', 'technical_issue', 'missing_reason', 'total_events_count'
   ];
   const rows = [headers.join(',')];
@@ -615,6 +616,55 @@ export function exportCombinedResearchDatasetCSV({ participants = [], sessions =
     const q = resolveQuestionnaireData(s, questionnaires, sEvents);
     const isC4 = (s.condition || '').toUpperCase() === 'C4';
     const disc = isC4 ? (q.C4_discomfort ?? q.c4_discomfort ?? '') : 'N/A';
+
+    // VR specific metrics for C4
+    let vrConceptsCount = 'N/A';
+    let vrHeadSd = 'N/A';
+    let vrTaskSuccess = 'N/A';
+
+    if (isC4) {
+      // 1. Concepts explored in 3D
+      const conceptsSet = new Set();
+      sEvents.forEach(e => {
+        const payload = e.payload || e.data || {};
+        const cid = payload.conceptId || payload.target_id || e.target_id || e.target_object || '';
+        const cidLower = String(cid).toLowerCase().trim();
+        if (['ether', 'earth', 'fire', 'water', 'air', 'vata', 'pitta', 'kapha'].includes(cidLower)) {
+          conceptsSet.add(cidLower);
+        }
+        if (e.event_type === 'CONCEPT_DISCOVERED' && payload.conceptId) {
+          conceptsSet.add(String(payload.conceptId).toLowerCase().trim());
+        }
+      });
+      vrConceptsCount = conceptsSet.size;
+
+      // 2. Head movement standard deviation
+      const yawValues = [];
+      sEvents.forEach(e => {
+        if (e.event_type === 'HEAD_ROTATION' || e.event === 'HEAD_ROTATION') {
+          const payload = e.payload || e.data || {};
+          const extra = payload.extra || {};
+          const yaw = parseFloat(extra.yaw ?? payload.yaw);
+          if (!isNaN(yaw)) yawValues.push(yaw);
+        }
+      });
+      if (yawValues.length > 1) {
+        const mean = yawValues.reduce((a, b) => a + b, 0) / yawValues.length;
+        const variance = yawValues.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / yawValues.length;
+        vrHeadSd = Math.sqrt(variance).toFixed(1) + '°';
+      } else {
+        vrHeadSd = '0.0°';
+      }
+
+      // 3. VR Task success (e.g. grinding completion)
+      const hasCompleted = sEvents.some(e => {
+        const ev = e.event_type || e.event || '';
+        const act = e.action || '';
+        const payload = e.payload || e.data || {};
+        return ev === 'DHONGA_GRIND_COMPLETE' || ev === 'C3_COMPLETE' || act === 'grind_complete' || payload.action === 'grind_complete';
+      });
+      vrTaskSuccess = hasCompleted ? 'YES' : 'NO';
+    }
 
     rows.push([
       escapeCsv(s.participant_id),
@@ -651,6 +701,9 @@ export function exportCombinedResearchDatasetCSV({ participants = [], sessions =
       q.Q12 ?? q.q12 ?? '',
       q.Q13 ?? q.q13 ?? '',
       escapeCsv(disc),
+      vrConceptsCount,
+      escapeCsv(vrHeadSd),
+      escapeCsv(vrTaskSuccess),
       q.completion_time_seconds ?? '',
       escapeCsv(q.technical_issue || ''),
       escapeCsv(q.missing_reason || ''),
@@ -659,5 +712,102 @@ export function exportCombinedResearchDatasetCSV({ participants = [], sessions =
   });
 
   return { csv: rows.join('\n'), count: filteredSessions.length, name: 'combined_research_dataset.csv' };
+}
+
+// 14. Condition Comparison Summary CSV (Aggregated Research Statistics C1 vs C2 vs C3 vs C4)
+export function exportConditionComparisonSummaryCSV({ sessions = [], questionnaires = [], events = [] } = {}) {
+  const conditions = ['C1', 'C2', 'C3', 'C4'];
+  const labels = {
+    C1: 'Flat Passive Video (Control)',
+    C2: 'Spatial Audio Video',
+    C3: 'Interactive 2D Video',
+    C4: 'Restricted-Movement 3D VR'
+  };
+
+  const headers = [
+    'condition',
+    'condition_label',
+    'sample_size_n',
+    'knowledge_score_mean',
+    'knowledge_score_sd',
+    'accuracy_percent_mean',
+    'q10_understanding_mean',
+    'q11_attention_mean',
+    'q12_clarity_mean',
+    'q13_recall_mean',
+    'c4_discomfort_mean',
+    'avg_completion_time_sec'
+  ];
+
+  const rows = [headers.join(',')];
+
+  conditions.forEach(c => {
+    const cSessions = sessions.filter(s => (s.condition || '').toUpperCase() === c);
+    const n = cSessions.length;
+    if (n === 0) {
+      rows.push([c, escapeCsv(labels[c]), 0, '0.00', '0.00', '0.0%', '0.00', '0.00', '0.00', '0.00', 'N/A', '0'].join(','));
+      return;
+    }
+
+    const scores = [];
+    const q10s = [];
+    const q11s = [];
+    const q12s = [];
+    const q13s = [];
+    const discs = [];
+    const times = [];
+
+    cSessions.forEach(s => {
+      const sEvents = events.filter(e => e.session_id === s.session_id || (s.participant_id && e.participant_id === s.participant_id));
+      const q = resolveQuestionnaireData(s, questionnaires, sEvents);
+      if (q.knowledge_total != null && !isNaN(Number(q.knowledge_total))) scores.push(Number(q.knowledge_total));
+      if (q.Q10 != null && !isNaN(Number(q.Q10))) q10s.push(Number(q.Q10));
+      if (q.Q11 != null && !isNaN(Number(q.Q11))) q11s.push(Number(q.Q11));
+      if (q.Q12 != null && !isNaN(Number(q.Q12))) q12s.push(Number(q.Q12));
+      if (q.Q13 != null && !isNaN(Number(q.Q13))) q13s.push(Number(q.Q13));
+      if (c === 'C4') {
+        const d = q.C4_discomfort ?? q.c4_discomfort;
+        if (d != null && !isNaN(Number(d))) discs.push(Number(d));
+      }
+      if (q.completion_time_seconds != null && !isNaN(Number(q.completion_time_seconds))) {
+        times.push(Number(q.completion_time_seconds));
+      }
+    });
+
+    const calcMean = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '0.00';
+    const calcSD = arr => {
+      if (arr.length <= 1) return '0.00';
+      const m = arr.reduce((a, b) => a + b, 0) / arr.length;
+      const v = arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / (arr.length - 1);
+      return Math.sqrt(v).toFixed(2);
+    };
+
+    const meanScore = calcMean(scores);
+    const sdScore = calcSD(scores);
+    const accPct = ((parseFloat(meanScore) / 8) * 100).toFixed(1) + '%';
+    const meanQ10 = calcMean(q10s);
+    const meanQ11 = calcMean(q11s);
+    const meanQ12 = calcMean(q12s);
+    const meanQ13 = calcMean(q13s);
+    const meanDisc = c === 'C4' && discs.length ? calcMean(discs) : 'N/A';
+    const meanTime = calcMean(times);
+
+    rows.push([
+      c,
+      escapeCsv(labels[c]),
+      n,
+      meanScore,
+      sdScore,
+      escapeCsv(accPct),
+      meanQ10,
+      meanQ11,
+      meanQ12,
+      meanQ13,
+      meanDisc,
+      meanTime
+    ].join(','));
+  });
+
+  return { csv: rows.join('\n'), count: conditions.length, name: 'condition_comparison_summary.csv' };
 }
 

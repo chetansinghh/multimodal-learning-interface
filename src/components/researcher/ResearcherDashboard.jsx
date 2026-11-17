@@ -20,6 +20,7 @@ import {
   exportTechnicalIssuesCSV,
   exportDataSyncStatusCSV,
   exportCombinedResearchDatasetCSV,
+  exportConditionComparisonSummaryCSV,
   resolveQuestionnaireData
 } from '../../services/ResearchDataExporter';
 import AdminLoginGate from './AdminLoginGate';
@@ -1834,6 +1835,7 @@ function ResearcherDashboardContent() {
             <p>
               Complete integrated research table joining participants, sessions, conditions, telemetry event totals,
               and scored questionnaire submissions using stable identifiers (<code>participant_id</code> and <code>session_id</code>).
+              Includes C4 VR exploration metrics (concepts explored, head movement dispersion, task completion).
               Ready for SPSS, R, Python (Pandas), and direct Excel analysis.
             </p>
             <p className="export-count" style={{ color: '#38bdf8', fontWeight: 700 }}>
@@ -1845,6 +1847,23 @@ function ResearcherDashboardContent() {
               </button>
               <button className="export-btn" onClick={() => triggerJsonDownload('combined_research_dataset.json', filterItems(ayurvedaSessions, exportFilters))}>
                 Export Combined JSON
+              </button>
+            </div>
+          </div>
+
+          {/* 14. Condition Comparison Summary */}
+          <div className="export-card" style={{ gridColumn: '1 / -1', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.05)' }}>
+            <h3>📊 14. Condition Comparison Summary (C1 vs C2 vs C3 vs C4 Aggregated Statistics)</h3>
+            <p>
+              Publication-ready aggregated comparison table calculating sample sizes, mean test scores, standard deviations,
+              accuracy percentages, self-reported ratings (Q10–Q13), C4 discomfort scores, and average completion times.
+            </p>
+            <p className="export-count" style={{ color: '#10b981', fontWeight: 700 }}>
+              Aggregated across all 4 experimental conditions (C1, C2, C3, C4)
+            </p>
+            <div className="export-btns">
+              <button className="export-btn" style={{ background: '#059669', color: '#fff', fontWeight: 700, padding: '8px 18px' }} onClick={() => triggerDownload(exportConditionComparisonSummaryCSV({ sessions: ayurvedaSessions, questionnaires: ayurvedaQuestionnaires, events: ayurvedaEvents }))}>
+                Export Condition Comparison Summary CSV
               </button>
             </div>
           </div>
