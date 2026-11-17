@@ -410,6 +410,11 @@ class EventLogger {
     }
   }
 
+  /** Alias for backward compatibility */
+  async saveAssessment(response) {
+    return this.saveAssessmentResponse(response);
+  }
+
   /** Save full Ayurveda research questionnaire submission */
   async saveQuestionnaireSubmission(submission) {
     let scored = submission;

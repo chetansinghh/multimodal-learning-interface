@@ -191,6 +191,24 @@ export default function AssessmentEngine({
     });
   };
 
+  // Handler for Q9 open-ended input blur/save
+  const handleQ9Blur = () => {
+    if (isSubmitted) return;
+    const trimmed = (q9Text || '').trim();
+    if (trimmed) {
+      eventLogger.log('OBJECT_INTERACT', {
+        objectId: 'Q9',
+        action: 'input_text',
+        response: trimmed,
+        extra: {
+          question_id: 'Q9',
+          text: trimmed,
+          verbatim: trimmed
+        }
+      });
+    }
+  };
+
   // Handler for C4 discomfort
   const handleSelectDiscomfort = (val) => {
     if (isSubmitted) return;
@@ -253,6 +271,9 @@ export default function AssessmentEngine({
       action: 'submit_questionnaire',
       completion_time_seconds: completionTimeSeconds,
       has_q9: !!q9Text.trim(),
+      q9_verbatim: q9Text.trim(),
+      q9_text: q9Text.trim(),
+      answers: submissionPayload.answers,
       part_a_answered: Object.keys(partAAnswers).length,
       exp_answered: Object.keys(experienceRatings).length,
       c4_discomfort: isC4 ? c4Discomfort : null
@@ -529,6 +550,7 @@ export default function AssessmentEngine({
               placeholder="Type your response here..."
               value={q9Text}
               onChange={(e) => setQ9Text(e.target.value)}
+              onBlur={handleQ9Blur}
               aria-label="Main message response"
             />
           </div>
@@ -538,6 +560,7 @@ export default function AssessmentEngine({
               type="button"
               className="nav-action-btn secondary-btn"
               onClick={() => {
+                handleQ9Blur();
                 setCurrentStep(0);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
@@ -548,6 +571,7 @@ export default function AssessmentEngine({
               type="button"
               className="nav-action-btn primary-btn"
               onClick={() => {
+                handleQ9Blur();
                 setCurrentStep(2);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}

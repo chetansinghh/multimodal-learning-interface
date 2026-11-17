@@ -114,8 +114,8 @@ export function resolveQuestionnaireData(sessionOrQ = {}, questionnaires = [], e
         }
       }
 
-      if (target === 'Q9' || p.question_id === 'Q9' || action === 'submit_q9') {
-        const val = p.response ?? p.verbatim ?? p.answer ?? p.text;
+      if (target === 'Q9' || p.question_id === 'Q9' || action === 'submit_q9' || p.q9_verbatim || p.q9_text || (p.answers && (p.answers.Q9 || p.answers.q9))) {
+        const val = p.q9_verbatim ?? p.q9_text ?? (p.answers ? (p.answers.Q9 || p.answers.q9) : null) ?? p.response ?? p.verbatim ?? p.answer ?? p.text;
         if (val) fromEvents.Q9 = String(val).trim();
       }
 
