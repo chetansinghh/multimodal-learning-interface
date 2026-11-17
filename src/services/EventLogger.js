@@ -154,6 +154,7 @@ class EventLogger {
     );
 
     const payload = params.payload || {
+      ...params,
       ...(params.extra || {}),
       response: params.response ?? null,
       holder: params.holder ?? null,
