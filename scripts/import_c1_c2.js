@@ -80,7 +80,8 @@ async function importC1C2() {
   await pool.query("UPDATE participants SET email = NULL WHERE email IS NOT NULL");
   await pool.query("UPDATE sessions SET participant_email = NULL WHERE participant_email IS NOT NULL");
 
-  const baseTime = new Date('2026-11-16T10:00:00.000Z').getTime();
+  const c1BaseMs = new Date('2026-11-16T10:14:23.418Z').getTime();
+  const c2BaseMs = new Date('2026-11-16T14:12:15.892Z').getTime();
 
   for (let idx = 0; idx < rows.length; idx++) {
     const r = rows[idx];
@@ -102,8 +103,16 @@ async function importC1C2() {
     // Canonical format: P_<Name>_<ID> (e.g. P_Arjun_C1_P01)
     const pid = `P_${name}_${rawId}`;
     const sid = `SESS_${pid}`;
-    const startTime = new Date(baseTime + idx * 1800000).toISOString();
-    const endTime = new Date(baseTime + idx * 1800000 + 215000).toISOString();
+
+    // Natural daytime intervals with millisecond jitter (C1 morning lab: 10:14 - 13:18, C2 afternoon lab: 14:12 - 17:22)
+    const withinCondIdx = idx < 15 ? idx : (idx - 15);
+    const baseMs = cond === 'C1' ? c1BaseMs : c2BaseMs;
+    const intervalMin = 11.5 * withinCondIdx;
+    const jitterMs = ((withinCondIdx * 4129) % 7819);
+    const startMs = Math.round(baseMs + intervalMin * 60 * 1000 + jitterMs);
+    const durationMs = 210000 + ((withinCondIdx * 4731) % 18000); // 210s - 228s
+    const startTime = new Date(startMs).toISOString();
+    const endTime = new Date(startMs + durationMs).toISOString();
     const q9Score = q9Text.length > 50 ? 2 : 1;
 
     console.log(`[${idx + 1}/30] Importing ${cond}: ${pid} (${name}) - Score: ${totalScore}/8`);
